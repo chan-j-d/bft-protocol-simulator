@@ -17,12 +17,8 @@ public class QueueEvent extends Event {
 
     @Override
     public List<Event> simulate() {
-        if (node.isEmpty()) {
-            return List.of(new ProcessHeaderEvent(getTime(), node, payload));
-        } else {
-            node.addToQueue(payload);
-            return List.of();
-        }
+        node.addToQueue(payload);
+        return List.of(new PollQueueEvent(getTime(), node));
     }
 
     @Override

@@ -70,11 +70,12 @@ public class IBFTNode extends NetworkNode {
 
     public void setOtherNodes(List<IBFTNode> otherNodes) {
         this.otherNodes = new ArrayList<>(otherNodes);
-        this.F = otherNodes.size() / 3;
+        this.F = (otherNodes.size() - 1) / 3;
     }
 
     @Override
     public List<Payload> processPayload(double time, Payload payload) {
+        super.processPayload(time, payload);
         String message = payload.getMessage();
         currentTime = time;
         if (time > 200) {
@@ -108,7 +109,7 @@ public class IBFTNode extends NetworkNode {
     public List<Payload> notifyTime(double time) {
         if (state != IBFTState.ROUND_CHANGE && timer.hasTimedOut(time) && height == -1) {
             currentTime = time;
-            // note the height == 0 condition is to restrict it from going for more rounds
+            // note the height == -1 condition is to restrict it from going for more rounds
             nextRound = getRoundChangeRoundFromCurrentState();
             state = IBFTState.ROUND_CHANGE;
 

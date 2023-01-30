@@ -13,29 +13,27 @@ import static simulation.event.EventUtil.convertPayloadsToQueueEvents;
 
 public class ProcessPayloadEvent extends RandomDurationEvent {
 
-    private static double seed = 0; // TODO update seed and ways to change seed
+    private static double seed = 500; // TODO update seed and ways to change seed
     private static RandomNumberGenerator rng = new ExponentialDistribution(1);
     //private static RandomNumberGenerator rng = new TestGenerator(0);
 
     private NetworkNode node;
     private Payload payload;
+    private double processingEndTime;
 
     public ProcessPayloadEvent(double time, NetworkNode node, Payload payload) {
         super(time);
         this.node = node;
         this.payload = payload;
+        this.processingEndTime = time + generateRandomDuration();
     }
 
     @Override
     public List<Event> simulate() {
-        double processingEndTime = generateRandomDuration() + getTime();
         List<Payload> processedPayloads = node.processPayload(processingEndTime, payload);
         List<Event> eventList =
                 new ArrayList<>(convertPayloadsToQueueEvents(processingEndTime, node, processedPayloads));
-
-        if (!node.isEmpty()) {
-            eventList.add(new ProcessHeaderEvent(processingEndTime, node, node.popFromQueue()));
-        }
+        eventList.add(new PollQueueEvent(processingEndTime, node));
 
         double nextNotificationTime = node.getNextNotificationTime();
         if (nextNotificationTime != -1) {
@@ -51,6 +49,7 @@ public class ProcessPayloadEvent extends RandomDurationEvent {
 
     @Override
     public String toString() {
-        return super.toString() + " (ProcessPayload): Processing payload at " + node + " (" + payload + ")";
+        return String.format("%s-%.3f (ProcessPayload): Processing payload at %s (%s)",
+                super.toString(), processingEndTime, node, payload);
     }
 }

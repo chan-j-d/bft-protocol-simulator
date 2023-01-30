@@ -14,12 +14,14 @@ public abstract class NetworkNode implements Queueable<Payload> {
     private Map<String, NetworkNode> destinationToNeighborMap;
     private String name;
     private LinkedList<Payload> queue;
+    private double currentTime;
 
     public NetworkNode(String name) {
         this.name = name;
         this.neighbors = new ArrayList<>();
         this.destinationToNeighborMap = new HashMap<>();
         this.queue = new LinkedList<>();
+        this.currentTime = 0;
     }
 
     public NetworkNode(String name, List<NetworkNode> neighbors) {
@@ -29,7 +31,15 @@ public abstract class NetworkNode implements Queueable<Payload> {
         this.queue = new LinkedList<>();
     }
 
-    public abstract List<Payload> processPayload(double time, Payload payload);
+    public List<Payload> processPayload(double time, Payload payload) {
+        this.currentTime = time;
+        return List.of();
+    }
+
+    public boolean isOccupiedAtTime(double time) {
+        return currentTime > time;
+    }
+
     public abstract List<Payload> initializationPayloads();
 
     /**

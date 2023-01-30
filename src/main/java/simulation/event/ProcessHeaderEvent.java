@@ -16,24 +16,23 @@ public class ProcessHeaderEvent extends RandomDurationEvent {
     private static RandomNumberGenerator rng = new TestGenerator(0);
     private NetworkNode node;
     private Payload payload;
+    private double processingEndTime;
     public ProcessHeaderEvent(double time, NetworkNode node, Payload payload) {
         super(time);
         this.node = node;
         this.payload = payload;
+        this.processingEndTime = time + generateRandomDuration();
     }
 
     @Override
     public List<Event> simulate() {
-        double processingEndTime = generateRandomDuration() + getTime();
         List<Event> eventList = new ArrayList<>();
         if (node.isPayloadDestination(payload)) {
             eventList.add(new ProcessPayloadEvent(processingEndTime, node, payload));
         } else {
             NetworkNode nextHopNode = node.getNextNodeFor(payload);
             eventList.add(new QueueEvent(processingEndTime, nextHopNode, payload));
-            if (!node.isEmpty()) {
-                eventList.add(new ProcessHeaderEvent(processingEndTime, node, node.popFromQueue()));
-            }
+            eventList.add(new PollQueueEvent(processingEndTime, node));
         }
 
         return eventList;
@@ -46,6 +45,7 @@ public class ProcessHeaderEvent extends RandomDurationEvent {
 
     @Override
     public String toString() {
-        return super.toString() + " (ProcessHeader): Processing header at " + node;
+        return String.format("%s-%.3f (ProcessHeader): Processing header at %s",
+                super.toString(), processingEndTime, node);
     }
 }
