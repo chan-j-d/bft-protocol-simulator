@@ -14,8 +14,8 @@ import static simulation.event.EventUtil.convertPayloadsToQueueEvents;
 public class ProcessPayloadEvent extends RandomDurationEvent {
 
     private static double seed = 0; // TODO update seed and ways to change seed
-    //private static RandomNumberGenerator rng = new ExponentialDistribution(2);
-    private static RandomNumberGenerator rng = new TestGenerator(0);
+    private static RandomNumberGenerator rng = new ExponentialDistribution(1);
+    //private static RandomNumberGenerator rng = new TestGenerator(0);
 
     private NetworkNode node;
     private Payload payload;
@@ -29,7 +29,7 @@ public class ProcessPayloadEvent extends RandomDurationEvent {
     @Override
     public List<Event> simulate() {
         double processingEndTime = generateRandomDuration() + getTime();
-        List<Payload> processedPayloads = node.processPayload(getTime(), payload);
+        List<Payload> processedPayloads = node.processPayload(processingEndTime, payload);
         List<Event> eventList =
                 new ArrayList<>(convertPayloadsToQueueEvents(processingEndTime, node, processedPayloads));
 
