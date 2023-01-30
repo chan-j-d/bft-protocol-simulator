@@ -13,6 +13,7 @@ import static simulation.network.structure.NetworkStructure.cliqueStructure;
 public class Main {
     public static void main(String[] args) {
 
+
         IoInterface io = new FileIo("output.txt");
 
         List<IBFTNode> nodes = new ArrayList<>();
@@ -29,5 +30,6 @@ public class Main {
         while (!simulator.isSimulationOver()) {
             io.output(simulator.simulate());
         }
+        io.close();
     }
 }
