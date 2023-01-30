@@ -38,7 +38,7 @@ public class Simulator {
         return finalString;
     }
 
-    private String getSnapshotOfNodes() {
+    public String getSnapshotOfNodes() {
         if (nodes.isEmpty()) {
             return "";
         } else {
