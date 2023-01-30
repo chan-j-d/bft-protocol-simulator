@@ -13,7 +13,7 @@ public class ProcessHeaderEvent extends RandomDurationEvent {
 
     private static double seed = 0; // TODO update seed and ways to change seed
     private static RandomNumberGenerator rng = new ExponentialDistribution(1);
-    //private static RandomNumberGenerator rng = new TestGenerator();
+    //private static RandomNumberGenerator rng = new TestGenerator(0);
     private NetworkNode node;
     private Payload payload;
     public ProcessHeaderEvent(double time, NetworkNode node, Payload payload) {

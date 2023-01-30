@@ -15,7 +15,7 @@ public class ProcessPayloadEvent extends RandomDurationEvent {
 
     private static double seed = 0; // TODO update seed and ways to change seed
     //private static RandomNumberGenerator rng = new ExponentialDistribution(2);
-    private static RandomNumberGenerator rng = new TestGenerator();
+    private static RandomNumberGenerator rng = new TestGenerator(0);
 
     private NetworkNode node;
     private Payload payload;
