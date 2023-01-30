@@ -15,11 +15,12 @@ public class Main {
 
 
         IoInterface io = new FileIo("output.txt");
+        double timeLimit = 0.5;
 
         List<IBFTNode> nodes = new ArrayList<>();
-        int numNodes = 4;
+        int numNodes = 7;
         for (int i = 0; i < numNodes; i++) {
-            nodes.add(new IBFTNode("IBFT-" + i, i, 1));
+            nodes.add(new IBFTNode("IBFT-" + i, i, timeLimit));
         }
         for (IBFTNode node : nodes) {
             List<IBFTNode> copy = new ArrayList<>(nodes);
@@ -30,6 +31,7 @@ public class Main {
         while (!simulator.isSimulationOver()) {
             io.output(simulator.simulate());
         }
+        io.output("\nSnapshot:\n" + simulator.getSnapshotOfNodes());
         io.close();
     }
 }
