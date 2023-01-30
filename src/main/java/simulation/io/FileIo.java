@@ -9,7 +9,7 @@ public class FileIo implements IoInterface {
 
     public FileIo(String filename) {
         try {
-            fileWriter = new FileWriter(filename);
+            fileWriter = new FileWriter(filename, false);
         } catch (IOException e) {
             System.err.println("Unable to create write file: " + e);
         }
