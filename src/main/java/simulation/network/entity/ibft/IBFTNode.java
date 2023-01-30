@@ -34,7 +34,7 @@ public class IBFTNode extends NetworkNode {
     private List<IBFTNode> otherNodes;
 
     // TODO Change to map to have more efficient pulling of exact message types to process
-    private Map<Integer, List<String>> backlog;
+    private Map<Integer, Map<Integer, List<String>>> backlog;
 
     private final TimeoutHandler timer;
     private boolean isNotifiedOfTimer;
@@ -96,15 +96,15 @@ public class IBFTNode extends NetworkNode {
     public List<Payload> processPayload(double time, Payload payload) {
         String message = payload.getMessage();
         currentTime = time;
-        if (time > 1000) {
+        if (time > 200) {
             return List.of();
         }
-        return analyzeMessage(message);
+        return processMessage(message);
     }
 
     @Override
     public List<Payload> initializationPayloads() {
-        if (identifier == getLeaderFromRoundNumebr(currentRound)) {
+        if (identifier == getLeaderFromRoundNumber(currentRound)) {
             List<NetworkNode> allNodes = new ArrayList<>(otherNodes);
             allNodes.add(this);
             return broadcastMessage(createPrePrepareMessage(identifier), allNodes);
@@ -130,7 +130,10 @@ public class IBFTNode extends NetworkNode {
             // note the height == 0 condition is to restrict it from going for more rounds
             nextRound = getRoundChangeRoundFromCurrentState();
             state = IBFTState.ROUND_CHANGE;
-            return broadcastMessage(createRoundChangeMessage(), otherNodes);
+
+            List<Payload> payloads = broadcastMessage(createRoundChangeMessage(), otherNodes);
+            payloads.addAll(processPotentialRoundChange(getRoundChangeRoundFromCurrentState()));
+            return payloads;
         } else {
             return List.of();
         }
@@ -139,12 +142,16 @@ public class IBFTNode extends NetworkNode {
     // backlog handling
     private void addToBacklog(String message) {
         int type = getMessageType(message);
-        backlog.putIfAbsent(type, new ArrayList<>());
-        backlog.get(type).add(message);
+        int round = getRoundOfMessage(message);
+        backlog.putIfAbsent(round, new HashMap<>());
+        backlog.get(round).putIfAbsent(type, new ArrayList<>());
+        backlog.get(round).get(type).add(message);
     }
 
     private List<String> getBacklogMessagesOf(int type) {
-        return Optional.ofNullable(backlog.remove(type)).orElse(List.of());
+        return Optional.ofNullable(backlog.get(currentRound))
+                .map(map -> map.remove(type))
+                .orElse(List.of());
     }
 
     // util
@@ -152,32 +159,39 @@ public class IBFTNode extends NetworkNode {
         return STATE_TO_TYPE_MAP.get(state);
     }
 
+    // Default format is {identifier}:{round}:{message type}:{message details}
     private String createSeparatedMessage(List<Object> objects) {
-        return objects.stream().map(Object::toString).collect(Collectors.joining(":"));
+        List<Object> defaultStrings = new ArrayList<>(List.of(identifier, currentRound));
+        defaultStrings.addAll(objects);
+        return defaultStrings.stream().map(Object::toString).collect(Collectors.joining(":"));
     }
 
     private int getMessageType(String message) {
-        return Integer.parseInt(message.split(SEPARATOR)[0]);
+        return Integer.parseInt(message.split(SEPARATOR)[2]);
     }
 
     private int getSender(String message) {
+        return Integer.parseInt(message.split(SEPARATOR)[0]);
+    }
+
+    private int getRoundOfMessage(String message) {
         return Integer.parseInt(message.split(SEPARATOR)[1]);
     }
 
     private String getMessageDetails(String message) {
-        return message.split(SEPARATOR, 3)[2];
+        return message.split(SEPARATOR, 4)[3];
     }
 
     private int getNextRoundNumber(int roundNumber) {
         return roundNumber + 1;
     }
 
-    private int getLeaderFromRoundNumebr(int roundNumber) {
+    private int getLeaderFromRoundNumber(int roundNumber) {
         return roundNumber % (otherNodes.size() + 1);
     }
 
     // message analysis methods
-    private List<Payload> analyzeMessage(String originalMessage) {
+    private List<Payload> processMessage(String originalMessage) {
         int status = getMessageType(originalMessage);
         if (status == ROUND_CHANGE_TYPE) {
             processRoundChangeMessage(originalMessage);
@@ -187,8 +201,12 @@ public class IBFTNode extends NetworkNode {
             return List.of();
         }
 
+        return analyzeMessages(List.of(originalMessage));
+    }
+
+    private List<Payload> analyzeMessages(List<String> originalMessages) {
         List<Payload> finalizedPayloads = new ArrayList<>();
-        List<String> messages = List.of(originalMessage);
+        List<String> messages = new ArrayList<>(originalMessages);
         while (!messages.isEmpty()) {
             if (state == IBFTState.NEW_ROUND) {
                 finalizedPayloads.addAll(analyzeMessagesInNewRoundState(messages));
@@ -207,31 +225,31 @@ public class IBFTNode extends NetworkNode {
     }
 
     private String createPrePrepareMessage(int sequence) {
-        return createSeparatedMessage(List.of(PREPREPARE_TYPE, identifier, sequence));
+        return createSeparatedMessage(List.of(PREPREPARE_TYPE, sequence));
     }
 
     private List<Payload> analyzeMessagesInNewRoundState(List<String> messages) {
         for (String message : messages) {
             int sender = getSender(message);
             sequence = Integer.parseInt(getMessageDetails(message));
-            if (sender == getLeaderFromRoundNumebr(currentRound) && sequence > height) {
+            if (sender == getLeaderFromRoundNumber(currentRound) && sequence > height) {
                 state = IBFTState.PRE_PREPARED;
-                return broadcastMessage(createPrepareMessage(sequence, currentRound), otherNodes);
+                return broadcastMessage(createPrepareMessage(sequence), otherNodes);
                 // assumption that only one such message exists in the queue at most
             }
         }
         return List.of();
     }
 
-    private String createPrepareMessage(int sequence, int round) {
-        return createSeparatedMessage(List.of(PREPARE_TYPE, identifier, sequence, round));
+    private String createPrepareMessage(int sequence) {
+        return createSeparatedMessage(List.of(PREPARE_TYPE, sequence));
     }
 
     private List<Payload> analyzeMessagesInPrePreparedState(List<String> messages) {
         for (String message : messages) {
             String[] details = getMessageDetails(message).split(SEPARATOR);
             int sequence = Integer.parseInt(details[0]);
-            int round = Integer.parseInt(details[1]);
+            int round = getRoundOfMessage(message);
             if (round == currentRound && sequence == this.sequence) {
                 prepareCount++;
 
@@ -239,15 +257,15 @@ public class IBFTNode extends NetworkNode {
                 addToBacklog(message);
             }
         }
-        if (prepareCount >= 2 * F + 1) {
+        if (prepareCount >= 2 * F) {
             state = IBFTState.PREPARED;
-            return broadcastMessage(createCommittedMessage(sequence, currentRound), otherNodes);
+            return broadcastMessage(createCommittedMessage(sequence), otherNodes);
         }
         return List.of();
     }
 
-    private String createCommittedMessage(int sequence, int round) {
-        return createSeparatedMessage(List.of(COMMITTED_TYPE, identifier, sequence, round));
+    private String createCommittedMessage(int sequence) {
+        return createSeparatedMessage(List.of(COMMITTED_TYPE, sequence));
     }
 
     private void updateVariablesToNewRound() {
@@ -261,18 +279,18 @@ public class IBFTNode extends NetworkNode {
         for (String message : messages) {
             String[] details = getMessageDetails(message).split(SEPARATOR);
             int sequence = Integer.parseInt(details[0]);
-            int round = Integer.parseInt(details[1]);
+            int round = getRoundOfMessage(message);
             if (round == currentRound && sequence == this.sequence) {
                 committedCount++;
             } else if (round > currentRound) {
                 addToBacklog(message);
             }
         }
-        if (committedCount >= 2 * F + 1) {
+        if (committedCount >= 2 * F) {
             height = sequence;
             currentRound = getNextRoundNumber(currentRound);
             updateVariablesToNewRound();
-            System.out.println("Consensus achieved at " + this);
+            System.out.println(currentTime + ": Consensus achieved at " + this);
             // consensus achieved
         }
         return List.of();
@@ -305,7 +323,7 @@ public class IBFTNode extends NetworkNode {
         return currentMax == -1 ? currentRound + 1 : currentMax;
     }
     private String createRoundChangeMessage() {
-        return createSeparatedMessage(List.of(ROUND_CHANGE_TYPE, identifier, nextRound));
+        return createSeparatedMessage(List.of(ROUND_CHANGE_TYPE, nextRound));
     }
 
     private List<Payload> analyzeMessagesInRoundChangeState(List<String> messages) {
@@ -316,14 +334,21 @@ public class IBFTNode extends NetworkNode {
             nextRound = suggestedRound;
             return broadcastMessage(createRoundChangeMessage(), otherNodes);
         }
+        return processPotentialRoundChange(nextRound);
+    }
 
+    private List<Payload> processPotentialRoundChange(int nextRound) {
+        int roundCount = getRoundChangeCount(nextRound);
         if (roundCount >= 2 * F + 1) {
-            System.out.println(this + " changed round from " + currentRound + " to " + nextRound);
+            System.out.println(currentTime + ": " + this + " changed round from " + currentRound + " to " + nextRound);
             currentRound = nextRound;
             updateVariablesToNewRound();
-            return initializationPayloads();
+            List<Payload> finalPayloads = new ArrayList<>(initializationPayloads());
+            finalPayloads.addAll(analyzeMessages(getBacklogMessagesOf(PREPREPARE_TYPE)));
+            return finalPayloads;
+        } else {
+            return List.of();
         }
-        return List.of();
     }
 
     @Override
