@@ -19,14 +19,14 @@ public class Simulator {
         }
     }
 
-    public void simulate() {
-        while (!eventQueue.isEmpty()) {
-            Event nextEvent = eventQueue.poll();
-            System.out.println(nextEvent);
-            List<Event> resultingEvents = nextEvent.simulate();
-            resultingEvents.forEach(event -> eventQueue.add(event));
-        }
+    public String simulate() {
+        Event nextEvent = eventQueue.poll();
+        List<Event> resultingEvents = nextEvent.simulate();
+        eventQueue.addAll(resultingEvents);
+        return nextEvent.toString();
     }
 
-
+    public boolean isSimulationOver() {
+        return eventQueue.isEmpty();
+    }
 }

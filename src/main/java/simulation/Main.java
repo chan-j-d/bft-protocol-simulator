@@ -1,5 +1,7 @@
 package simulation;
 
+import simulation.io.FileIo;
+import simulation.io.IoInterface;
 import simulation.network.entity.ibft.IBFTNode;
 import simulation.simulator.Simulator;
 
@@ -10,6 +12,9 @@ import static simulation.network.structure.NetworkStructure.cliqueStructure;
 
 public class Main {
     public static void main(String[] args) {
+
+        IoInterface io = new FileIo("output.txt");
+
         List<IBFTNode> nodes = new ArrayList<>();
         int numNodes = 4;
         for (int i = 0; i < numNodes; i++) {
@@ -21,6 +26,8 @@ public class Main {
             node.setOtherNodes(copy);
         }
         Simulator simulator = new Simulator(cliqueStructure(nodes));
-        simulator.simulate();
+        while (!simulator.isSimulationOver()) {
+            io.output(simulator.simulate());
+        }
     }
 }
