@@ -68,25 +68,6 @@ public class IBFTNode extends NetworkNode {
         this.currentTime = 0;
     }
 
-    public IBFTNode(String name, int identifier, double timeLimit, int currentLeader) {
-        super(name);
-        this.identifier = identifier;
-        this.otherNodes = new ArrayList<>();
-        this.timer = new TimeoutDoubler(0, timeLimit);
-        this.isNotifiedOfTimer = false;
-        this.state = IBFTState.NEW_ROUND;
-        this.backlog = new HashMap<>();
-        this.roundChangeCountMap = new HashMap<>();
-
-        this.prepareCount = 0;
-        this.committedCount = 0;
-        this.sequence = 0;
-        this.height = -1;
-        this.currentRound = currentLeader;
-        this.nextRound = this.currentRound + 1;
-        this.currentTime = 0;
-    }
-
     public void setOtherNodes(List<IBFTNode> otherNodes) {
         this.otherNodes = new ArrayList<>(otherNodes);
         this.F = otherNodes.size() / 3;
@@ -339,7 +320,7 @@ public class IBFTNode extends NetworkNode {
 
     private List<Payload> processPotentialRoundChange(int nextRound) {
         int roundCount = getRoundChangeCount(nextRound);
-        if (roundCount >= 2 * F + 1) {
+        if (roundCount >= 2 * F) {
             System.out.println(currentTime + ": " + this + " changed round from " + currentRound + " to " + nextRound);
             currentRound = nextRound;
             updateVariablesToNewRound();
