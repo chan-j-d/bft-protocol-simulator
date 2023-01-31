@@ -40,6 +40,10 @@ public abstract class NetworkNode implements Queueable<Payload> {
         return currentTime > time;
     }
 
+    public double getTime() {
+        return this.currentTime;
+    }
+
     public abstract List<Payload> initializationPayloads();
 
     /**

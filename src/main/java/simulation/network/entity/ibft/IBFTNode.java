@@ -47,7 +47,8 @@ public class IBFTNode extends NetworkNode {
     private int height;
     private Map<Integer, Integer> roundChangeCountMap;
     private int nextRound;
-    private double currentTime;
+
+    private double consensusTime;
 
     public IBFTNode(String name, int identifier, double timeLimit) {
         super(name);
@@ -65,7 +66,7 @@ public class IBFTNode extends NetworkNode {
         this.sequence = 0;
         this.height = -1;
         this.nextRound = this.currentRound + 1;
-        this.currentTime = 0;
+        this.consensusTime = -1;
     }
 
     public void setOtherNodes(List<IBFTNode> otherNodes) {
@@ -77,10 +78,6 @@ public class IBFTNode extends NetworkNode {
     public List<Payload> processPayload(double time, Payload payload) {
         super.processPayload(time, payload);
         String message = payload.getMessage();
-        currentTime = time;
-        if (time > 200) {
-            return List.of();
-        }
         return processMessage(message);
     }
 
@@ -108,7 +105,6 @@ public class IBFTNode extends NetworkNode {
     @Override
     public List<Payload> notifyTime(double time) {
         if (state != IBFTState.ROUND_CHANGE && timer.hasTimedOut(time) && height == -1) {
-            currentTime = time;
             // note the height == -1 condition is to restrict it from going for more rounds
             nextRound = getRoundChangeRoundFromCurrentState();
             state = IBFTState.ROUND_CHANGE;
@@ -252,7 +248,7 @@ public class IBFTNode extends NetworkNode {
 
     private void updateVariablesToNewRound() {
         isNotifiedOfTimer = false;
-        timer.setStartTime(currentTime);
+        timer.setStartTime(getTime());
         state = IBFTState.NEW_ROUND;
         committedCount = 0;
         prepareCount = 0;
@@ -272,7 +268,8 @@ public class IBFTNode extends NetworkNode {
             height = sequence;
             currentRound = getNextRoundNumber(currentRound);
             updateVariablesToNewRound();
-            System.out.println(currentTime + ": Consensus achieved at " + this);
+            System.out.println(getTime() + ": Consensus achieved at " + this);
+            consensusTime = getTime();
             // consensus achieved
         }
         return List.of();
@@ -322,7 +319,7 @@ public class IBFTNode extends NetworkNode {
     private List<Payload> processPotentialRoundChange(int nextRound) {
         int roundCount = getRoundChangeCount(nextRound);
         if (roundCount >= 2 * F) {
-            System.out.println(currentTime + ": " + this + " changed round from " + currentRound + " to " + nextRound);
+            System.out.println(getTime() + ": " + this + " changed round from " + currentRound + " to " + nextRound);
             currentRound = nextRound;
             updateVariablesToNewRound();
             List<Payload> finalPayloads = new ArrayList<>(initializationPayloads());
@@ -331,6 +328,15 @@ public class IBFTNode extends NetworkNode {
         } else {
             return List.of();
         }
+    }
+
+    /**
+     * Returns the time the node took to achieve consensus or -1 if consensus was not reached.
+     *
+     * @return time to reach consensus or -1 if consensus was not reached.
+     */
+    public double getConsensusTime() {
+        return this.consensusTime;
     }
 
     @Override
