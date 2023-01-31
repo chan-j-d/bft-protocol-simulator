@@ -5,7 +5,7 @@ import java.util.Random;
 public class ExponentialDistribution implements RandomNumberGenerator {
 
     private static final long SEED = 0;
-    private static final Random UNIFORM_DISTRIBUTION = new Random(SEED);
+    public static Random UNIFORM_DISTRIBUTION = new Random(SEED);
     private double lambda;
 
     public ExponentialDistribution(double lambda) {
