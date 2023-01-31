@@ -2,4 +2,4 @@
 /build/
 .*
 !/.gitignore
-output.txt
+*.txt
