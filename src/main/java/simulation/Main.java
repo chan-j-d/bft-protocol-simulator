@@ -2,7 +2,6 @@ package simulation;
 
 import simulation.io.FileIo;
 import simulation.io.IoInterface;
-import simulation.io.NoIo;
 import simulation.network.entity.ibft.IBFTNode;
 import simulation.simulator.Simulator;
 import simulation.util.rng.ExponentialDistribution;
@@ -19,7 +18,7 @@ public class Main {
 
         double timeLimit = 10000;
 
-        int numNodes = 48;
+        int numNodes = 64;
         int numTrials = 5;
         int seedMultiplier = 5;
 
@@ -30,15 +29,13 @@ public class Main {
             IoInterface io = new FileIo("output" + j + ".txt");
             List<IBFTNode> nodes = new ArrayList<>();
 
+            Simulator simulator = new Simulator(cliqueStructure(nodes));
             for (int i = 0; i < numNodes; i++) {
-                nodes.add(new IBFTNode("IBFT-" + i, i, timeLimit));
+                nodes.add(new IBFTNode("IBFT-" + i, i, timeLimit, simulator));
             }
             for (IBFTNode node : nodes) {
-                List<IBFTNode> copy = new ArrayList<>(nodes);
-                copy.remove(node);
-                node.setOtherNodes(copy);
+                node.setAllNodes(nodes);
             }
-            Simulator simulator = new Simulator(cliqueStructure(nodes));
             while (!simulator.isSimulationOver()) {
                 io.output(simulator.simulate());
             }

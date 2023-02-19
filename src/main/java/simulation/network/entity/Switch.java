@@ -17,14 +17,4 @@ public class Switch extends NetworkNode {
     public List<Payload> initializationPayloads() {
         return List.of();
     }
-
-    @Override
-    public double getNextNotificationTime() {
-        return -1;
-    }
-
-    @Override
-    public List<Payload> notifyTime(double time) {
-        return List.of();
-    }
 }

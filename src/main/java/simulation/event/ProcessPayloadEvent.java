@@ -34,11 +34,6 @@ public class ProcessPayloadEvent extends RandomDurationEvent {
         List<Event> eventList =
                 new ArrayList<>(convertPayloadsToQueueEvents(processingEndTime, node, processedPayloads));
         eventList.add(new PollQueueEvent(processingEndTime, node));
-
-        double nextNotificationTime = node.getNextNotificationTime();
-        if (nextNotificationTime != -1) {
-            eventList.add(new TimedEvent(nextNotificationTime, node));
-        }
         return eventList;
     }
 

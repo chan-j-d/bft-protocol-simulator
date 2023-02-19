@@ -40,25 +40,7 @@ public abstract class NetworkNode implements Queueable<Payload> {
         return currentTime > time;
     }
 
-    public double getTime() {
-        return this.currentTime;
-    }
-
     public abstract List<Payload> initializationPayloads();
-
-    /**
-     * Returns the next time to notify the node for any timed events.
-     *
-     * @return next notification time or -1 if no need for notification.
-     */
-    public abstract double getNextNotificationTime();
-    /**
-     * Returns a list of payloads after notifying the node at the requested time.
-     *
-     * @param time to be notified, determined by a previous {@code getNextNotificationTime} call.
-     * @return List of payloads to be sent at the given time.
-     */
-    public abstract List<Payload> notifyTime(double time);
 
     public String getName() {
         return name;
@@ -109,7 +91,7 @@ public abstract class NetworkNode implements Queueable<Payload> {
         neighbors.clear();
     }
 
-    public List<Payload> broadcastMessage(String message, List<? extends NetworkNode> nodes) {
+    public List<Payload> sendMessage(String message, List<? extends NetworkNode> nodes) {
         List<Payload> payloads = new ArrayList<>();
         for (NetworkNode node : nodes) {
             payloads.add(new Payload(message, node.getName()));

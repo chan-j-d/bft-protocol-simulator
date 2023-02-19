@@ -1,6 +1,6 @@
 package simulation.event;
 
-import simulation.network.entity.NetworkNode;
+import simulation.network.entity.TimedNetworkNode;
 
 import java.util.List;
 
@@ -8,16 +8,18 @@ import static simulation.event.EventUtil.convertPayloadsToQueueEvents;
 
 public class TimedEvent extends Event {
 
-    private NetworkNode node;
+    private TimedNetworkNode node;
+    private String message;
 
-    public TimedEvent(double time, NetworkNode node) {
+    public TimedEvent(double time, TimedNetworkNode node, String message) {
         super(time);
         this.node = node;
+        this.message = message;
     }
 
     @Override
     public List<Event> simulate() {
-        return convertPayloadsToQueueEvents(getTime(), node, node.notifyTime(getTime()));
+        return convertPayloadsToQueueEvents(getTime(), node, node.notifyTime(getTime(), message));
     }
 
     @Override

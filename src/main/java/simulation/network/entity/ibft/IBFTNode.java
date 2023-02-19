@@ -1,354 +1,334 @@
 package simulation.network.entity.ibft;
 
-import simulation.network.entity.NetworkNode;
+import static simulation.network.entity.ibft.IBFTMessage.NULL_VALUE;
+
+import simulation.network.entity.TimedNetworkNode;
+import simulation.network.entity.NodeTimerNotifier;
 import simulation.network.entity.Payload;
-import simulation.util.timer.TimeoutDoubler;
-import simulation.util.timer.TimeoutHandler;
+import simulation.util.Pair;
 
 import java.util.ArrayList;
-import java.util.HashMap;
 import java.util.List;
-import java.util.Map;
-import java.util.Optional;
 import java.util.stream.Collectors;
 
-public class IBFTNode extends NetworkNode {
+public class IBFTNode extends TimedNetworkNode {
 
-    /*
-     * TODO Add round change mechanism
-     *  Add registering of messages in the wrong phase i.e. receiving committed while in prepared
+    /**
+     * Dummy value to be passed around as part of the protocol.
      */
-    private static final int PREPREPARE_TYPE = 0;
-    private static final int PREPARE_TYPE = 1;
-    private static final int COMMITTED_TYPE = 2;
-    private static final int ROUND_CHANGE_TYPE = 3;
-    private static final Map<IBFTState, Integer> STATE_TO_TYPE_MAP = Map.of(
-            IBFTState.NEW_ROUND, PREPREPARE_TYPE,
-            IBFTState.PRE_PREPARED, PREPARE_TYPE,
-            IBFTState.PREPARED, COMMITTED_TYPE,
-            IBFTState.ROUND_CHANGE, ROUND_CHANGE_TYPE);
-    private static final String SEPARATOR = ":";
+    private static final int DUMMY_VALUE = 1;
 
-    private final int identifier;
+    // Simulation variables
+    private final double baseTimeLimit;
+    private int N;
     private int F;
-    private List<IBFTNode> otherNodes;
+    private List<IBFTNode> allNodes;
 
-    // TODO Change to map to have more efficient pulling of exact message types to process
-    private Map<Integer, Map<Integer, List<String>>> backlog;
+    // Helper attributes
+    private int timerExpiryCount; // Used to differentiate multiple timers in the same instance & round
+    private IBFTMessageHolder messageHolder;
+    /**
+     * Stores payloads while node is processing a message.
+     * All payloads are retrieved and sent out after message processing.
+     */
+    private List<Payload> tempPayloadStore;
 
-    private final TimeoutHandler timer;
-    private boolean isNotifiedOfTimer;
+    private final int p_i; // identifier
+    private int lambda_i; // consensus instance identifier
+    private int r_i; // round number
+    private int pr_i; // round at which process has prepared
+    private int pv_i; // value for which process has prepared
+    private int inputValue_i; // value passed as input to instance
 
-    private IBFTState state;
-    private int prepareCount;
-    private int committedCount;
-    private int currentRound; // same as leader for this
-    private int sequence;
-    private int height;
-    private Map<Integer, Integer> roundChangeCountMap;
-    private int nextRound;
 
-    private double consensusTime;
+    public IBFTNode(String name, int identifier, double baseTimeLimit, NodeTimerNotifier timerNotifier) {
+        super(name, timerNotifier);
+        this.p_i = identifier;
+        this.allNodes = new ArrayList<>();
+        this.baseTimeLimit = baseTimeLimit;
+        this.timerExpiryCount = 0;
 
-    public IBFTNode(String name, int identifier, double timeLimit) {
-        super(name);
-        this.identifier = identifier;
-        this.otherNodes = new ArrayList<>();
-        this.timer = new TimeoutDoubler(0, timeLimit);
-        this.isNotifiedOfTimer = false;
-        this.state = IBFTState.NEW_ROUND;
-        this.backlog = new HashMap<>();
-        this.roundChangeCountMap = new HashMap<>();
-
-        this.prepareCount = 0;
-        this.committedCount = 0;
-        this.currentRound = 0;
-        this.sequence = 0;
-        this.height = -1;
-        this.nextRound = this.currentRound + 1;
-        this.consensusTime = -1;
+        this.tempPayloadStore = new ArrayList<>();
+        this.messageHolder = new IBFTMessageHolder();
     }
 
-    public void setOtherNodes(List<IBFTNode> otherNodes) {
-        this.otherNodes = new ArrayList<>(otherNodes);
-        this.F = (otherNodes.size() - 1) / 3;
+    public void setAllNodes(List<IBFTNode> allNodes) {
+        this.allNodes = new ArrayList<>(allNodes);
+        this.N = allNodes.size();
+        this.F = (this.N - 1) / 3;
+    }
+
+    /**
+     * Retries and returns payloads generated from a processing step.
+     * Empties the payload list.
+     *
+     * @return List of payloads that were generated from a processing step.
+     */
+    private List<Payload> getProcessedPayloads() {
+        List<Payload> payloads = tempPayloadStore;
+        tempPayloadStore = new ArrayList<>();
+        return payloads;
     }
 
     @Override
     public List<Payload> processPayload(double time, Payload payload) {
         super.processPayload(time, payload);
-        String message = payload.getMessage();
-        return processMessage(message);
+        IBFTMessage message = IBFTMessage.createIBFTMessageFromString(payload.getMessage());
+        processMessage(message);
+        return getProcessedPayloads();
     }
 
     @Override
     public List<Payload> initializationPayloads() {
-        if (identifier == getLeaderFromRoundNumber(currentRound)) {
-            List<NetworkNode> allNodes = new ArrayList<>(otherNodes);
-            allNodes.add(this);
-            return broadcastMessage(createPrePrepareMessage(identifier), allNodes);
-        } else {
-            return analyzeMessagesInNewRoundState(getBacklogMessagesOf(PREPREPARE_TYPE));
-        }
+        start(1, DUMMY_VALUE);
+        return getProcessedPayloads();
     }
 
-    @Override
-    public double getNextNotificationTime() {
-        if (isNotifiedOfTimer) {
-            return -1;
-        } else {
-            isNotifiedOfTimer = true;
-            return timer.getTimeoutTime();
-        }
+    // Utility methods
+    private void startTimer() {
+        timerExpiryCount++; // Every time a timer starts, a unique one is set.
+        notifyAtTime(getTime() + timerFunction(r_i), createTimerNotificationMessage().toString());
     }
 
-    @Override
-    public List<Payload> notifyTime(double time) {
-        if (state != IBFTState.ROUND_CHANGE && timer.hasTimedOut(time) && height == -1) {
-            // note the height == -1 condition is to restrict it from going for more rounds
-            nextRound = getRoundChangeRoundFromCurrentState();
-            state = IBFTState.ROUND_CHANGE;
-
-            List<Payload> payloads = broadcastMessage(createRoundChangeMessage(), otherNodes);
-            payloads.addAll(processPotentialRoundChange(getRoundChangeRoundFromCurrentState()));
-            return payloads;
-        } else {
-            return List.of();
-        }
+    private void broadcastMessage(IBFTMessage message) {
+        tempPayloadStore.addAll(sendMessage(message.toString(), allNodes));
     }
 
-    // backlog handling
-    private void addToBacklog(String message) {
-        int type = getMessageType(message);
-        int round = getRoundOfMessage(message);
-        backlog.putIfAbsent(round, new HashMap<>());
-        backlog.get(round).putIfAbsent(type, new ArrayList<>());
-        backlog.get(round).get(type).add(message);
+    private int getQuorumCount() {
+        return Math.floorDiv((N + F), 2) + 1;
     }
 
-    private List<String> getBacklogMessagesOf(int type) {
-        return Optional.ofNullable(backlog.get(currentRound))
-                .map(map -> map.remove(type))
-                .orElse(List.of());
+    private double timerFunction(int round) {
+        return Math.pow(2, round - 1) * baseTimeLimit;
     }
-
-    // util
-    private int getMessageTypeForState(IBFTState state) {
-        return STATE_TO_TYPE_MAP.get(state);
-    }
-
-    // Default format is {identifier}:{round}:{message type}:{message details}
-    private String createSeparatedMessage(List<Object> objects) {
-        List<Object> defaultStrings = new ArrayList<>(List.of(identifier, currentRound));
-        defaultStrings.addAll(objects);
-        return defaultStrings.stream().map(Object::toString).collect(Collectors.joining(":"));
-    }
-
-    private int getMessageType(String message) {
-        return Integer.parseInt(message.split(SEPARATOR)[2]);
-    }
-
-    private int getSender(String message) {
-        return Integer.parseInt(message.split(SEPARATOR)[0]);
-    }
-
-    private int getRoundOfMessage(String message) {
-        return Integer.parseInt(message.split(SEPARATOR)[1]);
-    }
-
-    private String getMessageDetails(String message) {
-        return message.split(SEPARATOR, 4)[3];
-    }
-
-    private int getNextRoundNumber(int roundNumber) {
+    private static int getNextRoundNumber(int roundNumber) {
         return roundNumber + 1;
     }
 
-    private int getLeaderFromRoundNumber(int roundNumber) {
-        return roundNumber % (otherNodes.size() + 1);
+    private static int getLeader(int consensusInstance, int roundNumber, int N) {
+        return (consensusInstance + roundNumber) % N;
     }
 
-    // message analysis methods
-    private List<Payload> processMessage(String originalMessage) {
-        int status = getMessageType(originalMessage);
-        if (status == ROUND_CHANGE_TYPE) {
-            processRoundChangeMessage(originalMessage);
+    // Timer expire handling
+    @Override
+    public List<Payload> notifyTime(double time, String stringMessage) {
+        IBFTMessage message = IBFTMessage.createIBFTMessageFromString(stringMessage);
+        int round = message.getRound();
+        int lambda = message.getLambda();
+        int messageTimerExpiryCount = message.getValue();
+        if (timerExpiryCount == messageTimerExpiryCount && lambda == lambda_i && round == r_i) {
+            timerExpiryOperation();
         }
-        if (status != getMessageTypeForState(state)) {
-            addToBacklog(originalMessage);
-            return List.of();
-        }
-
-        return analyzeMessages(List.of(originalMessage));
-    }
-
-    private List<Payload> analyzeMessages(List<String> originalMessages) {
-        List<Payload> finalizedPayloads = new ArrayList<>();
-        List<String> messages = new ArrayList<>(originalMessages);
-        while (!messages.isEmpty()) {
-            if (state == IBFTState.NEW_ROUND) {
-                finalizedPayloads.addAll(analyzeMessagesInNewRoundState(messages));
-            } else if (state == IBFTState.PRE_PREPARED) {
-                finalizedPayloads.addAll(analyzeMessagesInPrePreparedState(messages));
-            } else if (state == IBFTState.PREPARED) {
-                finalizedPayloads.addAll(analyzeMessagesInPreparedState(messages));
-            } else if (state == IBFTState.ROUND_CHANGE) {
-                finalizedPayloads.addAll(analyzeMessagesInRoundChangeState(messages));
-            } else {
-                throw new RuntimeException("Unknown state"); //TODO update exception type if necessary
-            }
-            messages = getBacklogMessagesOf(getMessageTypeForState(state));
-        }
-        return finalizedPayloads;
-    }
-
-    private String createPrePrepareMessage(int sequence) {
-        return createSeparatedMessage(List.of(PREPREPARE_TYPE, sequence));
-    }
-
-    private List<Payload> analyzeMessagesInNewRoundState(List<String> messages) {
-        for (String message : messages) {
-            int sender = getSender(message);
-            sequence = Integer.parseInt(getMessageDetails(message));
-            if (sender == getLeaderFromRoundNumber(currentRound) && sequence > height) {
-                state = IBFTState.PRE_PREPARED;
-                return broadcastMessage(createPrepareMessage(sequence), otherNodes);
-                // assumption that only one such message exists in the queue at most
-            }
-        }
-        return List.of();
-    }
-
-    private String createPrepareMessage(int sequence) {
-        return createSeparatedMessage(List.of(PREPARE_TYPE, sequence));
-    }
-
-    private List<Payload> analyzeMessagesInPrePreparedState(List<String> messages) {
-        for (String message : messages) {
-            String[] details = getMessageDetails(message).split(SEPARATOR);
-            int sequence = Integer.parseInt(details[0]);
-            int round = getRoundOfMessage(message);
-            if (round == currentRound && sequence == this.sequence) {
-                prepareCount++;
-
-            } else if (round > currentRound) {
-                addToBacklog(message);
-            }
-        }
-        if (prepareCount >= 2 * F) {
-            state = IBFTState.PREPARED;
-            return broadcastMessage(createCommittedMessage(sequence), otherNodes);
-        }
-        return List.of();
-    }
-
-    private String createCommittedMessage(int sequence) {
-        return createSeparatedMessage(List.of(COMMITTED_TYPE, sequence));
-    }
-
-    private void updateVariablesToNewRound() {
-        isNotifiedOfTimer = false;
-        timer.setStartTime(getTime());
-        state = IBFTState.NEW_ROUND;
-        committedCount = 0;
-        prepareCount = 0;
-    }
-    private List<Payload> analyzeMessagesInPreparedState(List<String> messages) {
-        for (String message : messages) {
-            String[] details = getMessageDetails(message).split(SEPARATOR);
-            int sequence = Integer.parseInt(details[0]);
-            int round = getRoundOfMessage(message);
-            if (round == currentRound && sequence == this.sequence) {
-                committedCount++;
-            } else if (round > currentRound) {
-                addToBacklog(message);
-            }
-        }
-        if (committedCount >= 2 * F) {
-            height = sequence;
-            currentRound = getNextRoundNumber(currentRound);
-            updateVariablesToNewRound();
-            System.out.println(getTime() + ": Consensus achieved at " + this);
-            consensusTime = getTime();
-            // consensus achieved
-        }
-        return List.of();
-    }
-
-    // round change handling
-    private void addRoundChangeCount(int round) {
-        roundChangeCountMap.put(round, roundChangeCountMap.getOrDefault(round, 0) + 1);
-    }
-
-    private int getRoundChangeCount(int round) {
-        return roundChangeCountMap.getOrDefault(round, 0);
-    }
-
-    private int getRoundChangeRoundFromMessage(String message) {
-        return Integer.parseInt(getMessageDetails(message));
-    }
-
-    private void processRoundChangeMessage(String message) {
-        addRoundChangeCount(getRoundChangeRoundFromMessage(message));
-    }
-
-    private int getRoundChangeRoundFromCurrentState() {
-        int currentMax = -1;
-        for (int round : roundChangeCountMap.keySet()) {
-            if (round > currentRound && roundChangeCountMap.get(round) > F + 1 && round > currentMax) {
-                currentMax = round;
-            }
-        }
-        return currentMax == -1 ? currentRound + 1 : currentMax;
-    }
-    private String createRoundChangeMessage() {
-        return createSeparatedMessage(List.of(ROUND_CHANGE_TYPE, nextRound));
-    }
-
-    private List<Payload> analyzeMessagesInRoundChangeState(List<String> messages) {
-        String message = messages.get(0); // Should only have 1
-        int suggestedRound = getRoundChangeRoundFromMessage(message);
-        int roundCount = getRoundChangeCount(suggestedRound);
-        if (suggestedRound > nextRound && roundCount >= F + 1) {
-            nextRound = suggestedRound;
-            return broadcastMessage(createRoundChangeMessage(), otherNodes);
-        }
-        return processPotentialRoundChange(nextRound);
-    }
-
-    private List<Payload> processPotentialRoundChange(int nextRound) {
-        int roundCount = getRoundChangeCount(nextRound);
-        if (roundCount >= 2 * F) {
-            System.out.println(getTime() + ": " + this + " changed round from " + currentRound + " to " + nextRound);
-            currentRound = nextRound;
-            updateVariablesToNewRound();
-            List<Payload> finalPayloads = new ArrayList<>(initializationPayloads());
-            finalPayloads.addAll(analyzeMessages(getBacklogMessagesOf(PREPREPARE_TYPE)));
-            return finalPayloads;
-        } else {
-            return List.of();
-        }
+        return getProcessedPayloads();
     }
 
     /**
-     * Returns the time the node took to achieve consensus or -1 if consensus was not reached.
+     * Returns a formatted timer notification message for the node itself.
      *
-     * @return time to reach consensus or -1 if consensus was not reached.
+     * @return formatted timer notification message containing consensus instance and round.
      */
-    public double getConsensusTime() {
-        return this.consensusTime;
+    private IBFTMessage createTimerNotificationMessage() {
+        return createSingleValueMessage(IBFTMessageType.TIMER_EXPIRY, timerExpiryCount);
+    }
+
+    // Message util
+    public IBFTMessage createSingleValueMessage(IBFTMessageType type, int value) {
+        return IBFTMessage.createValueMessage(p_i, type, lambda_i, r_i, value);
+    }
+
+    public IBFTMessage createPreparedValuesMessage(IBFTMessageType type) {
+        return IBFTMessage.createPreparedValuesMessage(p_i, type, lambda_i, r_i, pr_i, pv_i);
+    }
+
+    // Round start handling
+    private void start(int lambda, int value) {
+        // TODO filter out old messages
+        timerExpiryCount = 0;
+
+        lambda_i = lambda;
+        r_i = 1;
+        pr_i = NULL_VALUE;
+        pv_i = NULL_VALUE;
+        inputValue_i = value;
+        if (getLeader(lambda_i, r_i, N) == p_i) {
+            broadcastMessage(createSingleValueMessage(IBFTMessageType.PREPREPARED, inputValue_i));
+        }
+        startTimer();
+        prePrepareOperation();
+    }
+
+    // Message parsing methods
+    private void processMessage(IBFTMessage message) {
+        IBFTMessageType messageType = message.getMessageType();
+        messageHolder.addMessageToBacklog(message);
+
+        switch (messageType) {
+        case PREPREPARED:
+            prePrepareOperation();
+            break;
+        case PREPARED:
+            prepareOperation();
+            break;
+        case COMMIT:
+            commitOperation();
+            break;
+        case ROUND_CHANGE:
+            int messageRound = message.getRound();
+            if (messageRound > r_i) {
+                fPlusOneRoundChangeOperation();
+            } else if (messageRound == r_i) {
+                leaderRoundChangeOperation();
+            }
+            break;
+        }
+    }
+
+    // Round change handling
+    private void timerExpiryOperation() {
+        r_i++;
+        startTimer();
+        broadcastMessage(createPreparedValuesMessage(IBFTMessageType.ROUND_CHANGE));
+        prePrepareOperation();
+        prepareOperation();
+    }
+
+    private void fPlusOneRoundChangeOperation() {
+        if (messageHolder.hasMoreHigherRoundChangeMessagesThan(lambda_i, r_i)) {
+            int minimumRound = messageHolder.getNextGreaterRoundChangeMessage(lambda_i, r_i);
+            r_i = minimumRound;
+            startTimer();
+            broadcastMessage(createPreparedValuesMessage(IBFTMessageType.ROUND_CHANGE));
+            prePrepareOperation();
+            prepareOperation();
+        }
+    }
+
+    private void leaderRoundChangeOperation() {
+        if (p_i == getLeader(lambda_i, r_i, N)) {
+            if (messageHolder.hasQuorumOfMessages(IBFTMessageType.ROUND_CHANGE, lambda_i, r_i)) {
+                List<IBFTMessage> roundChangeMessages =
+                        messageHolder.getQuorumOfMessages(IBFTMessageType.ROUND_CHANGE, lambda_i, r_i);
+                if (justifyRoundChange(roundChangeMessages)) {
+                    Pair<Integer, Integer> prPvPair = highestPrepared(roundChangeMessages);
+                    int pr = prPvPair.first();
+                    int pv = prPvPair.second();
+                    if (pr != NULL_VALUE && pv != NULL_VALUE) {
+                        inputValue_i = pv;
+                    }
+                    broadcastMessage(createSingleValueMessage(IBFTMessageType.PREPREPARED, inputValue_i));
+                }
+            }
+        }
+    }
+
+    // Message processing
+    private void prePrepareOperation() {
+        List<IBFTMessage> preprepareMessages = messageHolder.getMessages(IBFTMessageType.PREPREPARED, lambda_i, r_i);
+        for (IBFTMessage message : preprepareMessages) {
+            int sender = message.getIdentifier();
+            if (sender == getLeader(lambda_i, r_i, N) && justifyPrePrepare(message)) {
+                startTimer();
+                inputValue_i = message.getValue();
+                broadcastMessage(createSingleValueMessage(IBFTMessageType.PREPARED, inputValue_i));
+            }
+        }
+    }
+
+    private void prepareOperation() {
+        if (messageHolder.hasQuorumOfMessages(IBFTMessageType.PREPARED, lambda_i, r_i)) {
+            List<IBFTMessage> prepareMessages =
+                    messageHolder.getQuorumOfMessages(IBFTMessageType.PREPARED, lambda_i, r_i);
+            pr_i = r_i;
+            pv_i = prepareMessages.get(0).getValue();
+            broadcastMessage(createSingleValueMessage(IBFTMessageType.COMMIT, inputValue_i));
+        }
+    }
+
+    private void commitOperation() {
+        if (messageHolder.hasQuorumOfMessagesOfSameRound(IBFTMessageType.COMMIT, lambda_i)) {
+            lambda_i++;
+            start(lambda_i, DUMMY_VALUE);
+        }
+    }
+
+    // Message justification
+
+    //TODO fix the piggybacking mechanism that is implemented wrongly
+    /**
+     * Returns true if the quorum of round change messages is justified.
+     *
+     * @param roundChangeMessageQuorum quorum of valid round change messages
+     * @return true if the round change quorum is justified.
+     */
+    private boolean justifyRoundChange(List<IBFTMessage> roundChangeMessageQuorum) {
+        Pair<Integer, Integer> quorumAnalysis = highestPrepared(roundChangeMessageQuorum);
+        int highestPr = quorumAnalysis.first();
+        int highestPv = quorumAnalysis.second();
+        return j1Justification(roundChangeMessageQuorum) ||
+                j2Justification(roundChangeMessageQuorum, lambda_i, highestPr, highestPv);
+    }
+
+    private boolean j1Justification(List<IBFTMessage> messages) {
+        return messages.stream().filter(message ->
+                message.getPreparedRound() == NULL_VALUE && message.getPreparedValue() == NULL_VALUE).count() >=
+                getQuorumCount();
+    }
+
+    private boolean j2Justification(List<IBFTMessage> messages, int lambda_i, int highestPr, int highestPv) {
+        return messages.size() >= getQuorumCount() &&
+                messages.stream().anyMatch(message -> message.getPiggybackMessages().stream().filter(pbm ->
+                                pbm.getMessageType() == IBFTMessageType.PREPARED &&
+                                pbm.getLambda() == lambda_i &&
+                                pbm.getPreparedValue() == highestPr &&
+                                pbm.getPreparedValue() == highestPv)
+                        .count() >= getQuorumCount());
+    }
+
+    /**
+     * Returns true if the received pre-prepare message is justified.
+     *
+     * @param message of type pre-prepare to be analyzed.
+     * @return true if the received pre-prepare message is justified.
+     */
+    private boolean justifyPrePrepare(IBFTMessage message) {
+        int messageRound = message.getRound();
+        if (messageRound == 1) {
+            return true;
+        }
+
+        List<IBFTMessage> piggybackMessages = message.getPiggybackMessages();
+        List<IBFTMessage> validPiggybackMessages = piggybackMessages.stream()
+                .filter(m -> m.getMessageType() == IBFTMessageType.ROUND_CHANGE &&
+                        m.getRound() == messageRound &&
+                        m.getLambda() == message.getLambda())
+                .collect(Collectors.toList());
+        return validPiggybackMessages.size() >= getQuorumCount() && justifyRoundChange(validPiggybackMessages);
+    }
+
+    /**
+     * Returns number of double null messages and highest prepared round with its associated prepared value.
+     *
+     * @param messageQuorum to be analyzed.
+     * @return Pair with first being the number of double null messages, and second being the pair of prepared numbers.
+     */
+    private Pair<Integer, Integer> highestPrepared(List<? extends IBFTMessage> messageQuorum) {
+        int pv = NULL_VALUE;
+        int pr = NULL_VALUE;
+        for (IBFTMessage message : messageQuorum) {
+            int message_pv = message.getPreparedValue();
+            int message_pr = message.getPreparedRound();
+            if (pr == NULL_VALUE || message_pr > pr) {
+                pr = message_pr;
+                pv = message_pv;
+            }  // else don't update
+        }
+        return new Pair<>(pr, pv);
     }
 
     @Override
     public String toString() {
         return String.format("%s (%s, %d, %d, %d, %d, RC(%d, %d))",
-                super.toString(),
-                state,
-                sequence,
-                currentRound,
-                prepareCount,
-                committedCount,
-                nextRound,
-                getRoundChangeCount(nextRound));
+                super.toString());
+        //TODO fix this
     }
 }
