@@ -12,7 +12,7 @@ public class EventUtil {
             List<? extends Payload<T>> payloads) {
         List<Event> events = new ArrayList<>();
         for (Payload<T> payload : payloads) {
-            events.add(new QueueEvent(time, currentNode.getNextNodeFor(payload), payload));
+            events.add(new QueueEvent<>(time, currentNode.getNextNodeFor(payload), payload));
         }
         return events;
     }

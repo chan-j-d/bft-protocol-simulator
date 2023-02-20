@@ -19,9 +19,9 @@ public class Main {
 
         double timeLimit = 100;
 
-        int numNodes = 8;
+        int numNodes = 4;
         int numTrials = 1;
-        int seedMultiplier = 1000;
+        int seedMultiplier = 100;
         int consensusLimit = 10;
 
         double totalTime2 = 0;

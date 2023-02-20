@@ -32,7 +32,7 @@ public class ProcessPayloadEvent<T> extends RandomDurationEvent {
         List<Payload<T>> processedPayloads = node.processPayload(processingEndTime, payload);
         List<Event> eventList =
                 new ArrayList<>(convertPayloadsToQueueEvents(processingEndTime, node, processedPayloads));
-        eventList.add(new PollQueueEvent(processingEndTime, node));
+        eventList.add(new PollQueueEvent<>(processingEndTime, node));
         return eventList;
     }
 

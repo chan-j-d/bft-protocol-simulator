@@ -3,6 +3,7 @@ package simulation.network.entity;
 import simulation.util.Queueable;
 
 import java.util.ArrayList;
+import java.util.Collection;
 import java.util.HashMap;
 import java.util.LinkedList;
 import java.util.List;
@@ -91,10 +92,13 @@ public abstract class NetworkNode<T> implements Queueable<Payload<T>> {
         neighbors.clear();
     }
 
-    public List<Payload<T>> sendMessage(T message, List<? extends NetworkNode<T>> nodes) {
+    public Payload<T> sendMessage(T message, NetworkNode<T> node) {
+        return new Payload<>(message, node.getName());
+    }
+    public List<Payload<T>> sendMessage(T message, Collection<? extends NetworkNode<T>> nodes) {
         List<Payload<T>> payloads = new ArrayList<>();
         for (NetworkNode<T> node : nodes) {
-            payloads.add(new Payload<T>(message, node.getName()));
+            payloads.add(new Payload<>(message, node.getName()));
         }
         return payloads;
     }
