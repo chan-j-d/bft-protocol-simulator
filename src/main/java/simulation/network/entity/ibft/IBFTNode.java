@@ -153,9 +153,6 @@ public class IBFTNode extends TimedNetworkNode<IBFTMessage> {
 
     // Round start handling
     private void start(int lambda, int value) {
-        if (lambda > consensusLimit) {
-            return;
-        }
         timerExpiryCount = 0;
 
         lambda_i = lambda;
@@ -164,6 +161,9 @@ public class IBFTNode extends TimedNetworkNode<IBFTMessage> {
         pv_i = NULL_VALUE;
         preparedMessageJustification = List.of();
         inputValue_i = value;
+        if (lambda > consensusLimit) {
+            return;
+        }
         if (getLeader(lambda_i, r_i, N) == p_i) {
             broadcastMessage(createSingleValueMessage(IBFTMessageType.PREPREPARED, inputValue_i));
         }

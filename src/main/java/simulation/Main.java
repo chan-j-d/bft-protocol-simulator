@@ -17,7 +17,7 @@ public class Main {
     public static void main(String[] args) {
 
 
-        double timeLimit = 5;
+        double timeLimit = 100;
 
         int numNodes = 8;
         int numTrials = 1;

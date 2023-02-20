@@ -60,7 +60,7 @@ public class Simulator<T> implements NodeTimerNotifier<T> {
     }
 
     public boolean isSimulationOver() {
-        return eventQueue.isEmpty() || getTime() > 50;
+        return eventQueue.isEmpty();
     }
 
     @Override
