@@ -1,5 +1,6 @@
 package simulation.network.entity.ibft;
 
+import java.util.List;
 import java.util.Map;
 
 public enum IBFTMessageType {
@@ -17,6 +18,9 @@ public enum IBFTMessageType {
             "COMMIT", COMMIT,
             "TIMER_EXPIRY", TIMER_EXPIRY
     );
+
+    public static final List<IBFTMessageType> MESSAGE_TYPES = List.of(
+            PREPREPARED, PREPARED, ROUND_CHANGE, COMMIT, TIMER_EXPIRY);
 
     private final String representation;
 

@@ -31,7 +31,7 @@ public class Main {
 
             Simulator simulator = new Simulator(cliqueStructure(nodes));
             for (int i = 0; i < numNodes; i++) {
-                nodes.add(new IBFTNode("IBFT-" + i, i, timeLimit, simulator));
+                nodes.add(new IBFTNode("IBFT-" + i, i, timeLimit, simulator, numNodes));
             }
             for (IBFTNode node : nodes) {
                 node.setAllNodes(nodes);
@@ -40,21 +40,6 @@ public class Main {
                 io.output(simulator.simulate());
             }
             io.output("\nSnapshot:\n" + simulator.getSnapshotOfNodes());
-
-            int numNodesReachingConsensus = 0;
-            double totalTime = 0;
-            for (IBFTNode node : nodes) {
-                if (node.getConsensusTime() != -1) {
-                    totalTime += node.getConsensusTime();
-                    numNodesReachingConsensus += 1;
-                }
-            }
-
-            io.output("Average time to consensus: " + totalTime / numNodesReachingConsensus);
-
-            System.out.println(totalTime / numNodesReachingConsensus);
-            totalNodesConsensus += numNodesReachingConsensus;
-            totalTime2 += totalTime;
             io.close();
         }
 

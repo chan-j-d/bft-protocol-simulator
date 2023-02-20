@@ -41,21 +41,21 @@ public class IBFTNode extends TimedNetworkNode {
     private int inputValue_i; // value passed as input to instance
 
 
-    public IBFTNode(String name, int identifier, double baseTimeLimit, NodeTimerNotifier timerNotifier) {
+    public IBFTNode(String name, int identifier, double baseTimeLimit, NodeTimerNotifier timerNotifier, int N) {
         super(name, timerNotifier);
         this.p_i = identifier;
         this.allNodes = new ArrayList<>();
         this.baseTimeLimit = baseTimeLimit;
         this.timerExpiryCount = 0;
+        this.N = N;
+        this.F = (this.N - 1) / 3;
 
         this.tempPayloadStore = new ArrayList<>();
-        this.messageHolder = new IBFTMessageHolder();
+        this.messageHolder = new IBFTMessageHolder(getQuorumCount());
     }
 
     public void setAllNodes(List<IBFTNode> allNodes) {
         this.allNodes = new ArrayList<>(allNodes);
-        this.N = allNodes.size();
-        this.F = (this.N - 1) / 3;
     }
 
     /**
@@ -142,7 +142,6 @@ public class IBFTNode extends TimedNetworkNode {
 
     // Round start handling
     private void start(int lambda, int value) {
-        // TODO filter out old messages
         timerExpiryCount = 0;
 
         lambda_i = lambda;
@@ -207,7 +206,8 @@ public class IBFTNode extends TimedNetworkNode {
         if (p_i == getLeader(lambda_i, r_i, N)) {
             if (messageHolder.hasQuorumOfMessages(IBFTMessageType.ROUND_CHANGE, lambda_i, r_i)) {
                 List<IBFTMessage> roundChangeMessages =
-                        messageHolder.getQuorumOfMessages(IBFTMessageType.ROUND_CHANGE, lambda_i, r_i);
+                        messageHolder.getQuorumOfMessages(IBFTMessageType.ROUND_CHANGE,
+                                lambda_i, r_i);
                 if (justifyRoundChange(roundChangeMessages)) {
                     Pair<Integer, Integer> prPvPair = highestPrepared(roundChangeMessages);
                     int pr = prPvPair.first();
@@ -245,15 +245,22 @@ public class IBFTNode extends TimedNetworkNode {
     }
 
     private void commitOperation() {
-        if (messageHolder.hasQuorumOfMessagesOfSameRound(IBFTMessageType.COMMIT, lambda_i)) {
+        if (messageHolder.hasCommitQuorumOfMessages(lambda_i)) {
+            Pair<Integer, List<IBFTMessage>> valueMessagesPair = messageHolder.getRoundValueToCommit(lambda_i);
+            commit(lambda_i, valueMessagesPair.first(), valueMessagesPair.second());
+            messageHolder.advanceConsensusInstance(lambda_i, lambda_i + 1);
             lambda_i++;
             start(lambda_i, DUMMY_VALUE);
         }
     }
 
+    private void commit(int consensusInstance, int value, List<IBFTMessage> messages) {
+        // currently not necessary
+        return;
+    }
+
     // Message justification
 
-    //TODO fix the piggybacking mechanism that is implemented wrongly
     /**
      * Returns true if the quorum of round change messages is justified.
      *
