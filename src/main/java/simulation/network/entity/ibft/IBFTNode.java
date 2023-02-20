@@ -17,6 +17,7 @@ public class IBFTNode extends TimedNetworkNode {
      * Dummy value to be passed around as part of the protocol.
      */
     private static final int DUMMY_VALUE = 1;
+    public static final int FIRST_CONSENSUS_INSTANCE = 1;
 
     // Simulation variables
     private final double baseTimeLimit;
@@ -51,7 +52,7 @@ public class IBFTNode extends TimedNetworkNode {
         this.F = (this.N - 1) / 3;
 
         this.tempPayloadStore = new ArrayList<>();
-        this.messageHolder = new IBFTMessageHolder(getQuorumCount());
+        this.messageHolder = new IBFTMessageHolder(getQuorumCount(), FIRST_CONSENSUS_INSTANCE);
     }
 
     public void setAllNodes(List<IBFTNode> allNodes) {
@@ -80,7 +81,7 @@ public class IBFTNode extends TimedNetworkNode {
 
     @Override
     public List<Payload> initializationPayloads() {
-        start(1, DUMMY_VALUE);
+        start(FIRST_CONSENSUS_INSTANCE, DUMMY_VALUE);
         return getProcessedPayloads();
     }
 
@@ -192,6 +193,7 @@ public class IBFTNode extends TimedNetworkNode {
     }
 
     private void fPlusOneRoundChangeOperation() {
+        System.out.println(this);
         if (messageHolder.hasMoreHigherRoundChangeMessagesThan(lambda_i, r_i)) {
             int minimumRound = messageHolder.getNextGreaterRoundChangeMessage(lambda_i, r_i);
             r_i = minimumRound;
@@ -248,6 +250,7 @@ public class IBFTNode extends TimedNetworkNode {
         if (messageHolder.hasCommitQuorumOfMessages(lambda_i)) {
             Pair<Integer, List<IBFTMessage>> valueMessagesPair = messageHolder.getRoundValueToCommit(lambda_i);
             commit(lambda_i, valueMessagesPair.first(), valueMessagesPair.second());
+            System.out.println(this);
             messageHolder.advanceConsensusInstance(lambda_i, lambda_i + 1);
             lambda_i++;
             start(lambda_i, DUMMY_VALUE);
@@ -334,9 +337,8 @@ public class IBFTNode extends TimedNetworkNode {
 
     @Override
     public String toString() {
-        return String.format("%s (%d, %d, %d)",
+        return String.format("%s (%d, %d)",
                 super.toString(),
-                p_i,
                 lambda_i,
                 r_i);
     }

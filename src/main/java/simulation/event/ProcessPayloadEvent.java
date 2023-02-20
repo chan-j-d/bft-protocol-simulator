@@ -4,7 +4,6 @@ import simulation.network.entity.NetworkNode;
 import simulation.network.entity.Payload;
 import simulation.util.rng.ExponentialDistribution;
 import simulation.util.rng.RandomNumberGenerator;
-import simulation.util.rng.TestGenerator;
 
 import java.util.ArrayList;
 import java.util.List;

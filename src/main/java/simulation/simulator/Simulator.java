@@ -13,7 +13,7 @@ import java.util.PriorityQueue;
 
 public class Simulator implements NodeTimerNotifier {
 
-    private static final int SNAPSHOT_INTERVAL = 10;
+    private static final int SNAPSHOT_INTERVAL = 100;
 
     private PriorityQueue<Event> eventQueue;
     private int roundCount;

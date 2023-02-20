@@ -19,17 +19,22 @@ public class IBFTMessageHolder {
     private Map<Integer, Integer> roundChangeMessageCounts;
     private Map<Integer, Pair<Integer, List<IBFTMessage>>> toCommitRoundValueMap;
     private int threshold;
+    private int currentConsensusInstance;
 
-    public IBFTMessageHolder(int threshold) {
+    public IBFTMessageHolder(int threshold, int lambda) {
         messageStorage = new HashMap<>();
         roundChangeMessageCounts = new HashMap<>();
         toCommitRoundValueMap = new HashMap<>();
         this.threshold = threshold;
+        this.currentConsensusInstance = lambda;
     }
 
     public void addMessageToBacklog(IBFTMessage message) {
         IBFTMessageType type = message.getMessageType();
         int consensusInstance = message.getLambda();
+        if (consensusInstance < currentConsensusInstance) {
+            return;
+        }
         int round = message.getRound();
         int identifyingValue = message.getValue() == NULL_VALUE
                 ? message.getPreparedRound()
@@ -61,7 +66,7 @@ public class IBFTMessageHolder {
     }
 
     public boolean hasMoreHigherRoundChangeMessagesThan(int consensusInstance, int round) {
-        int totalCountForConsensusInstance = roundChangeMessageCounts.get(consensusInstance);
+        int totalCountForConsensusInstance = roundChangeMessageCounts.computeIfAbsent(consensusInstance, k -> 0);
         int currentRoundChangeCount = filterTypeLambdaRound(IBFTMessageType.ROUND_CHANGE, round, threshold)
                 .stream()
                 .flatMap(valueMap -> valueMap.values().stream())
@@ -119,6 +124,7 @@ public class IBFTMessageHolder {
     }
 
     public void advanceConsensusInstance(int oldLambda, int newLambda) {
+        System.out.println("removing" + oldLambda + " " + newLambda);
         for (int i = oldLambda; i < newLambda; i++) {
             for (IBFTMessageType type : MESSAGE_TYPES) {
                 messageStorage.getOrDefault(type, new HashMap<>()).remove(i);
@@ -126,5 +132,6 @@ public class IBFTMessageHolder {
             roundChangeMessageCounts.remove(i);
             toCommitRoundValueMap.remove(i);
         }
+        currentConsensusInstance = newLambda;
     }
 }
