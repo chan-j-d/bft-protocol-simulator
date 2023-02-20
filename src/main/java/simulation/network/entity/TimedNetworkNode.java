@@ -12,6 +12,7 @@ public abstract class TimedNetworkNode extends NetworkNode {
 
     public TimedNetworkNode(String name, NodeTimerNotifier timerNotifier) {
         super(name);
+        this.timerNotifier = timerNotifier;
     }
 
     public double getTime() {

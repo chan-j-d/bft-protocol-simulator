@@ -334,8 +334,10 @@ public class IBFTNode extends TimedNetworkNode {
 
     @Override
     public String toString() {
-        return String.format("%s (%s, %d, %d, %d, %d, RC(%d, %d))",
-                super.toString());
-        //TODO fix this
+        return String.format("%s (%d, %d, %d)",
+                super.toString(),
+                p_i,
+                lambda_i,
+                r_i);
     }
 }

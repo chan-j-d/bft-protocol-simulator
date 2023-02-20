@@ -7,7 +7,7 @@ import java.util.ArrayList;
 import java.util.List;
 
 public class NetworkStructure {
-    public static List<NetworkNode> cliqueStructure(List<? extends NetworkNode> nodes) {
+    public static List<NetworkNode> arrangeCliqueStructure(List<? extends NetworkNode> nodes) {
         for (NetworkNode node : nodes) {
             node.clearNeighbors();
             List<NetworkNode> copy = new ArrayList<>(nodes);

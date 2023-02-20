@@ -7,6 +7,7 @@ import simulation.network.entity.TimedNetworkNode;
 import simulation.network.entity.NetworkNode;
 import simulation.network.entity.NodeTimerNotifier;
 
+import java.util.ArrayList;
 import java.util.List;
 import java.util.PriorityQueue;
 
@@ -18,8 +19,11 @@ public class Simulator implements NodeTimerNotifier {
     private int roundCount;
     private List<NetworkNode> nodes;
     private double currentTime;
-    public Simulator(List<NetworkNode> nodes) {
-        this.nodes = nodes;
+
+    public Simulator() {
+    }
+    public void setNodes(List<? extends NetworkNode> nodes) {
+        this.nodes = new ArrayList<>(nodes);
         eventQueue = new PriorityQueue<>();
         for (NetworkNode node : nodes) {
             eventQueue.add(new InitializationEvent(node));

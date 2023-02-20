@@ -121,7 +121,7 @@ public class IBFTMessageHolder {
     public void advanceConsensusInstance(int oldLambda, int newLambda) {
         for (int i = oldLambda; i < newLambda; i++) {
             for (IBFTMessageType type : MESSAGE_TYPES) {
-                messageStorage.get(type).remove(i);
+                messageStorage.getOrDefault(type, new HashMap<>()).remove(i);
             }
             roundChangeMessageCounts.remove(i);
             toCommitRoundValueMap.remove(i);

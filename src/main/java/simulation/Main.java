@@ -1,6 +1,6 @@
 package simulation;
 
-import simulation.io.FileIo;
+import simulation.io.ConsoleIo;
 import simulation.io.IoInterface;
 import simulation.network.entity.ibft.IBFTNode;
 import simulation.simulator.Simulator;
@@ -10,7 +10,7 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.Random;
 
-import static simulation.network.structure.NetworkStructure.cliqueStructure;
+import static simulation.network.structure.NetworkStructure.arrangeCliqueStructure;
 
 public class Main {
     public static void main(String[] args) {
@@ -18,21 +18,23 @@ public class Main {
 
         double timeLimit = 10000;
 
-        int numNodes = 64;
-        int numTrials = 5;
-        int seedMultiplier = 5;
+        int numNodes = 8;
+        int numTrials = 1;
+        int seedMultiplier = 1000;
 
         double totalTime2 = 0;
         int totalNodesConsensus = 0;
         for (int j = 0; j < numTrials; j++) {
             ExponentialDistribution.UNIFORM_DISTRIBUTION = new Random(seedMultiplier * j);
-            IoInterface io = new FileIo("output" + j + ".txt");
+            //IoInterface io = new FileIo("output" + j + ".txt");
+            IoInterface io = new ConsoleIo();
             List<IBFTNode> nodes = new ArrayList<>();
-
-            Simulator simulator = new Simulator(cliqueStructure(nodes));
+            Simulator simulator = new Simulator();
             for (int i = 0; i < numNodes; i++) {
                 nodes.add(new IBFTNode("IBFT-" + i, i, timeLimit, simulator, numNodes));
             }
+            simulator.setNodes(nodes);
+            arrangeCliqueStructure(nodes);
             for (IBFTNode node : nodes) {
                 node.setAllNodes(nodes);
             }
@@ -42,7 +44,5 @@ public class Main {
             io.output("\nSnapshot:\n" + simulator.getSnapshotOfNodes());
             io.close();
         }
-
-        System.out.println(totalTime2 / totalNodesConsensus);
     }
 }
