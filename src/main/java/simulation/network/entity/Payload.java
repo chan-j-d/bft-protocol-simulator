@@ -1,11 +1,11 @@
 package simulation.network.entity;
 
-public class Payload {
+public class Payload<T> {
 
-    private String message;
+    private T message;
     private String destination;
 
-    public Payload(String message, String destination) {
+    public Payload(T message, String destination) {
         this.message = message;
         this.destination = destination;
     }
@@ -14,7 +14,7 @@ public class Payload {
         return destination;
     }
 
-    public String getMessage() {
+    public T getMessage() {
         return message;
     }
     @Override

@@ -16,11 +16,12 @@ public class Main {
     public static void main(String[] args) {
 
 
-        double timeLimit = 30;
+        double timeLimit = 5;
 
         int numNodes = 8;
         int numTrials = 1;
         int seedMultiplier = 1000;
+        int consensusLimit = 10;
 
         double totalTime2 = 0;
         int totalNodesConsensus = 0;
@@ -31,7 +32,7 @@ public class Main {
             List<IBFTNode> nodes = new ArrayList<>();
             Simulator simulator = new Simulator();
             for (int i = 0; i < numNodes; i++) {
-                nodes.add(new IBFTNode("IBFT-" + i, i, timeLimit, simulator, numNodes));
+                nodes.add(new IBFTNode("IBFT-" + i, i, timeLimit, simulator, numNodes, consensusLimit));
             }
             simulator.setNodes(nodes);
             arrangeCliqueStructure(nodes);

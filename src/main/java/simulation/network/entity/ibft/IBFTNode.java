@@ -11,7 +11,7 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.stream.Collectors;
 
-public class IBFTNode extends TimedNetworkNode {
+public class IBFTNode extends TimedNetworkNode<IBFTMessage> {
 
     /**
      * Dummy value to be passed around as part of the protocol.
@@ -21,6 +21,7 @@ public class IBFTNode extends TimedNetworkNode {
 
     // Simulation variables
     private final double baseTimeLimit;
+    private final int consensusLimit;
     private int N;
     private int F;
     private List<IBFTNode> allNodes;
@@ -32,17 +33,19 @@ public class IBFTNode extends TimedNetworkNode {
      * Stores payloads while node is processing a message.
      * All payloads are retrieved and sent out after message processing.
      */
-    private List<Payload> tempPayloadStore;
+    private List<Payload<IBFTMessage>> tempPayloadStore;
 
     private final int p_i; // identifier
     private int lambda_i; // consensus instance identifier
     private int r_i; // round number
     private int pr_i; // round at which process has prepared
     private int pv_i; // value for which process has prepared
+    private List<IBFTMessage> preparedMessageJustification;
     private int inputValue_i; // value passed as input to instance
 
 
-    public IBFTNode(String name, int identifier, double baseTimeLimit, NodeTimerNotifier timerNotifier, int N) {
+    public IBFTNode(String name, int identifier, double baseTimeLimit, NodeTimerNotifier timerNotifier, int N,
+            int consensusLimit) {
         super(name, timerNotifier);
         this.p_i = identifier;
         this.allNodes = new ArrayList<>();
@@ -50,6 +53,7 @@ public class IBFTNode extends TimedNetworkNode {
         this.timerExpiryCount = 0;
         this.N = N;
         this.F = (this.N - 1) / 3;
+        this.consensusLimit = consensusLimit;
 
         this.tempPayloadStore = new ArrayList<>();
         this.messageHolder = new IBFTMessageHolder(getQuorumCount(), FIRST_CONSENSUS_INSTANCE);
@@ -65,22 +69,22 @@ public class IBFTNode extends TimedNetworkNode {
      *
      * @return List of payloads that were generated from a processing step.
      */
-    private List<Payload> getProcessedPayloads() {
-        List<Payload> payloads = tempPayloadStore;
+    private List<Payload<IBFTMessage>> getProcessedPayloads() {
+        List<Payload<IBFTMessage>> payloads = tempPayloadStore;
         tempPayloadStore = new ArrayList<>();
         return payloads;
     }
 
     @Override
-    public List<Payload> processPayload(double time, Payload payload) {
+    public List<Payload<IBFTMessage>> processPayload(double time, Payload<IBFTMessage> payload) {
         super.processPayload(time, payload);
-        IBFTMessage message = IBFTMessage.createIBFTMessageFromString(payload.getMessage());
+        IBFTMessage message = payload.getMessage();
         processMessage(message);
         return getProcessedPayloads();
     }
 
     @Override
-    public List<Payload> initializationPayloads() {
+    public List<Payload<IBFTMessage>> initializationPayloads() {
         start(FIRST_CONSENSUS_INSTANCE, DUMMY_VALUE);
         return getProcessedPayloads();
     }
@@ -92,7 +96,7 @@ public class IBFTNode extends TimedNetworkNode {
     }
 
     private void broadcastMessage(IBFTMessage message) {
-        tempPayloadStore.addAll(sendMessage(message.toString(), allNodes));
+        tempPayloadStore.addAll(sendMessage(message, allNodes));
     }
 
     private int getQuorumCount() {
@@ -102,9 +106,6 @@ public class IBFTNode extends TimedNetworkNode {
     private double timerFunction(int round) {
         return Math.pow(2, round - 1) * baseTimeLimit;
     }
-    private static int getNextRoundNumber(int roundNumber) {
-        return roundNumber + 1;
-    }
 
     private static int getLeader(int consensusInstance, int roundNumber, int N) {
         return (consensusInstance + roundNumber) % N;
@@ -112,8 +113,7 @@ public class IBFTNode extends TimedNetworkNode {
 
     // Timer expire handling
     @Override
-    public List<Payload> notifyTime(double time, String stringMessage) {
-        IBFTMessage message = IBFTMessage.createIBFTMessageFromString(stringMessage);
+    public List<Payload<IBFTMessage>> notifyTime(double time, IBFTMessage message) {
         int round = message.getRound();
         int lambda = message.getLambda();
         int messageTimerExpiryCount = message.getValue();
@@ -137,18 +137,32 @@ public class IBFTNode extends TimedNetworkNode {
         return IBFTMessage.createValueMessage(p_i, type, lambda_i, r_i, value);
     }
 
+    public IBFTMessage createSingleValueMessage(IBFTMessageType type, int value, List<IBFTMessage> piggybackMessages) {
+        return IBFTMessage.createValueMessage(p_i, type, lambda_i, r_i, value, piggybackMessages);
+    }
+
     public IBFTMessage createPreparedValuesMessage(IBFTMessageType type) {
         return IBFTMessage.createPreparedValuesMessage(p_i, type, lambda_i, r_i, pr_i, pv_i);
     }
 
+    public IBFTMessage createPreparedValuesMessage(IBFTMessageType type, List<IBFTMessage> piggybackMessages) {
+        return IBFTMessage.createPreparedValuesMessage(p_i, type, lambda_i, r_i, pr_i, pv_i, piggybackMessages);
+    }
+
+    //TODO implement sending of quorum messages to old nodes
+
     // Round start handling
     private void start(int lambda, int value) {
+        if (lambda > consensusLimit) {
+            return;
+        }
         timerExpiryCount = 0;
 
         lambda_i = lambda;
         r_i = 1;
         pr_i = NULL_VALUE;
         pv_i = NULL_VALUE;
+        preparedMessageJustification = List.of();
         inputValue_i = value;
         if (getLeader(lambda_i, r_i, N) == p_i) {
             broadcastMessage(createSingleValueMessage(IBFTMessageType.PREPREPARED, inputValue_i));
@@ -187,13 +201,16 @@ public class IBFTNode extends TimedNetworkNode {
     private void timerExpiryOperation() {
         r_i++;
         startTimer();
-        broadcastMessage(createPreparedValuesMessage(IBFTMessageType.ROUND_CHANGE));
+        if (pr_i == NULL_VALUE && pv_i == NULL_VALUE) {
+            broadcastMessage(createPreparedValuesMessage(IBFTMessageType.ROUND_CHANGE));
+        } else {
+            broadcastMessage(createPreparedValuesMessage(IBFTMessageType.ROUND_CHANGE, preparedMessageJustification));
+        }
         prePrepareOperation();
         prepareOperation();
     }
 
     private void fPlusOneRoundChangeOperation() {
-        System.out.println(this);
         if (messageHolder.hasMoreHigherRoundChangeMessagesThan(lambda_i, r_i)) {
             int minimumRound = messageHolder.getNextGreaterRoundChangeMessage(lambda_i, r_i);
             r_i = minimumRound;
@@ -217,7 +234,8 @@ public class IBFTNode extends TimedNetworkNode {
                     if (pr != NULL_VALUE && pv != NULL_VALUE) {
                         inputValue_i = pv;
                     }
-                    broadcastMessage(createSingleValueMessage(IBFTMessageType.PREPREPARED, inputValue_i));
+                    broadcastMessage(createSingleValueMessage(
+                            IBFTMessageType.PREPREPARED, inputValue_i, roundChangeMessages));
                 }
             }
         }
@@ -242,6 +260,7 @@ public class IBFTNode extends TimedNetworkNode {
                     messageHolder.getQuorumOfMessages(IBFTMessageType.PREPARED, lambda_i, r_i);
             pr_i = r_i;
             pv_i = prepareMessages.get(0).getValue();
+            preparedMessageJustification = prepareMessages;
             broadcastMessage(createSingleValueMessage(IBFTMessageType.COMMIT, inputValue_i));
         }
     }
@@ -250,7 +269,6 @@ public class IBFTNode extends TimedNetworkNode {
         if (messageHolder.hasCommitQuorumOfMessages(lambda_i)) {
             Pair<Integer, List<IBFTMessage>> valueMessagesPair = messageHolder.getRoundValueToCommit(lambda_i);
             commit(lambda_i, valueMessagesPair.first(), valueMessagesPair.second());
-            System.out.println(this);
             messageHolder.advanceConsensusInstance(lambda_i, lambda_i + 1);
             lambda_i++;
             start(lambda_i, DUMMY_VALUE);
@@ -312,6 +330,9 @@ public class IBFTNode extends TimedNetworkNode {
                         m.getRound() == messageRound &&
                         m.getLambda() == message.getLambda())
                 .collect(Collectors.toList());
+        System.out.println(message);
+        System.out.println("j1: " + (validPiggybackMessages.size() >= getQuorumCount()));
+        System.out.println("j2: " + justifyRoundChange(validPiggybackMessages));
         return validPiggybackMessages.size() >= getQuorumCount() && justifyRoundChange(validPiggybackMessages);
     }
 

@@ -124,7 +124,6 @@ public class IBFTMessageHolder {
     }
 
     public void advanceConsensusInstance(int oldLambda, int newLambda) {
-        System.out.println("removing" + oldLambda + " " + newLambda);
         for (int i = oldLambda; i < newLambda; i++) {
             for (IBFTMessageType type : MESSAGE_TYPES) {
                 messageStorage.getOrDefault(type, new HashMap<>()).remove(i);

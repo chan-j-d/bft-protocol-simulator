@@ -46,26 +46,26 @@ public class IBFTMessage {
         this.piggybackMessages = List.copyOf(piggybackMessages);
     }
 
-    public static IBFTMessage createIBFTMessageFromString(String message) {
-        String[] details = message.split(SEPARATOR);
-        return new IBFTMessage(
-                Integer.parseInt(details[0]),
-                IBFTMessageType.getMessageTypeFromString(details[1]),
-                Integer.parseInt(details[2]),
-                Integer.parseInt(details[3]),
-                Integer.parseInt(details[4]),
-                Integer.parseInt(details[5]),
-                Integer.parseInt(details[6])
-        );
-    }
     public static IBFTMessage createValueMessage(int identifier, IBFTMessageType messageType,
             int lambda, int round, int value) {
         return new IBFTMessage(identifier, messageType, lambda, round, value, NULL_VALUE, NULL_VALUE);
     }
 
+    public static IBFTMessage createValueMessage(int identifier, IBFTMessageType messageType,
+            int lambda, int round, int value, List<IBFTMessage> piggybackMessages) {
+        return new IBFTMessage(identifier, messageType, lambda, round, value,
+                NULL_VALUE, NULL_VALUE, piggybackMessages);
+    }
+
     public static IBFTMessage createPreparedValuesMessage(int identifier, IBFTMessageType messageType,
             int lambda, int round, int preparedRound, int preparedValue) {
         return new IBFTMessage(identifier, messageType, lambda, round, NULL_VALUE, preparedRound, preparedValue);
+    }
+
+    public static IBFTMessage createPreparedValuesMessage(int identifier, IBFTMessageType messageType,
+            int lambda, int round, int preparedRound, int preparedValue, List<IBFTMessage> piggybackMessages) {
+        return new IBFTMessage(identifier, messageType, lambda, round, NULL_VALUE,
+                preparedRound, preparedValue, piggybackMessages);
     }
 
     public int getIdentifier() {

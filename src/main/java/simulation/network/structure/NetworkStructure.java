@@ -7,10 +7,10 @@ import java.util.ArrayList;
 import java.util.List;
 
 public class NetworkStructure {
-    public static List<NetworkNode> arrangeCliqueStructure(List<? extends NetworkNode> nodes) {
-        for (NetworkNode node : nodes) {
+    public static <T> List<NetworkNode<T>> arrangeCliqueStructure(List<? extends NetworkNode<T>> nodes) {
+        for (NetworkNode<T> node : nodes) {
             node.clearNeighbors();
-            List<NetworkNode> copy = new ArrayList<>(nodes);
+            List<NetworkNode<T>> copy = new ArrayList<>(nodes);
             copy.remove(node);
             node.addNeighbors(copy);
 

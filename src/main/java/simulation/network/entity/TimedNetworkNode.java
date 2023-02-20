@@ -6,7 +6,7 @@ import simulation.network.entity.Payload;
 
 import java.util.List;
 
-public abstract class TimedNetworkNode extends NetworkNode {
+public abstract class TimedNetworkNode<T> extends NetworkNode<T> {
 
     private NodeTimerNotifier timerNotifier;
 
@@ -30,6 +30,6 @@ public abstract class TimedNetworkNode extends NetworkNode {
      * @param message to be attached with the notification for analysis.
      * @return List of payloads to be sent at the given time.
      */
-    public abstract List<Payload> notifyTime(double time, String message);
+    public abstract List<Payload<T>> notifyTime(double time, T message);
 
 }
