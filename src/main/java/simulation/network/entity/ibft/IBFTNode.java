@@ -44,8 +44,8 @@ public class IBFTNode extends TimedNetworkNode<IBFTMessage> {
     private int inputValue_i; // value passed as input to instance
 
 
-    public IBFTNode(String name, int identifier, double baseTimeLimit, NodeTimerNotifier timerNotifier, int N,
-            int consensusLimit) {
+    public IBFTNode(String name, int identifier, double baseTimeLimit, NodeTimerNotifier<IBFTMessage> timerNotifier,
+            int N, int consensusLimit) {
         super(name, timerNotifier);
         this.p_i = identifier;
         this.allNodes = new ArrayList<>();
@@ -92,7 +92,7 @@ public class IBFTNode extends TimedNetworkNode<IBFTMessage> {
     // Utility methods
     private void startTimer() {
         timerExpiryCount++; // Every time a timer starts, a unique one is set.
-        notifyAtTime(getTime() + timerFunction(r_i), createTimerNotificationMessage().toString());
+        notifyAtTime(getTime() + timerFunction(r_i), createTimerNotificationMessage());
     }
 
     private void broadcastMessage(IBFTMessage message) {

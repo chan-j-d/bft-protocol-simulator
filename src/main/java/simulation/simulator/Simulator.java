@@ -11,21 +11,21 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.PriorityQueue;
 
-public class Simulator implements NodeTimerNotifier {
+public class Simulator<T> implements NodeTimerNotifier<T> {
 
     private static final int SNAPSHOT_INTERVAL = 100;
 
     private PriorityQueue<Event> eventQueue;
     private int roundCount;
-    private List<NetworkNode> nodes;
+    private List<NetworkNode<T>> nodes;
     private double currentTime;
 
     public Simulator() {
     }
-    public void setNodes(List<? extends NetworkNode> nodes) {
+    public void setNodes(List<? extends NetworkNode<T>> nodes) {
         this.nodes = new ArrayList<>(nodes);
         eventQueue = new PriorityQueue<>();
-        for (NetworkNode node : nodes) {
+        for (NetworkNode<T> node : nodes) {
             eventQueue.add(new InitializationEvent(node));
         }
 
@@ -64,8 +64,8 @@ public class Simulator implements NodeTimerNotifier {
     }
 
     @Override
-    public void notifyAtTime(TimedNetworkNode node, double time, String message) {
-        eventQueue.add(new TimedEvent(time, node, message));
+    public void notifyAtTime(TimedNetworkNode<T> node, double time, T message) {
+        eventQueue.add(new TimedEvent<T>(time, node, message));
     }
 
     @Override

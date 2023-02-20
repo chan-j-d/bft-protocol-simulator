@@ -10,17 +10,17 @@ import java.util.List;
 
 import static simulation.event.EventUtil.convertPayloadsToQueueEvents;
 
-public class ProcessPayloadEvent extends RandomDurationEvent {
+public class ProcessPayloadEvent<T> extends RandomDurationEvent {
 
     private static double seed = 500; // TODO update seed and ways to change seed
     private static RandomNumberGenerator rng = new ExponentialDistribution(1);
     //private static RandomNumberGenerator rng = new TestGenerator(0);
 
-    private NetworkNode node;
-    private Payload payload;
+    private NetworkNode<T> node;
+    private Payload<T> payload;
     private double processingEndTime;
 
-    public ProcessPayloadEvent(double time, NetworkNode node, Payload payload) {
+    public ProcessPayloadEvent(double time, NetworkNode<T> node, Payload<T> payload) {
         super(time);
         this.node = node;
         this.payload = payload;
@@ -29,7 +29,7 @@ public class ProcessPayloadEvent extends RandomDurationEvent {
 
     @Override
     public List<Event> simulate() {
-        List<Payload> processedPayloads = node.processPayload(processingEndTime, payload);
+        List<Payload<T>> processedPayloads = node.processPayload(processingEndTime, payload);
         List<Event> eventList =
                 new ArrayList<>(convertPayloadsToQueueEvents(processingEndTime, node, processedPayloads));
         eventList.add(new PollQueueEvent(processingEndTime, node));

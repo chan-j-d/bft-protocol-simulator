@@ -1,7 +1,7 @@
 package simulation.network.entity;
 
-public interface NodeTimerNotifier {
+public interface NodeTimerNotifier<T> {
 
-    void notifyAtTime(TimedNetworkNode node, double time, String message);
+    void notifyAtTime(TimedNetworkNode<T> node, double time, T message);
     double getTime();
 }

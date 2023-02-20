@@ -5,11 +5,11 @@ import simulation.network.entity.Payload;
 
 import java.util.List;
 
-public class QueueEvent extends Event {
+public class QueueEvent<T> extends Event {
 
-    private NetworkNode node;
-    private Payload payload;
-    public QueueEvent(double time, NetworkNode node, Payload payload) {
+    private NetworkNode<T> node;
+    private Payload<T> payload;
+    public QueueEvent(double time, NetworkNode<T> node, Payload<T> payload) {
         super(time);
         this.node = node;
         this.payload = payload;
@@ -18,7 +18,7 @@ public class QueueEvent extends Event {
     @Override
     public List<Event> simulate() {
         node.addToQueue(payload);
-        return List.of(new PollQueueEvent(getTime(), node));
+        return List.of(new PollQueueEvent<>(getTime(), node));
     }
 
     @Override

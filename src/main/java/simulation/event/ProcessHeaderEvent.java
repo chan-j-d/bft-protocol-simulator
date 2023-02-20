@@ -9,15 +9,15 @@ import simulation.util.rng.TestGenerator;
 import java.util.ArrayList;
 import java.util.List;
 
-public class ProcessHeaderEvent extends RandomDurationEvent {
+public class ProcessHeaderEvent<T> extends RandomDurationEvent {
 
     private static double seed = 0; // TODO update seed and ways to change seed
     //private static RandomNumberGenerator rng = new ExponentialDistribution(1);
     private static RandomNumberGenerator rng = new TestGenerator(0);
-    private NetworkNode node;
-    private Payload payload;
+    private NetworkNode<T> node;
+    private Payload<T> payload;
     private double processingEndTime;
-    public ProcessHeaderEvent(double time, NetworkNode node, Payload payload) {
+    public ProcessHeaderEvent(double time, NetworkNode<T> node, Payload<T> payload) {
         super(time);
         this.node = node;
         this.payload = payload;
@@ -28,11 +28,11 @@ public class ProcessHeaderEvent extends RandomDurationEvent {
     public List<Event> simulate() {
         List<Event> eventList = new ArrayList<>();
         if (node.isPayloadDestination(payload)) {
-            eventList.add(new ProcessPayloadEvent(processingEndTime, node, payload));
+            eventList.add(new ProcessPayloadEvent<>(processingEndTime, node, payload));
         } else {
-            NetworkNode nextHopNode = node.getNextNodeFor(payload);
-            eventList.add(new QueueEvent(processingEndTime, nextHopNode, payload));
-            eventList.add(new PollQueueEvent(processingEndTime, node));
+            NetworkNode<T> nextHopNode = node.getNextNodeFor(payload);
+            eventList.add(new QueueEvent<>(processingEndTime, nextHopNode, payload));
+            eventList.add(new PollQueueEvent<>(processingEndTime, node));
         }
 
         return eventList;

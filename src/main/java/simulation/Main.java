@@ -2,6 +2,7 @@ package simulation;
 
 import simulation.io.ConsoleIo;
 import simulation.io.IoInterface;
+import simulation.network.entity.ibft.IBFTMessage;
 import simulation.network.entity.ibft.IBFTNode;
 import simulation.simulator.Simulator;
 import simulation.util.rng.ExponentialDistribution;
@@ -30,7 +31,7 @@ public class Main {
             //IoInterface io = new FileIo("output" + j + ".txt");
             IoInterface io = new ConsoleIo();
             List<IBFTNode> nodes = new ArrayList<>();
-            Simulator simulator = new Simulator();
+            Simulator<IBFTMessage> simulator = new Simulator<IBFTMessage>();
             for (int i = 0; i < numNodes; i++) {
                 nodes.add(new IBFTNode("IBFT-" + i, i, timeLimit, simulator, numNodes, consensusLimit));
             }

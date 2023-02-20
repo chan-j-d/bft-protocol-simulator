@@ -8,9 +8,9 @@ import java.util.List;
 
 public abstract class TimedNetworkNode<T> extends NetworkNode<T> {
 
-    private NodeTimerNotifier timerNotifier;
+    private final NodeTimerNotifier<T> timerNotifier;
 
-    public TimedNetworkNode(String name, NodeTimerNotifier timerNotifier) {
+    public TimedNetworkNode(String name, NodeTimerNotifier<T> timerNotifier) {
         super(name);
         this.timerNotifier = timerNotifier;
     }
@@ -19,7 +19,7 @@ public abstract class TimedNetworkNode<T> extends NetworkNode<T> {
         return timerNotifier.getTime();
     }
 
-    public void notifyAtTime(double time, String message) {
+    public void notifyAtTime(double time, T message) {
         timerNotifier.notifyAtTime(this, time, message);
     }
 
