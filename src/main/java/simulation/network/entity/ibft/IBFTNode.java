@@ -181,7 +181,7 @@ public class IBFTNode extends TimedNetworkNode<IBFTMessage> {
 
     private void newRoundCleanup() {
         int minBlockHeight = otherNodeHeights.values().stream().mapToInt(x -> x).min().orElse(0);
-        Set<Integer> toRemoveKeySet = List.copyOf(consensusQuorum.keySet()).stream().filter(x -> x >= minBlockHeight)
+        Set<Integer> toRemoveKeySet = List.copyOf(consensusQuorum.keySet()).stream().filter(x -> x < minBlockHeight)
                 .collect(Collectors.toSet());
         for (int oldConsensusInstance : toRemoveKeySet) {
             consensusQuorum.remove(oldConsensusInstance);
@@ -248,9 +248,9 @@ public class IBFTNode extends TimedNetworkNode<IBFTMessage> {
 
     private void leaderRoundChangeOperation() {
         if (p_i == getLeader(lambda_i, r_i, N)) {
-            if (messageHolder.hasQuorumOfMessages(IBFTMessageType.ROUND_CHANGE, lambda_i, r_i)) {
+            if (messageHolder.hasQuorumOfAnyValuedMessages(IBFTMessageType.ROUND_CHANGE, lambda_i, r_i)) {
                 List<IBFTMessage> roundChangeMessages =
-                        messageHolder.getQuorumOfMessages(IBFTMessageType.ROUND_CHANGE,
+                        messageHolder.getQuorumOfAnyValuedMessages(IBFTMessageType.ROUND_CHANGE,
                                 lambda_i, r_i);
                 if (justifyRoundChange(roundChangeMessages)) {
                     Pair<Integer, Integer> prPvPair = highestPrepared(roundChangeMessages);
@@ -280,9 +280,9 @@ public class IBFTNode extends TimedNetworkNode<IBFTMessage> {
     }
 
     private void prepareOperation() {
-        if (messageHolder.hasQuorumOfMessages(IBFTMessageType.PREPARED, lambda_i, r_i)) {
+        if (messageHolder.hasQuorumOfSameValuedMessages(IBFTMessageType.PREPARED, lambda_i, r_i)) {
             List<IBFTMessage> prepareMessages =
-                    messageHolder.getQuorumOfMessages(IBFTMessageType.PREPARED, lambda_i, r_i);
+                    messageHolder.getQuorumOfSameValuedMessages(IBFTMessageType.PREPARED, lambda_i, r_i);
             pr_i = r_i;
             pv_i = prepareMessages.get(0).getValue();
             preparedMessageJustification = prepareMessages;
@@ -331,8 +331,8 @@ public class IBFTNode extends TimedNetworkNode<IBFTMessage> {
                 messages.stream().anyMatch(message -> message.getPiggybackMessages().stream().filter(pbm ->
                                 pbm.getMessageType() == IBFTMessageType.PREPARED &&
                                 pbm.getLambda() == lambda_i &&
-                                pbm.getPreparedValue() == highestPr &&
-                                pbm.getPreparedValue() == highestPv)
+                                pbm.getRound() == highestPr &&
+                                pbm.getValue() == highestPv)
                         .count() >= getQuorumCount());
     }
 
@@ -354,9 +354,6 @@ public class IBFTNode extends TimedNetworkNode<IBFTMessage> {
                         m.getRound() == messageRound &&
                         m.getLambda() == message.getLambda())
                 .collect(Collectors.toList());
-        System.out.println(message);
-        System.out.println("j1: " + (validPiggybackMessages.size() >= getQuorumCount()));
-        System.out.println("j2: " + justifyRoundChange(validPiggybackMessages));
         return validPiggybackMessages.size() >= getQuorumCount() && justifyRoundChange(validPiggybackMessages);
     }
 

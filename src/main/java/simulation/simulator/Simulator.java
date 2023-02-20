@@ -26,7 +26,7 @@ public class Simulator<T> implements NodeTimerNotifier<T> {
         this.nodes = new ArrayList<>(nodes);
         eventQueue = new PriorityQueue<>();
         for (NetworkNode<T> node : nodes) {
-            eventQueue.add(new InitializationEvent(node));
+            eventQueue.add(new InitializationEvent<>(node));
         }
 
         roundCount = 0;

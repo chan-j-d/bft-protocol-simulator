@@ -1,6 +1,7 @@
 package simulation;
 
 import simulation.io.ConsoleIo;
+import simulation.io.FileIo;
 import simulation.io.IoInterface;
 import simulation.network.entity.ibft.IBFTMessage;
 import simulation.network.entity.ibft.IBFTNode;
@@ -17,7 +18,7 @@ public class Main {
     public static void main(String[] args) {
 
 
-        double timeLimit = 100;
+        double timeLimit = 5;
 
         int numNodes = 4;
         int numTrials = 1;

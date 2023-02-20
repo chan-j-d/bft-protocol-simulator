@@ -90,14 +90,14 @@ public class IBFTMessageHolder {
                 .keySet().stream().mapToInt(x -> x).filter(roundKey -> roundKey > round).min().orElse(NULL_VALUE);
     }
 
-    public boolean hasQuorumOfMessages(IBFTMessageType type, int consensusInstance, int round) {
+    public boolean hasQuorumOfSameValuedMessages(IBFTMessageType type, int consensusInstance, int round) {
         return filterTypeLambdaRound(type, consensusInstance, round)
                 .stream()
                 .flatMap(map -> map.values().stream())
                 .anyMatch(list -> list.size() >= threshold);
     }
 
-    public List<IBFTMessage> getQuorumOfMessages(IBFTMessageType type, int consensusInstance,
+    public List<IBFTMessage> getQuorumOfSameValuedMessages(IBFTMessageType type, int consensusInstance,
             int round) {
         return filterTypeLambdaRound(type, consensusInstance, round)
                 .stream()
@@ -105,6 +105,22 @@ public class IBFTMessageHolder {
                 .filter(list -> list.size() >= threshold)
                 .findFirst()
                 .orElseThrow(); // this method should be called after hasQuorumOfMessages
+    }
+
+    public boolean hasQuorumOfAnyValuedMessages(IBFTMessageType type, int consensusInstance, int round) {
+        return filterTypeLambdaRound(type, consensusInstance, round)
+                .stream()
+                .flatMap(map -> map.values().stream())
+                .mapToInt(Collection::size)
+                .sum() >= threshold;
+    }
+
+    public List<IBFTMessage> getQuorumOfAnyValuedMessages(IBFTMessageType type, int consensusInstance, int round) {
+        return filterTypeLambdaRound(type, consensusInstance, round)
+                .stream()
+                .flatMap(map -> map.values().stream())
+                .flatMap(List::stream)
+                .collect(Collectors.toList());
     }
 
     public List<IBFTMessage> getMessages(IBFTMessageType type, int consensusInstance, int round) {
@@ -133,4 +149,5 @@ public class IBFTMessageHolder {
         }
         currentConsensusInstance = newLambda;
     }
+
 }
