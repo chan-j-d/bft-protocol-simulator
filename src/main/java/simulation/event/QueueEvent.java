@@ -23,6 +23,6 @@ public class QueueEvent<T> extends Event {
 
     @Override
     public String toString() {
-        return super.toString() + " (QueueEvent): payload queued at " + node;
+        return super.toString() + " (QueueEvent): payload queued at " + node + " (" + payload + ")";
     }
 }

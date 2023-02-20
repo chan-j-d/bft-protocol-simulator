@@ -9,6 +9,7 @@ public enum IBFTMessageType {
     PREPARED("PREPARED"),
     ROUND_CHANGE("ROUND_CHANGE"),
     COMMIT("COMMIT"),
+    SYNC("SYNC"),
     TIMER_EXPIRY("TIMER_EXPIRY");
 
     private static final Map<String, IBFTMessageType> STRING_IBFT_MESSAGE_TYPE_MAP = Map.of(

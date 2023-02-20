@@ -205,9 +205,10 @@ public class IBFTNode extends TimedNetworkNode<IBFTMessage> {
                     prepareOperation();
                     break;
                 case COMMIT:
-                    message.getPiggybackMessages().forEach(pbMessage -> messageHolder.addMessageToBacklog(pbMessage));
                     commitOperation();
                     break;
+                case SYNC:
+                    message.getPiggybackMessages().forEach(pbm -> messageHolder.addMessageToBacklog(pbm));
                 case ROUND_CHANGE:
                     int messageRound = message.getRound();
                     if (messageRound > r_i) {
@@ -218,13 +219,16 @@ public class IBFTNode extends TimedNetworkNode<IBFTMessage> {
                     break;
             }
         } else if (messageType == IBFTMessageType.ROUND_CHANGE) {
-            tempPayloadStore.add(sendMessage(createSingleValueMessage(IBFTMessageType.COMMIT, NULL_VALUE,
+            tempPayloadStore.add(sendMessage(createSingleValueMessage(IBFTMessageType.SYNC, NULL_VALUE,
                     consensusQuorum.get(lambda)), allNodes.get(sender)));
         }
     }
 
     // Round change handling
     private void timerExpiryOperation() {
+        if (lambda_i > consensusLimit) {
+            return;
+        }
         r_i++;
         startTimer();
         if (pr_i == NULL_VALUE && pv_i == NULL_VALUE) {
