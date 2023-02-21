@@ -20,7 +20,7 @@ import java.util.stream.Collectors;
 public class IBFTNode extends TimedNetworkNode<IBFTMessage> {
 
     //TODO remove constant and figure out means to configure constant
-    private static final RandomNumberGenerator RNG = new ExponentialDistribution(1);
+    private static final RandomNumberGenerator RNG = new ExponentialDistribution(3);
 
     /**
      * Dummy value to be passed around as part of the protocol.
@@ -102,6 +102,7 @@ public class IBFTNode extends TimedNetworkNode<IBFTMessage> {
     public Pair<Double, List<Payload<IBFTMessage>>> processPayload(double time, Payload<IBFTMessage> payload) {
         double duration = RNG.generateRandomNumber();
         super.processPayload(time + duration, payload);
+        statistics.incrementMesssageArrivedCount();
         statistics.addTime(state, duration);
         IBFTMessage message = payload.getMessage();
         processMessage(message);

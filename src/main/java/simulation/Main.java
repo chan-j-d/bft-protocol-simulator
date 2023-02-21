@@ -15,6 +15,7 @@ import java.nio.file.Files;
 import java.nio.file.Paths;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Optional;
 import java.util.Random;
 import java.util.logging.LogManager;
 
@@ -28,13 +29,12 @@ public class Main {
 
         double timeLimit = 1000;
 
-        int numNodes = 64;
-        int numTrials = 1;
+        int numNodes = 128;
+        int numTrials = 10;
         int seedMultiplier = 100;
         int consensusLimit = 10;
 
-        double totalTime2 = 0;
-        int totalNodesConsensus = 0;
+        IBFTStatistics statistics = null;
         for (int j = 0; j < numTrials; j++) {
             ExponentialDistribution.UNIFORM_DISTRIBUTION = new Random(seedMultiplier * j);
             IoInterface io = new FileIo("output" + j + ".txt");
@@ -54,15 +54,22 @@ public class Main {
             }
             io.output("\nSnapshot:\n" + simulator.getSnapshotOfNodes());
 
-            String statisticsResults = nodes.stream()
+            IBFTStatistics runStats = nodes.stream()
                     .map(IBFTNode::getStatistics)
-                    .reduce(IBFTStatistics::addStatistics)
-                    .map(IBFTStatistics::toString).orElseThrow();
+                    .reduce(IBFTStatistics::addStatistics).orElseThrow();
+            statistics = Optional.ofNullable(statistics)
+                    .map(stats -> stats.addStatistics(runStats))
+                    .orElse(runStats);
+
+            String statisticsResults = runStats.toString();
             io.output("\nSummary:");
             io.output(statisticsResults);
 
             io.close();
         }
+
+        String fullRunResults = statistics.toString();
+        System.out.println(fullRunResults);
 
         cleanup();
     }
