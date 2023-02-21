@@ -170,8 +170,6 @@ public class IBFTNode extends TimedNetworkNode<IBFTMessage> {
         return IBFTMessage.createPreparedValuesMessage(p_i, type, lambda_i, r_i, pr_i, pv_i, piggybackMessages);
     }
 
-    //TODO implement sending of quorum messages to old nodes
-
     // Round start handling
     private void start(int lambda, int value) {
         timerExpiryCount = 0;
