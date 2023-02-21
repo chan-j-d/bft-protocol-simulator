@@ -268,13 +268,14 @@ public class IBFTNode extends TimedNetworkNode<IBFTMessage> {
                 List<IBFTMessage> roundChangeMessages =
                         messageHolder.getQuorumOfAnyValuedMessages(IBFTMessageType.ROUND_CHANGE,
                                 lambda_i, r_i);
-                if (justifyRoundChange(roundChangeMessages)) {
+                if (justifyRoundChange(roundChangeMessages) && state == IBFTState.ROUND_CHANGE) {
                     Pair<Integer, Integer> prPvPair = highestPrepared(roundChangeMessages);
                     int pr = prPvPair.first();
                     int pv = prPvPair.second();
                     if (pr != NULL_VALUE && pv != NULL_VALUE) {
                         inputValue_i = pv;
                     }
+                    state = IBFTState.NEW_ROUND;
                     broadcastMessage(createSingleValueMessage(
                             IBFTMessageType.PREPREPARED, inputValue_i, roundChangeMessages));
                 }
@@ -298,7 +299,7 @@ public class IBFTNode extends TimedNetworkNode<IBFTMessage> {
 
     private void prepareOperation() {
         if (messageHolder.hasQuorumOfSameValuedMessages(IBFTMessageType.PREPARED, lambda_i, r_i)
-                && state != IBFTState.PREPARED) {
+                && state == IBFTState.PREPREPARED) {
             List<IBFTMessage> prepareMessages =
                     messageHolder.getQuorumOfSameValuedMessages(IBFTMessageType.PREPARED, lambda_i, r_i);
             state = IBFTState.PREPARED;

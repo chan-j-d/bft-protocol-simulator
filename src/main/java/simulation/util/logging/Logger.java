@@ -10,8 +10,8 @@ import java.util.logging.Level;
 
 public class Logger {
 
-    private static final String DEFAULT_DIRECTORY = "logs";
-    private static final java.util.logging.Logger BACKUP_LOGGER = java.util.logging.Logger.getLogger("MAIN");
+    public static final String DEFAULT_DIRECTORY = "logs";
+    public static final Logger MAIN_LOGGER = new Logger("MAIN");
 
     private final String fileName;
     private java.util.logging.Logger logger;
@@ -22,7 +22,7 @@ public class Logger {
         try {
             addFileHandler(logger, DEFAULT_DIRECTORY, fileName);
         } catch (IOException ioe) {
-            BACKUP_LOGGER.log(Level.WARNING, "Unable to set up logger for " + name + "\n" +
+            MAIN_LOGGER.log(Level.WARNING, "Unable to set up logger for " + name + "\n" +
                     Arrays.toString(ioe.getStackTrace()));
         }
     }
@@ -31,7 +31,7 @@ public class Logger {
             throws IOException {
         File file = new File(directory);
         if (file.exists() && !file.isDirectory()) {
-            BACKUP_LOGGER.log(Level.WARNING, "Default logs directory name is being used.");
+            MAIN_LOGGER.log(Level.WARNING, "Default logs directory name is being used.");
             return;
         } else if (!file.exists()) {
             Files.createDirectory(Paths.get(directory));
@@ -44,5 +44,9 @@ public class Logger {
 
     public void log(String message) {
         logger.log(Level.INFO, message);
+    }
+
+    public void log(Level level, String message) {
+        logger.log(level, message);
     }
 }

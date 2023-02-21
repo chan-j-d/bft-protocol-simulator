@@ -6,19 +6,29 @@ import simulation.io.IoInterface;
 import simulation.network.entity.ibft.IBFTMessage;
 import simulation.network.entity.ibft.IBFTNode;
 import simulation.simulator.Simulator;
+import simulation.util.logging.Logger;
 import simulation.util.rng.ExponentialDistribution;
 
+import java.io.File;
+import java.io.IOException;
+import java.nio.file.Files;
+import java.nio.file.Paths;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.List;
 import java.util.Random;
+import java.util.logging.LogManager;
 
 import static simulation.network.structure.NetworkStructure.arrangeCliqueStructure;
 
 public class Main {
+
+    public static Logger MAIN_LOGGER = Logger.MAIN_LOGGER;
     public static void main(String[] args) {
 
+        setup();
 
-        double timeLimit = 10000000;
+        double timeLimit = 10;
 
         int numNodes = 8;
         int numTrials = 1;
@@ -47,5 +57,14 @@ public class Main {
             io.output("\nSnapshot:\n" + simulator.getSnapshotOfNodes());
             io.close();
         }
+
+        cleanup();
+    }
+
+    private static void setup() {
+    }
+
+    private static void cleanup() {
+        LogManager.getLogManager().reset();
     }
 }
