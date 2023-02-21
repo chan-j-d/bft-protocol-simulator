@@ -1,6 +1,5 @@
 package simulation;
 
-import simulation.io.ConsoleIo;
 import simulation.io.FileIo;
 import simulation.io.IoInterface;
 import simulation.network.entity.ibft.IBFTMessage;
@@ -14,7 +13,6 @@ import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Paths;
 import java.util.ArrayList;
-import java.util.Arrays;
 import java.util.List;
 import java.util.Random;
 import java.util.logging.LogManager;
@@ -38,8 +36,8 @@ public class Main {
         int totalNodesConsensus = 0;
         for (int j = 0; j < numTrials; j++) {
             ExponentialDistribution.UNIFORM_DISTRIBUTION = new Random(seedMultiplier * j);
-            //IoInterface io = new FileIo("output" + j + ".txt");
-            IoInterface io = new ConsoleIo();
+            IoInterface io = new FileIo("output" + j + ".txt");
+            //IoInterface io = new ConsoleIo();
             List<IBFTNode> nodes = new ArrayList<>();
             Simulator<IBFTMessage> simulator = new Simulator<IBFTMessage>();
             for (int i = 0; i < numNodes; i++) {
@@ -64,7 +62,6 @@ public class Main {
         try {
             File directory = new File(Logger.DEFAULT_DIRECTORY);
             if (directory.exists() && directory.isDirectory()) {
-                System.out.println(Arrays.toString(directory.listFiles()));
                 for (File file : directory.listFiles()) {
                     file.delete();
                 }

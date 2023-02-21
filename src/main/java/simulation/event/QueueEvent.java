@@ -17,8 +17,9 @@ public class QueueEvent<T> extends Event {
 
     @Override
     public List<Event> simulate() {
+        boolean isNodeEmpty = node.isEmpty();
         node.addToQueue(payload);
-        return List.of(new PollQueueEvent<>(getTime(), node));
+        return isNodeEmpty ? List.of(new PollQueueEvent<>(getTime(), node)) : List.of();
     }
 
     @Override
