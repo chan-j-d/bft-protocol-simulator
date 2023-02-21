@@ -18,9 +18,9 @@ public class Main {
     public static void main(String[] args) {
 
 
-        double timeLimit = 5;
+        double timeLimit = 10000000;
 
-        int numNodes = 4;
+        int numNodes = 8;
         int numTrials = 1;
         int seedMultiplier = 100;
         int consensusLimit = 10;

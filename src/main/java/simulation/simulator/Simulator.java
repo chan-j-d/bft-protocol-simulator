@@ -13,7 +13,8 @@ import java.util.PriorityQueue;
 
 public class Simulator<T> implements NodeTimerNotifier<T> {
 
-    private static final int SNAPSHOT_INTERVAL = 100;
+    private static final int SNAPSHOT_INTERVAL = 1000000;
+    private static final double TIME_CUTOFF = 100000; // for safety
 
     private PriorityQueue<Event> eventQueue;
     private int roundCount;
@@ -37,6 +38,9 @@ public class Simulator<T> implements NodeTimerNotifier<T> {
         Event nextEvent = eventQueue.poll();
         assert nextEvent != null; // isSimulationOver should be used to check before calling this function
         currentTime = nextEvent.getTime();
+        if (currentTime > TIME_CUTOFF) {
+            return "";
+        }
         List<Event> resultingEvents = nextEvent.simulate();
         eventQueue.addAll(resultingEvents);
         roundCount++;
@@ -60,11 +64,14 @@ public class Simulator<T> implements NodeTimerNotifier<T> {
     }
 
     public boolean isSimulationOver() {
-        return eventQueue.isEmpty();
+        return eventQueue.isEmpty() || getTime() > TIME_CUTOFF;
     }
 
     @Override
     public void notifyAtTime(TimedNetworkNode<T> node, double time, T message) {
+        if (time > TIME_CUTOFF) {
+            return;
+        }
         eventQueue.add(new TimedEvent<T>(time, node, message));
     }
 

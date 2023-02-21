@@ -12,7 +12,6 @@ import static simulation.event.EventUtil.convertPayloadsToQueueEvents;
 
 public class ProcessPayloadEvent<T> extends RandomDurationEvent {
 
-    private static double seed = 500; // TODO update seed and ways to change seed
     private static RandomNumberGenerator rng = new ExponentialDistribution(1);
     //private static RandomNumberGenerator rng = new TestGenerator(0);
 

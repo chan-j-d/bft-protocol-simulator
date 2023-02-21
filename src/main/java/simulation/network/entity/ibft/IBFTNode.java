@@ -6,6 +6,7 @@ import simulation.network.entity.TimedNetworkNode;
 import simulation.network.entity.NodeTimerNotifier;
 import simulation.network.entity.Payload;
 import simulation.util.Pair;
+import simulation.util.logging.Logger;
 
 import java.util.ArrayList;
 import java.util.HashMap;
@@ -22,6 +23,8 @@ public class IBFTNode extends TimedNetworkNode<IBFTMessage> {
     private static final int DUMMY_VALUE = 1;
     public static final int FIRST_CONSENSUS_INSTANCE = 1;
 
+    private final Logger logger;
+
     // Simulation variables
     private final double baseTimeLimit;
     private final int consensusLimit;
@@ -37,6 +40,7 @@ public class IBFTNode extends TimedNetworkNode<IBFTMessage> {
      * All payloads are retrieved and sent out after message processing.
      */
     private List<Payload<IBFTMessage>> tempPayloadStore;
+    private IBFTState state;
 
     private final int p_i; // identifier
     private int lambda_i; // consensus instance identifier
@@ -52,6 +56,9 @@ public class IBFTNode extends TimedNetworkNode<IBFTMessage> {
     public IBFTNode(String name, int identifier, double baseTimeLimit, NodeTimerNotifier<IBFTMessage> timerNotifier,
             int N, int consensusLimit) {
         super(name, timerNotifier);
+        logger = new Logger(name);
+        this.state = IBFTState.NEW_ROUND;
+
         this.p_i = identifier;
         this.allNodes = new HashMap<>();
         this.baseTimeLimit = baseTimeLimit;
@@ -88,6 +95,7 @@ public class IBFTNode extends TimedNetworkNode<IBFTMessage> {
         super.processPayload(time, payload);
         IBFTMessage message = payload.getMessage();
         processMessage(message);
+        logger.log(String.format("%.3f: %s processing %s", time, this, message));
         return getProcessedPayloads();
     }
 
@@ -162,6 +170,8 @@ public class IBFTNode extends TimedNetworkNode<IBFTMessage> {
     // Round start handling
     private void start(int lambda, int value) {
         timerExpiryCount = 0;
+        state = IBFTState.NEW_ROUND;
+
         lambda_i = lambda;
         r_i = 1;
         pr_i = NULL_VALUE;
@@ -230,6 +240,7 @@ public class IBFTNode extends TimedNetworkNode<IBFTMessage> {
             return;
         }
         r_i++;
+        state = IBFTState.ROUND_CHANGE;
         startTimer();
         if (pr_i == NULL_VALUE && pv_i == NULL_VALUE) {
             broadcastMessage(createPreparedValuesMessage(IBFTMessageType.ROUND_CHANGE));
@@ -245,6 +256,7 @@ public class IBFTNode extends TimedNetworkNode<IBFTMessage> {
             r_i = messageHolder.getNextGreaterRoundChangeMessage(lambda_i, r_i);
             startTimer();
             broadcastMessage(createPreparedValuesMessage(IBFTMessageType.ROUND_CHANGE));
+            state = IBFTState.ROUND_CHANGE;
             prePrepareOperation();
             prepareOperation();
         }
@@ -277,6 +289,7 @@ public class IBFTNode extends TimedNetworkNode<IBFTMessage> {
             int sender = message.getIdentifier();
             if (sender == getLeader(lambda_i, r_i, N) && justifyPrePrepare(message)) {
                 startTimer();
+                state = IBFTState.PREPREPARED;
                 inputValue_i = message.getValue();
                 broadcastMessage(createSingleValueMessage(IBFTMessageType.PREPARED, inputValue_i));
             }
@@ -287,6 +300,7 @@ public class IBFTNode extends TimedNetworkNode<IBFTMessage> {
         if (messageHolder.hasQuorumOfSameValuedMessages(IBFTMessageType.PREPARED, lambda_i, r_i)) {
             List<IBFTMessage> prepareMessages =
                     messageHolder.getQuorumOfSameValuedMessages(IBFTMessageType.PREPARED, lambda_i, r_i);
+            state = IBFTState.PREPARED;
             pr_i = r_i;
             pv_i = prepareMessages.get(0).getValue();
             preparedMessageJustification = prepareMessages;
@@ -383,8 +397,9 @@ public class IBFTNode extends TimedNetworkNode<IBFTMessage> {
 
     @Override
     public String toString() {
-        return String.format("%s (%d, %d)",
+        return String.format("%s (%s, %d, %d)",
                 super.toString(),
+                state,
                 lambda_i,
                 r_i);
     }
