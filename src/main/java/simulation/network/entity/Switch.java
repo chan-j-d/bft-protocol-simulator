@@ -1,5 +1,7 @@
 package simulation.network.entity;
 
+import simulation.util.Pair;
+
 import java.util.List;
 
 public class Switch<T> extends NetworkNode<T> {
@@ -9,8 +11,8 @@ public class Switch<T> extends NetworkNode<T> {
     }
 
     @Override
-    public List<Payload<T>> processPayload(double time, Payload<T> payload) {
-        return List.of(payload);
+    public Pair<Double, List<Payload<T>>> processPayload(double time, Payload<T> payload) {
+        return new Pair<>(0.0, List.of(payload));
     }
 
     @Override

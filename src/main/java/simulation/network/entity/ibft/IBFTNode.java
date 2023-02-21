@@ -7,6 +7,8 @@ import simulation.network.entity.NodeTimerNotifier;
 import simulation.network.entity.Payload;
 import simulation.util.Pair;
 import simulation.util.logging.Logger;
+import simulation.util.rng.ExponentialDistribution;
+import simulation.util.rng.RandomNumberGenerator;
 
 import java.util.ArrayList;
 import java.util.HashMap;
@@ -16,6 +18,9 @@ import java.util.Set;
 import java.util.stream.Collectors;
 
 public class IBFTNode extends TimedNetworkNode<IBFTMessage> {
+
+    //TODO remove constant and figure out means to configure constant
+    private static final RandomNumberGenerator RNG = new ExponentialDistribution(1);
 
     /**
      * Dummy value to be passed around as part of the protocol.
@@ -34,7 +39,9 @@ public class IBFTNode extends TimedNetworkNode<IBFTMessage> {
 
     // Helper attributes
     private int timerExpiryCount; // Used to differentiate multiple timers in the same instance & round
-    private IBFTMessageHolder messageHolder;
+    private final IBFTMessageHolder messageHolder;
+    private final IBFTStatistics statistics;
+
     /**
      * Stores payloads while node is processing a message.
      * All payloads are retrieved and sent out after message processing.
@@ -71,6 +78,7 @@ public class IBFTNode extends TimedNetworkNode<IBFTMessage> {
         this.messageHolder = new IBFTMessageHolder(getQuorumCount(), FIRST_CONSENSUS_INSTANCE);
         this.consensusQuorum = new HashMap<>();
         this.otherNodeHeights = new HashMap<>();
+        this.statistics = new IBFTStatistics();
     }
 
     public void setAllNodes(List<IBFTNode> allNodes) {
@@ -91,12 +99,14 @@ public class IBFTNode extends TimedNetworkNode<IBFTMessage> {
     }
 
     @Override
-    public List<Payload<IBFTMessage>> processPayload(double time, Payload<IBFTMessage> payload) {
-        super.processPayload(time, payload);
+    public Pair<Double, List<Payload<IBFTMessage>>> processPayload(double time, Payload<IBFTMessage> payload) {
+        double duration = RNG.generateRandomNumber();
+        super.processPayload(time + duration, payload);
+        statistics.addTime(state, duration);
         IBFTMessage message = payload.getMessage();
         processMessage(message);
         logger.log(String.format("%.3f: %s processing %s", time, this, message));
-        return getProcessedPayloads();
+        return new Pair<>(duration, getProcessedPayloads());
     }
 
     @Override
@@ -105,9 +115,24 @@ public class IBFTNode extends TimedNetworkNode<IBFTMessage> {
         return getProcessedPayloads();
     }
 
+    // public facing query methods
+
     @Override
     public boolean isDone() {
         return lambda_i > consensusLimit;
+    }
+
+    public IBFTStatistics getStatistics() {
+        return statistics;
+    }
+
+    @Override
+    public String toString() {
+        return String.format("%s (%s, %d, %d)",
+                super.toString(),
+                state,
+                lambda_i,
+                r_i);
     }
 
     // Utility methods
@@ -154,19 +179,19 @@ public class IBFTNode extends TimedNetworkNode<IBFTMessage> {
     }
 
     // Message util
-    public IBFTMessage createSingleValueMessage(IBFTMessageType type, int value) {
+    private IBFTMessage createSingleValueMessage(IBFTMessageType type, int value) {
         return IBFTMessage.createValueMessage(p_i, type, lambda_i, r_i, value);
     }
 
-    public IBFTMessage createSingleValueMessage(IBFTMessageType type, int value, List<IBFTMessage> piggybackMessages) {
+    private IBFTMessage createSingleValueMessage(IBFTMessageType type, int value, List<IBFTMessage> piggybackMessages) {
         return IBFTMessage.createValueMessage(p_i, type, lambda_i, r_i, value, piggybackMessages);
     }
 
-    public IBFTMessage createPreparedValuesMessage(IBFTMessageType type) {
+    private IBFTMessage createPreparedValuesMessage(IBFTMessageType type) {
         return IBFTMessage.createPreparedValuesMessage(p_i, type, lambda_i, r_i, pr_i, pv_i);
     }
 
-    public IBFTMessage createPreparedValuesMessage(IBFTMessageType type, List<IBFTMessage> piggybackMessages) {
+    private IBFTMessage createPreparedValuesMessage(IBFTMessageType type, List<IBFTMessage> piggybackMessages) {
         return IBFTMessage.createPreparedValuesMessage(p_i, type, lambda_i, r_i, pr_i, pv_i, piggybackMessages);
     }
 
@@ -321,6 +346,7 @@ public class IBFTNode extends TimedNetworkNode<IBFTMessage> {
     }
 
     private void commit(int consensusInstance, int value, List<IBFTMessage> messages) {
+        statistics.incrementConsensusCount();
         consensusQuorum.put(consensusInstance, messages);
     }
 
@@ -395,14 +421,5 @@ public class IBFTNode extends TimedNetworkNode<IBFTMessage> {
             }  // else don't update
         }
         return new Pair<>(pr, pv);
-    }
-
-    @Override
-    public String toString() {
-        return String.format("%s (%s, %d, %d)",
-                super.toString(),
-                state,
-                lambda_i,
-                r_i);
     }
 }

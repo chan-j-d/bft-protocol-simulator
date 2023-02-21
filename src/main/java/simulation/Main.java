@@ -4,6 +4,7 @@ import simulation.io.FileIo;
 import simulation.io.IoInterface;
 import simulation.network.entity.ibft.IBFTMessage;
 import simulation.network.entity.ibft.IBFTNode;
+import simulation.network.entity.ibft.IBFTStatistics;
 import simulation.simulator.Simulator;
 import simulation.util.logging.Logger;
 import simulation.util.rng.ExponentialDistribution;
@@ -17,7 +18,7 @@ import java.util.List;
 import java.util.Random;
 import java.util.logging.LogManager;
 
-import static simulation.network.structure.NetworkStructure.arrangeCliqueStructure;
+import static simulation.network.topology.NetworkTopology.arrangeCliqueStructure;
 
 public class Main {
 
@@ -27,7 +28,7 @@ public class Main {
 
         double timeLimit = 1000;
 
-        int numNodes = 4;
+        int numNodes = 64;
         int numTrials = 1;
         int seedMultiplier = 100;
         int consensusLimit = 10;
@@ -52,6 +53,14 @@ public class Main {
                 simulator.simulate().ifPresent(io::output);
             }
             io.output("\nSnapshot:\n" + simulator.getSnapshotOfNodes());
+
+            String statisticsResults = nodes.stream()
+                    .map(IBFTNode::getStatistics)
+                    .reduce(IBFTStatistics::addStatistics)
+                    .map(IBFTStatistics::toString).orElseThrow();
+            io.output("\nSummary:");
+            io.output(statisticsResults);
+
             io.close();
         }
 

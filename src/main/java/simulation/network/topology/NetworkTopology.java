@@ -1,4 +1,4 @@
-package simulation.network.structure;
+package simulation.network.topology;
 
 import simulation.network.NetworkUtil;
 import simulation.network.entity.NetworkNode;
@@ -6,7 +6,7 @@ import simulation.network.entity.NetworkNode;
 import java.util.ArrayList;
 import java.util.List;
 
-public class NetworkStructure {
+public class NetworkTopology {
     public static <T> List<NetworkNode<T>> arrangeCliqueStructure(List<? extends NetworkNode<T>> nodes) {
         for (NetworkNode<T> node : nodes) {
             node.clearNeighbors();

@@ -1,6 +1,9 @@
 package simulation.network.entity;
 
+import simulation.util.Pair;
 import simulation.util.Queueable;
+import simulation.util.rng.RandomNumberGenerator;
+import simulation.util.rng.TestGenerator;
 
 import java.util.ArrayList;
 import java.util.Collection;
@@ -11,6 +14,8 @@ import java.util.Map;
 
 public abstract class NetworkNode<T> implements Queueable<Payload<T>> {
 
+    //TODO update means to configure timing. Currently set to 0 sec
+    private static final RandomNumberGenerator RNG = new TestGenerator(0);
     private List<NetworkNode<T>> neighbors;
     private Map<String, NetworkNode<T>> destinationToNeighborMap;
     private String name;
@@ -32,9 +37,9 @@ public abstract class NetworkNode<T> implements Queueable<Payload<T>> {
         this.queue = new LinkedList<>();
     }
 
-    public List<Payload<T>> processPayload(double time, Payload<T> payload) {
+    public Pair<Double, List<Payload<T>>> processPayload(double time, Payload<T> payload) {
         this.currentTime = time;
-        return List.of();
+        return new Pair<>(0.0, List.of());
     }
 
     public boolean isOccupiedAtTime(double time) {
@@ -51,8 +56,8 @@ public abstract class NetworkNode<T> implements Queueable<Payload<T>> {
     public NetworkNode<T> getNextNodeFor(Payload<T> payload) {
         return destinationToNeighborMap.get(payload.getDestination());
     }
-    public boolean isPayloadDestination(Payload<T> payload) {
-        return payload.getDestination().equals(name);
+    public Pair<Double, Boolean> isPayloadDestination(Payload<T> payload) {
+        return new Pair<>(RNG.generateRandomNumber(), payload.getDestination().equals(name));
     }
 
     public void registerDestination(String destination, NetworkNode<T> neighbor) {

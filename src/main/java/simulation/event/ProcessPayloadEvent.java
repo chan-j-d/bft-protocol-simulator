@@ -2,18 +2,14 @@ package simulation.event;
 
 import simulation.network.entity.NetworkNode;
 import simulation.network.entity.Payload;
-import simulation.util.rng.ExponentialDistribution;
-import simulation.util.rng.RandomNumberGenerator;
+import simulation.util.Pair;
 
 import java.util.ArrayList;
 import java.util.List;
 
 import static simulation.event.EventUtil.convertPayloadsToQueueEvents;
 
-public class ProcessPayloadEvent<T> extends RandomDurationEvent {
-
-    private static RandomNumberGenerator rng = new ExponentialDistribution(1);
-    //private static RandomNumberGenerator rng = new TestGenerator(0);
+public class ProcessPayloadEvent<T> extends Event {
 
     private NetworkNode<T> node;
     private Payload<T> payload;
@@ -23,21 +19,18 @@ public class ProcessPayloadEvent<T> extends RandomDurationEvent {
         super(time);
         this.node = node;
         this.payload = payload;
-        this.processingEndTime = time + generateRandomDuration();
+        this.processingEndTime = 0;
     }
 
     @Override
     public List<Event> simulate() {
-        List<Payload<T>> processedPayloads = node.processPayload(processingEndTime, payload);
+        Pair<Double, List<Payload<T>>> durationPayloadsPair = node.processPayload(getTime(), payload);
+        List<Payload<T>> processedPayloads = durationPayloadsPair.second();
+        processingEndTime = getTime() + durationPayloadsPair.first();
         List<Event> eventList =
                 new ArrayList<>(convertPayloadsToQueueEvents(processingEndTime, node, processedPayloads));
         eventList.add(new PollQueueEvent<>(processingEndTime, node));
         return eventList;
-    }
-
-    @Override
-    public double generateRandomDuration() {
-        return rng.generateRandomNumber();
     }
 
     @Override

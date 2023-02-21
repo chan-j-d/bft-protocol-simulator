@@ -1,6 +1,15 @@
-package simulation.util;
+package simulation.statistics;
 
-public class Statistics {
-    //TODO KEEPS TRACK OF NUMBERS TO RECORD
+import java.util.Map;
 
+public abstract class Statistics {
+    public abstract Map<String, Number> getSummaryStatistics();
+
+    @Override
+    public String toString() {
+        return getSummaryStatistics().entrySet().stream()
+                .map(entry -> entry.getKey() + ": " + entry.getValue() + "\n")
+                .reduce((x, y) -> x + "\n" + y)
+                .orElse("");
+    }
 }
