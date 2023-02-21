@@ -297,7 +297,8 @@ public class IBFTNode extends TimedNetworkNode<IBFTMessage> {
     }
 
     private void prepareOperation() {
-        if (messageHolder.hasQuorumOfSameValuedMessages(IBFTMessageType.PREPARED, lambda_i, r_i)) {
+        if (messageHolder.hasQuorumOfSameValuedMessages(IBFTMessageType.PREPARED, lambda_i, r_i)
+                && state != IBFTState.PREPARED) {
             List<IBFTMessage> prepareMessages =
                     messageHolder.getQuorumOfSameValuedMessages(IBFTMessageType.PREPARED, lambda_i, r_i);
             state = IBFTState.PREPARED;
