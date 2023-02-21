@@ -1,8 +1,10 @@
 package simulation.event;
 
+import simulation.util.Printable;
+
 import java.util.List;
 
-public abstract class Event implements Comparable<Event> {
+public abstract class Event implements Comparable<Event>, Printable {
     private double time;
 
     public Event(double time) {
@@ -30,4 +32,9 @@ public abstract class Event implements Comparable<Event> {
     }
 
     public abstract List<Event> simulate();
+
+    @Override
+    public boolean toDisplay() {
+        return true;
+    }
 }

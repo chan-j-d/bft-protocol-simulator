@@ -28,9 +28,9 @@ public class Main {
 
         setup();
 
-        double timeLimit = 10;
+        double timeLimit = 1000;
 
-        int numNodes = 8;
+        int numNodes = 4;
         int numTrials = 1;
         int seedMultiplier = 100;
         int consensusLimit = 10;
@@ -52,7 +52,7 @@ public class Main {
                 node.setAllNodes(nodes);
             }
             while (!simulator.isSimulationOver()) {
-                io.output(simulator.simulate());
+                simulator.simulate().ifPresent(io::output);
             }
             io.output("\nSnapshot:\n" + simulator.getSnapshotOfNodes());
             io.close();
@@ -62,6 +62,17 @@ public class Main {
     }
 
     private static void setup() {
+        try {
+            File directory = new File(Logger.DEFAULT_DIRECTORY);
+            if (directory.exists() && directory.isDirectory()) {
+                for (File file : directory.listFiles()) {
+                    file.delete();
+                }
+            }
+            Files.deleteIfExists(Paths.get(Logger.DEFAULT_DIRECTORY));
+        } catch (IOException e) {
+            MAIN_LOGGER.log("Unable to delete log directory before run\n" + e);
+        }
     }
 
     private static void cleanup() {

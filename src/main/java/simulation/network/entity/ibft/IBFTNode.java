@@ -105,6 +105,11 @@ public class IBFTNode extends TimedNetworkNode<IBFTMessage> {
         return getProcessedPayloads();
     }
 
+    @Override
+    public boolean isDone() {
+        return lambda_i > consensusLimit;
+    }
+
     // Utility methods
     private void startTimer() {
         timerExpiryCount++; // Every time a timer starts, a unique one is set.
@@ -178,7 +183,7 @@ public class IBFTNode extends TimedNetworkNode<IBFTMessage> {
         pv_i = NULL_VALUE;
         preparedMessageJustification = List.of();
         inputValue_i = value;
-        if (lambda > consensusLimit) {
+        if (isDone()) {
             return;
         }
         newRoundCleanup();
@@ -236,9 +241,6 @@ public class IBFTNode extends TimedNetworkNode<IBFTMessage> {
 
     // Round change handling
     private void timerExpiryOperation() {
-        if (lambda_i > consensusLimit) {
-            return;
-        }
         r_i++;
         state = IBFTState.ROUND_CHANGE;
         startTimer();

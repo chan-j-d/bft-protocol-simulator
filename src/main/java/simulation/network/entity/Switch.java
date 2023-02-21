@@ -17,4 +17,9 @@ public class Switch<T> extends NetworkNode<T> {
     public List<Payload<T>> initializationPayloads() {
         return List.of();
     }
+
+    @Override
+    public boolean isDone() {
+        return false;
+    }
 }

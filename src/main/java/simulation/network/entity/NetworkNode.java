@@ -42,6 +42,7 @@ public abstract class NetworkNode<T> implements Queueable<Payload<T>> {
     }
 
     public abstract List<Payload<T>> initializationPayloads();
+    public abstract boolean isDone();
 
     public String getName() {
         return name;

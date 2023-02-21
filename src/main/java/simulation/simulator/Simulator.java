@@ -7,8 +7,10 @@ import simulation.network.entity.TimedNetworkNode;
 import simulation.network.entity.NetworkNode;
 import simulation.network.entity.NodeTimerNotifier;
 
+import javax.swing.text.html.Option;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Optional;
 import java.util.PriorityQueue;
 
 public class Simulator<T> implements NodeTimerNotifier<T> {
@@ -34,22 +36,25 @@ public class Simulator<T> implements NodeTimerNotifier<T> {
         currentTime = 0;
     }
 
-    public String simulate() {
+    public Optional<String> simulate() {
         Event nextEvent = eventQueue.poll();
         assert nextEvent != null; // isSimulationOver should be used to check before calling this function
         currentTime = nextEvent.getTime();
         if (currentTime > TIME_CUTOFF) {
-            return "";
+            return Optional.empty();
         }
         List<Event> resultingEvents = nextEvent.simulate();
         eventQueue.addAll(resultingEvents);
         roundCount++;
 
+        if (!nextEvent.toDisplay()) {
+            return Optional.empty();
+        }
         String finalString = nextEvent.toString();
         if (roundCount % SNAPSHOT_INTERVAL == 0) {
             finalString = finalString + "\n\nSnapshot:\n" + getSnapshotOfNodes() + "\n" + eventQueue + "\n";
         }
-        return finalString;
+        return Optional.of(finalString);
     }
 
     public String getSnapshotOfNodes() {
@@ -69,9 +74,6 @@ public class Simulator<T> implements NodeTimerNotifier<T> {
 
     @Override
     public void notifyAtTime(TimedNetworkNode<T> node, double time, T message) {
-        if (time > TIME_CUTOFF) {
-            return;
-        }
         eventQueue.add(new TimedEvent<T>(time, node, message));
     }
 

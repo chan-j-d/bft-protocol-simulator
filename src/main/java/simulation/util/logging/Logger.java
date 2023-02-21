@@ -19,6 +19,7 @@ public class Logger {
     public Logger(String name) {
         this.fileName = name;
         logger = java.util.logging.Logger.getLogger(name);
+        logger.setUseParentHandlers(false);
         try {
             addFileHandler(logger, DEFAULT_DIRECTORY, fileName);
         } catch (IOException ioe) {
