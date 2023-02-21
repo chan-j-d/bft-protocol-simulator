@@ -11,10 +11,14 @@ import java.util.logging.Level;
 public class Logger {
 
     public static final String DEFAULT_DIRECTORY = "logs";
-    public static final Logger MAIN_LOGGER = new Logger("MAIN");
+    public static Logger MAIN_LOGGER;
 
     private final String fileName;
     private java.util.logging.Logger logger;
+
+    public static void setup() {
+        MAIN_LOGGER = new Logger("MAIN");
+    }
 
     public Logger(String name) {
         this.fileName = name;

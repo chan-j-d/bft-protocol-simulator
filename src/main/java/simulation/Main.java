@@ -23,9 +23,8 @@ import static simulation.network.structure.NetworkStructure.arrangeCliqueStructu
 
 public class Main {
 
-    public static Logger MAIN_LOGGER = Logger.MAIN_LOGGER;
+    public static Logger MAIN_LOGGER;
     public static void main(String[] args) {
-
         setup();
 
         double timeLimit = 1000;
@@ -65,14 +64,18 @@ public class Main {
         try {
             File directory = new File(Logger.DEFAULT_DIRECTORY);
             if (directory.exists() && directory.isDirectory()) {
+                System.out.println(Arrays.toString(directory.listFiles()));
                 for (File file : directory.listFiles()) {
                     file.delete();
                 }
             }
             Files.deleteIfExists(Paths.get(Logger.DEFAULT_DIRECTORY));
         } catch (IOException e) {
-            MAIN_LOGGER.log("Unable to delete log directory before run\n" + e);
+            MAIN_LOGGER.log("Unable to delete log directory before run\n" + e.getMessage());
+            e.printStackTrace();
         }
+        Logger.setup();
+        MAIN_LOGGER = Logger.MAIN_LOGGER;
     }
 
     private static void cleanup() {
