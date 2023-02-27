@@ -1,6 +1,6 @@
 package simulation.event;
 
-import simulation.network.entity.NetworkNode;
+import simulation.network.entity.Node;
 import simulation.network.entity.Payload;
 import simulation.util.Pair;
 
@@ -11,11 +11,11 @@ import static simulation.event.EventUtil.convertPayloadsToQueueEvents;
 
 public class ProcessPayloadEvent<T> extends Event {
 
-    private NetworkNode<T> node;
+    private Node<T> node;
     private Payload<T> payload;
     private double processingEndTime;
 
-    public ProcessPayloadEvent(double time, NetworkNode<T> node, Payload<T> payload) {
+    public ProcessPayloadEvent(double time, Node<T> node, Payload<T> payload) {
         super(time);
         this.node = node;
         this.payload = payload;

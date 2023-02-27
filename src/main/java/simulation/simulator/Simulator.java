@@ -3,8 +3,8 @@ package simulation.simulator;
 import simulation.event.Event;
 import simulation.event.InitializationEvent;
 import simulation.event.TimedEvent;
-import simulation.network.entity.TimedNetworkNode;
-import simulation.network.entity.NetworkNode;
+import simulation.network.entity.TimedNode;
+import simulation.network.entity.Node;
 import simulation.network.entity.NodeTimerNotifier;
 
 import java.util.ArrayList;
@@ -19,15 +19,15 @@ public class Simulator<T> implements NodeTimerNotifier<T> {
 
     private PriorityQueue<Event> eventQueue;
     private int roundCount;
-    private List<NetworkNode<T>> nodes;
+    private List<Node<T>> nodes;
     private double currentTime;
 
     public Simulator() {
     }
-    public void setNodes(List<? extends NetworkNode<T>> nodes) {
+    public void setNodes(List<? extends Node<T>> nodes) {
         this.nodes = new ArrayList<>(nodes);
         eventQueue = new PriorityQueue<>();
-        for (NetworkNode<T> node : nodes) {
+        for (Node<T> node : nodes) {
             eventQueue.add(new InitializationEvent<>(node));
         }
 
@@ -61,7 +61,7 @@ public class Simulator<T> implements NodeTimerNotifier<T> {
             return "";
         } else {
             return nodes.stream()
-                    .map(NetworkNode::toString)
+                    .map(Node::toString)
                     .reduce((x, y) -> x + "\n" + y)
                     .get();
         }
@@ -72,7 +72,7 @@ public class Simulator<T> implements NodeTimerNotifier<T> {
     }
 
     @Override
-    public void notifyAtTime(TimedNetworkNode<T> node, double time, T message) {
+    public void notifyAtTime(TimedNode<T> node, double time, T message) {
         eventQueue.add(new TimedEvent<T>(time, node, message));
     }
 

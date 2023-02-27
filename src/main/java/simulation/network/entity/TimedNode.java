@@ -2,11 +2,11 @@ package simulation.network.entity;
 
 import java.util.List;
 
-public abstract class TimedNetworkNode<T> extends NetworkNode<T> {
+public abstract class TimedNode<T> extends EndpointNode<T> {
 
     private final NodeTimerNotifier<T> timerNotifier;
 
-    public TimedNetworkNode(String name, NodeTimerNotifier<T> timerNotifier) {
+    public TimedNode(String name, NodeTimerNotifier<T> timerNotifier) {
         super(name);
         this.timerNotifier = timerNotifier;
     }

@@ -1,17 +1,17 @@
 package simulation.network;
 
-import simulation.network.entity.NetworkNode;
+import simulation.network.entity.Node;
 
 import java.util.List;
 
 public class NetworkUtil {
 
-    public static <T> void updateDestinationTables(List<? extends NetworkNode<T>> nodes) {
+    public static <T> void updateDestinationTables(List<? extends Node<T>> nodes) {
         boolean isUpdated;
         do {
             isUpdated = false;
-            for (NetworkNode<T> node : nodes) {
-                for (NetworkNode<T> neighborNode : node.getNeighbors()) {
+            for (Node<T> node : nodes) {
+                for (Node<T> neighborNode : node.getNeighbors()) {
                     boolean isNodeUpdated = neighborNode.mergeDestinationTable(node);
                     isUpdated = isUpdated || isNodeUpdated;
                 }

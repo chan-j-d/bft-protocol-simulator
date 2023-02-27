@@ -2,7 +2,7 @@ package simulation.network.entity.ibft;
 
 import static simulation.network.entity.ibft.IBFTMessage.NULL_VALUE;
 
-import simulation.network.entity.TimedNetworkNode;
+import simulation.network.entity.TimedNode;
 import simulation.network.entity.NodeTimerNotifier;
 import simulation.network.entity.Payload;
 import simulation.util.Pair;
@@ -17,7 +17,7 @@ import java.util.Map;
 import java.util.Set;
 import java.util.stream.Collectors;
 
-public class IBFTNode extends TimedNetworkNode<IBFTMessage> {
+public class IBFTNode extends TimedNode<IBFTMessage> {
 
     //TODO remove constant and figure out means to configure constant
     private static final RandomNumberGenerator RNG = new ExponentialDistribution(3);

@@ -1,16 +1,16 @@
 package simulation.network.topology;
 
 import simulation.network.NetworkUtil;
-import simulation.network.entity.NetworkNode;
+import simulation.network.entity.Node;
 
 import java.util.ArrayList;
 import java.util.List;
 
 public class NetworkTopology {
-    public static <T> List<NetworkNode<T>> arrangeCliqueStructure(List<? extends NetworkNode<T>> nodes) {
-        for (NetworkNode<T> node : nodes) {
+    public static <T> List<Node<T>> arrangeCliqueStructure(List<? extends Node<T>> nodes) {
+        for (Node<T> node : nodes) {
             node.clearNeighbors();
-            List<NetworkNode<T>> copy = new ArrayList<>(nodes);
+            List<Node<T>> copy = new ArrayList<>(nodes);
             copy.remove(node);
             node.addNeighbors(copy);
 

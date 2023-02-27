@@ -1,15 +1,15 @@
 package simulation.event;
 
-import simulation.network.entity.NetworkNode;
+import simulation.network.entity.Node;
 import simulation.network.entity.Payload;
 
 import java.util.List;
 
 public class QueueEvent<T> extends Event {
 
-    private NetworkNode<T> node;
+    private Node<T> node;
     private Payload<T> payload;
-    public QueueEvent(double time, NetworkNode<T> node, Payload<T> payload) {
+    public QueueEvent(double time, Node<T> node, Payload<T> payload) {
         super(time);
         this.node = node;
         this.payload = payload;

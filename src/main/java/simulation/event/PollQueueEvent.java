@@ -1,16 +1,16 @@
 package simulation.event;
 
-import simulation.network.entity.NetworkNode;
+import simulation.network.entity.Node;
 import simulation.network.entity.Payload;
 
 import java.util.List;
 
 public class PollQueueEvent<T> extends Event {
 
-    private NetworkNode<T> node;
+    private Node<T> node;
     private Payload<T> payload;
 
-    public PollQueueEvent(double time, NetworkNode<T> node) {
+    public PollQueueEvent(double time, Node<T> node) {
         super(time);
         this.node = node;
     }

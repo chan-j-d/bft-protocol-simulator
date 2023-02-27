@@ -1,6 +1,6 @@
 package simulation.event;
 
-import simulation.network.entity.NetworkNode;
+import simulation.network.entity.Node;
 import simulation.network.entity.Payload;
 
 import java.util.ArrayList;
@@ -10,9 +10,9 @@ public class InitializationEvent<T> extends Event {
 
     public static final double START_TIME = 0;
 
-    private NetworkNode<T> node;
+    private Node<T> node;
 
-    public InitializationEvent(NetworkNode<T> node) {
+    public InitializationEvent(Node<T> node) {
         super(START_TIME);
         this.node = node;
     }
@@ -22,7 +22,7 @@ public class InitializationEvent<T> extends Event {
         List<Event> eventList = new ArrayList<>();
         List<Payload<T>> payloads = node.initializationPayloads();
         for (Payload<T> payload : payloads) {
-            NetworkNode<T> nextHopNode = node.getNextNodeFor(payload);
+            Node<T> nextHopNode = node.getNextNodeFor(payload);
             eventList.add(new QueueEvent<>(START_TIME, nextHopNode, payload));
         }
         return eventList;

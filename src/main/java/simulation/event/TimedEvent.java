@@ -1,6 +1,6 @@
 package simulation.event;
 
-import simulation.network.entity.TimedNetworkNode;
+import simulation.network.entity.TimedNode;
 
 import java.util.List;
 
@@ -8,10 +8,10 @@ import static simulation.event.EventUtil.convertPayloadsToQueueEvents;
 
 public class TimedEvent<T> extends Event {
 
-    private TimedNetworkNode<T> node;
+    private TimedNode<T> node;
     private T message;
 
-    public TimedEvent(double time, TimedNetworkNode<T> node, T message) {
+    public TimedEvent(double time, TimedNode<T> node, T message) {
         super(time);
         this.node = node;
         this.message = message;
