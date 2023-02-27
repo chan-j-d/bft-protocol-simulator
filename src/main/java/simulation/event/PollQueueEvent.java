@@ -19,7 +19,7 @@ public class PollQueueEvent<T> extends Event {
     public List<Event> simulate() {
         if (!node.isEmpty() && !node.isOccupiedAtTime(getTime())) {
             payload = node.popFromQueue();
-            return List.of(new ProcessHeaderEvent<T>(getTime(), node, payload));
+            return List.of(new ProcessPayloadEvent<>(getTime(), node, payload));
         } else {
             return List.of();
         }

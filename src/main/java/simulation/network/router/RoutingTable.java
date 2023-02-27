@@ -16,8 +16,7 @@ public class RoutingTable<T> {
     public RoutingTable(List<? extends T> endPoints, List<? extends T> neighbors) {
         nodeNextNodeMap = endPoints.stream()
                 .collect(Collectors.toMap(nodeName -> nodeName, nodeName -> new ArrayList<>()));
-        neighbors.forEach(neighbor -> nodeNextNodeMap.get(neighbor).add(neighbor));
-        nodeDistanceMap = neighbors.stream()
+        nodeDistanceMap = endPoints.stream()
                 .collect(Collectors.toMap(neighbor -> neighbor, neighbor -> 1));
         this.neighbors = new ArrayList<>(neighbors);
     }

@@ -29,8 +29,8 @@ public class Main {
 
         double timeLimit = 1000;
 
-        int numNodes = 128;
-        int numTrials = 10;
+        int numNodes = 16;
+        int numTrials = 5;
         int seedMultiplier = 100;
         int consensusLimit = 10;
 
