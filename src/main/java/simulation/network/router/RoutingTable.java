@@ -62,4 +62,16 @@ public class RoutingTable<T> {
 
         return new RoutingTable<>(newNodeNextNodeMap, newNodeDistanceMap, new ArrayList<>(neighbors));
     }
+
+    @Override
+    public boolean equals(Object o) {
+        if (!(o instanceof RoutingTable)) {
+            return false;
+        }
+
+        RoutingTable<?> otherTable = (RoutingTable<?>) o;
+        return nodeNextNodeMap.equals(otherTable.nodeNextNodeMap)
+                && nodeDistanceMap.equals(otherTable.nodeDistanceMap)
+                && neighbors.equals(otherTable.neighbors);
+    }
 }

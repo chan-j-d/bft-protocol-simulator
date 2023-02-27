@@ -37,11 +37,15 @@ public class Switch<T> extends Node<T> {
     public RoutingTable<Node<T>> getRoutingTable() {
         return table;
     }
-    public void update() {
+    public boolean update() {
+        boolean isUpdated = false;
         for (var neighbor : neighbors) {
             RoutingTable<Node<T>> otherTable = neighbor.getRoutingTable();
-            table = table.addOtherRoutingTableInfo(neighbor, otherTable);
+            RoutingTable<Node<T>> newTable = table.addOtherRoutingTableInfo(neighbor, otherTable);
+            isUpdated = isUpdated || !newTable.equals(table);
+            table = newTable;
         }
+        return isUpdated;
     }
 
     public Node<T> getNextNodeFor(Payload<T> payload) {

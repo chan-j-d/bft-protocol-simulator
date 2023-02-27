@@ -5,6 +5,7 @@ import simulation.io.IoInterface;
 import simulation.network.entity.ibft.IBFTMessage;
 import simulation.network.entity.ibft.IBFTNode;
 import simulation.network.entity.ibft.IBFTStatistics;
+import simulation.network.router.Switch;
 import simulation.simulator.Simulator;
 import simulation.util.logging.Logger;
 import simulation.util.rng.ExponentialDistribution;
@@ -27,10 +28,10 @@ public class Main {
     public static void main(String[] args) {
         setup();
 
-        double timeLimit = 1000;
+        double timeLimit = 100;
 
         int numNodes = 16;
-        int numTrials = 5;
+        int numTrials = 1;
         int seedMultiplier = 100;
         int consensusLimit = 10;
 
@@ -45,7 +46,9 @@ public class Main {
                 nodes.add(new IBFTNode("IBFT-" + i, i, timeLimit, simulator, numNodes, consensusLimit));
             }
             simulator.setNodes(nodes);
-            arrangeCliqueStructure(nodes);
+            var nodeListPair = arrangeCliqueStructure(nodes);
+            List<Switch<IBFTMessage>> newSwitches = nodeListPair.second();
+
             for (IBFTNode node : nodes) {
                 node.setAllNodes(nodes);
             }
