@@ -21,4 +21,12 @@ public class NetworkTopology {
         }
         return new ArrayList<>(nodes);
     }
+
+    public static <T> List<Node<T>> arrangeMeshStructure(List<? extends EndpointNode<T>> nodes, int n, int m) {
+        return null;
+    }
+
+    public static <T> List<Node<T>> arrangeClosStructure(List<? extends EndpointNode<T>> nodes, int n, int m, int p) {
+        return null;
+    }
 }
