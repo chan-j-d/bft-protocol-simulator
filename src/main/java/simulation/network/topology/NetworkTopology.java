@@ -44,6 +44,10 @@ public class NetworkTopology {
                 Switch<T> newSwitch = new Switch<>(switchName, new ArrayList<>(nodes));
                 switchArray.get(i).add(newSwitch);
                 switches.add(newSwitch);
+
+
+                EndpointNode<T> endNode = nodes.get(i * m + j);
+                endNode.setOutflowNodes(List.of(newSwitch));
             }
         }
         for (int i = 0; i < n; i++) {

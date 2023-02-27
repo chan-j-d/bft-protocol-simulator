@@ -6,6 +6,7 @@ import simulation.network.entity.ibft.IBFTMessage;
 import simulation.network.entity.ibft.IBFTNode;
 import simulation.network.entity.ibft.IBFTStatistics;
 import simulation.network.router.Switch;
+import simulation.network.topology.NetworkTopology;
 import simulation.simulator.Simulator;
 import simulation.util.logging.Logger;
 import simulation.util.rng.ExponentialDistribution;
@@ -20,17 +21,15 @@ import java.util.Optional;
 import java.util.Random;
 import java.util.logging.LogManager;
 
-import static simulation.network.topology.NetworkTopology.arrangeCliqueStructure;
-
 public class Main {
 
     public static Logger MAIN_LOGGER;
     public static void main(String[] args) {
         setup();
 
-        double timeLimit = 100;
+        double timeLimit = 10000;
 
-        int numNodes = 16;
+        int numNodes = 32;
         int numTrials = 1;
         int seedMultiplier = 100;
         int consensusLimit = 10;
@@ -46,7 +45,7 @@ public class Main {
                 nodes.add(new IBFTNode("IBFT-" + i, i, timeLimit, simulator, numNodes, consensusLimit));
             }
             simulator.setNodes(nodes);
-            var nodeListPair = arrangeCliqueStructure(nodes);
+            var nodeListPair = NetworkTopology.arrangeMeshStructure(nodes, 16);
             List<Switch<IBFTMessage>> newSwitches = nodeListPair.second();
 
             for (IBFTNode node : nodes) {

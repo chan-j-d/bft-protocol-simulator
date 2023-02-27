@@ -27,6 +27,10 @@ public abstract class Node<T> implements Queueable<Payload<T>> {
         return new Pair<>(0.0, List.of());
     }
 
+    public double getNodeTime() {
+        return currentTime;
+    }
+
     public boolean isOccupiedAtTime(double time) {
         return currentTime > time;
     }

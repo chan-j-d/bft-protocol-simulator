@@ -15,7 +15,7 @@ import java.util.stream.Collectors;
 public class Switch<T> extends Node<T> {
 
     //TODO update means to configure timing. Currently set to 0 sec
-    private static final RandomNumberGenerator RNG = new TestGenerator(0);
+    private static final RandomNumberGenerator RNG = new TestGenerator(1);
 
     private List<Switch<T>> neighbors;
     private final Map<String, Node<T>> stringToNodeMap;
