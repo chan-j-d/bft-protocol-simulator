@@ -3,7 +3,6 @@ package simulation.event;
 import simulation.network.entity.NetworkNode;
 import simulation.network.entity.Payload;
 import simulation.util.Pair;
-import simulation.util.rng.ExponentialDistribution;
 import simulation.util.rng.RandomNumberGenerator;
 import simulation.util.rng.TestGenerator;
 

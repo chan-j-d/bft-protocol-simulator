@@ -1,9 +1,5 @@
 package simulation.network.entity;
 
-import simulation.network.entity.NetworkNode;
-import simulation.network.entity.NodeTimerNotifier;
-import simulation.network.entity.Payload;
-
 import java.util.List;
 
 public abstract class TimedNetworkNode<T> extends NetworkNode<T> {

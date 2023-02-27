@@ -7,7 +7,6 @@ import simulation.network.entity.TimedNetworkNode;
 import simulation.network.entity.NetworkNode;
 import simulation.network.entity.NodeTimerNotifier;
 
-import javax.swing.text.html.Option;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Optional;
