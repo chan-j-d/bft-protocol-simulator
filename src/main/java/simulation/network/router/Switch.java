@@ -20,18 +20,26 @@ public class Switch<T> extends Node<T> {
     private List<Switch<T>> neighbors;
     private final Map<String, Node<T>> stringToNodeMap;
     private final List<Node<T>> endpoints;
+    private final List<Node<T>> directlyConnectedEndpoints;
     private RoutingTable<Node<T>> table;
 
-    public Switch(String name, List<Node<T>> endpoints) {
+    public Switch(String name, List<? extends Node<T>> allEndpoints,
+            List<? extends Node<T>> directlyConnectedEndpoints) {
         super(name);
-        this.endpoints = new ArrayList<>(endpoints);
-        this.stringToNodeMap = endpoints.stream()
+        this.endpoints = new ArrayList<>(allEndpoints);
+        this.directlyConnectedEndpoints = new ArrayList<>(directlyConnectedEndpoints);
+        this.stringToNodeMap = allEndpoints.stream()
                 .collect(Collectors.toMap(Node::getName, endPoint -> endPoint));
     }
 
     public void setNeighbors(List<Switch<T>> neighbors) {
         this.neighbors = new ArrayList<>(neighbors);
-        this.table = new RoutingTable<>(endpoints, neighbors);
+        this.table = new RoutingTable<>(endpoints, directlyConnectedEndpoints, neighbors);
+    }
+
+    public void updateNeighbors(List<Switch<T>> newNeighbors) {
+        this.neighbors.addAll(newNeighbors);
+        this.table = new RoutingTable<>(endpoints, directlyConnectedEndpoints, newNeighbors);
     }
 
     public RoutingTable<Node<T>> getRoutingTable() {

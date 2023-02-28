@@ -13,11 +13,12 @@ public class RoutingTable<T> {
     private final Map<T, Integer> nodeDistanceMap;
     private final List<T> neighbors;
 
-    public RoutingTable(List<? extends T> endPoints, List<? extends T> neighbors) {
+    public RoutingTable(List<? extends T> endPoints, List<? extends T> connectedEndpoints,
+            List<? extends T> neighbors) {
         nodeNextNodeMap = endPoints.stream()
                 .collect(Collectors.toMap(nodeName -> nodeName, nodeName -> new ArrayList<>()));
-        nodeDistanceMap = endPoints.stream()
-                .collect(Collectors.toMap(neighbor -> neighbor, neighbor -> 1));
+        nodeDistanceMap = connectedEndpoints.stream()
+                .collect(Collectors.toMap(point -> point, point -> 1));
         this.neighbors = new ArrayList<>(neighbors);
     }
 
