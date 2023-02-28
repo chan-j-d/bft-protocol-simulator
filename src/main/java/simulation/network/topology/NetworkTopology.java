@@ -1,7 +1,6 @@
 package simulation.network.topology;
 
 import simulation.network.entity.EndpointNode;
-import simulation.network.entity.Node;
 import simulation.network.router.RoutingUtil;
 import simulation.network.router.Switch;
 import simulation.util.Pair;
@@ -9,7 +8,6 @@ import simulation.util.Pair;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.stream.Collectors;
-import java.util.stream.IntStream;
 import java.util.stream.Stream;
 
 public class NetworkTopology {
@@ -17,13 +15,13 @@ public class NetworkTopology {
             List<? extends EndpointNode<T>> nodes) {
         List<Switch<T>> switches = new ArrayList<>();
         for (EndpointNode<T> node : nodes) {
-            Switch<T> switch_ = new Switch<>("Switch-" + node.getName(), List.of(node), new ArrayList<>(nodes));
+            Switch<T> switch_ = new Switch<>("Switch-" + node.getName(), new ArrayList<>(nodes), List.of(node));
             switches.add(switch_);
             node.setOutflowNodes(List.of(switch_));
         }
 
         for (Switch<T> switch_ : switches) {
-            switch_.setNeighbors(new ArrayList<>(switches));
+            switch_.setSwitchNeighbors(new ArrayList<>(switches));
         }
         return switches;
     }
@@ -45,7 +43,7 @@ public class NetworkTopology {
             for (int j = 0; j < m; j++) {
                 String switchName = String.format("Mesh-Switch-(x: %d, y: %d)", i, j);
                 EndpointNode<T> endNode = nodes.get(i * m + j);
-                Switch<T> newSwitch = new Switch<>(switchName, List.of(endNode), new ArrayList<>(nodes));
+                Switch<T> newSwitch = new Switch<>(switchName, new ArrayList<>(nodes), List.of(endNode));
                 switchArray.get(i).add(newSwitch);
                 switches.add(newSwitch);
 
@@ -56,14 +54,14 @@ public class NetworkTopology {
         // sets neighbors for each switch
         for (int i = 0; i < n; i++) {
             for (int j = 0; j < m; j++) {
-                List<Switch<T>> neighboringSwitches = Stream.of(new Pair<>(i - 1, j - 1), new Pair<>(i - 1, j + 1),
-                        new Pair<>(i + 1, j - 1), new Pair<>(i + 1, j + 1))
+                List<Switch<T>> neighboringSwitches = Stream.of(new Pair<>(i - 1, j), new Pair<>(i + 1, j),
+                        new Pair<>(i, j - 1), new Pair<>(i, j + 1))
                         .filter(pair -> pair.first() >= 0 && pair.first() < n
                                 && pair.second() >= 0 && pair.second() < m)
                         .map(coordinates -> switchArray.get(coordinates.first()).get(coordinates.second()))
                         .collect(Collectors.toList());
                 Switch<T> switch_ = switchArray.get(i).get(j);
-                switch_.setNeighbors(neighboringSwitches);
+                switch_.setSwitchNeighbors(neighboringSwitches);
             }
         }
 
@@ -81,22 +79,20 @@ public class NetworkTopology {
         }
 
         int numFirstLayerGroups = nodes.size() / radix;
-        List<Switch<T>> allSwitches = new ArrayList<>();
 
-        List<Switch<T>> firstLayerSwitches = Stream
-                .iterate(0, index -> index < numFirstLayerGroups, index -> index + 1)
-                .map(index -> new Switch<>(
-                        getFoldedClosSwitchName(1, 1, index),
-                        nodes.subList(0, index * radix),
-                        new ArrayList<>(nodes)))
-                .collect(Collectors.toList());
+        List<Switch<T>> firstLayerSwitches = new ArrayList<>();
         for (int i = 0; i < numFirstLayerGroups; i++) {
             int index = i;
-            List<? extends EndpointNode<T>> endpointSublist = nodes.subList(0, i * radix);
+            List<? extends EndpointNode<T>> endpointSublist = nodes.subList(index * radix, (index + 1) * radix);
+            Switch<T> directSwitch_ = new Switch<>(
+                    getFoldedClosSwitchName(1, 0, i),
+                    new ArrayList<>(nodes),
+                    endpointSublist);
+            firstLayerSwitches.add(directSwitch_);
             endpointSublist.forEach(switch_ -> switch_.setOutflowNodes(List.of(firstLayerSwitches.get(index))));
         }
 
-        allSwitches.addAll(firstLayerSwitches);
+        List<Switch<T>> allSwitches = new ArrayList<>(firstLayerSwitches);
 
         int currentLayer = 2;
         List<List<Switch<T>>> prevLayerGroupedSwitches = List.of(firstLayerSwitches);
@@ -107,10 +103,10 @@ public class NetworkTopology {
             }
             currentLayer++;
             prevLayerGroupedSwitches = newLayerGroupedSwitches;
-            newLayerGroupedSwitches.stream()
-                    .forEach(allSwitches::addAll);
+            newLayerGroupedSwitches.forEach(allSwitches::addAll);
         }
 
+        RoutingUtil.updateRoutingTables(allSwitches);
         return allSwitches;
     }
 
@@ -120,17 +116,20 @@ public class NetworkTopology {
         int numGroups = numNodes / radix;
 
         List<List<Switch<T>>> nextLayerSwitches = new ArrayList<>();
-        Stream.generate(() -> new ArrayList<Switch<T>>()).limit(numGroups).forEach(nextLayerSwitches::add);
+        Stream.generate(() -> new ArrayList<Switch<T>>()).limit(radix).forEach(nextLayerSwitches::add);
         for (int groupNumber = 0; groupNumber < numGroups; groupNumber++) {
             int finalGroupNumber = groupNumber;
             List<Switch<T>> newNeighborGroup = Stream.iterate(0, index -> index < radix, index -> index + 1)
-                    .map(index -> new Switch<>(getFoldedClosSwitchName(level, finalGroupNumber, index),
-                            List.of(),
-                            new ArrayList<>(endpoints)))
+                    .map(index -> new Switch<>(getFoldedClosSwitchName(level, index, finalGroupNumber),
+                            new ArrayList<>(endpoints),
+                            List.of()))
                     .collect(Collectors.toList());
+            List<Switch<T>> prevLayerGroup = Stream.iterate(0, index -> index < radix, index -> index + 1)
+                    .map(index -> prevLayer.get(finalGroupNumber * radix + index))
+                    .collect(Collectors.toList());
+            prevLayerGroup.forEach(switch_ -> switch_.updateSwitchNeighbors(newNeighborGroup));
+            newNeighborGroup.forEach(switch_ -> switch_.setSwitchNeighbors(prevLayerGroup));
             for (int index = 0; index < radix; index++) {
-                int prevLayerIndex = groupNumber * radix + index;
-                prevLayer.get(prevLayerIndex).updateNeighbors(newNeighborGroup);
                 nextLayerSwitches.get(index).add(newNeighborGroup.get(index));
             }
         }

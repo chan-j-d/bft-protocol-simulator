@@ -7,8 +7,7 @@ public class RoutingUtil {
     public static <T> void updateRoutingTables(List<Switch<T>> switches) {
         boolean isAnyNodeUpdated;
         do {
-            isAnyNodeUpdated = switches.stream()
-                    .anyMatch(Switch::update);
+            isAnyNodeUpdated = switches.stream().anyMatch(Switch::update);
         } while (isAnyNodeUpdated);
     }
 }

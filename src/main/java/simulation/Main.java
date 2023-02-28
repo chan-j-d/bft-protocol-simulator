@@ -27,9 +27,9 @@ public class Main {
     public static void main(String[] args) {
         setup();
 
-        double timeLimit = 10000;
+        double timeLimit = 100000;
 
-        int numNodes = 32;
+        int numNodes = 64;
         int numTrials = 1;
         int seedMultiplier = 100;
         int consensusLimit = 10;
@@ -45,8 +45,10 @@ public class Main {
                 nodes.add(new IBFTNode("IBFT-" + i, i, timeLimit, simulator, numNodes, consensusLimit));
             }
             simulator.setNodes(nodes);
-            var nodeListPair = NetworkTopology.arrangeMeshStructure(nodes, 16);
-            List<Switch<IBFTMessage>> newSwitches = nodeListPair.second();
+
+            //List<Switch<IBFTMessage>> newSwitches = NetworkTopology.arrangeCliqueStructure(nodes);
+            //List<Switch<IBFTMessage>> newSwitches = NetworkTopology.arrangeMeshStructure(nodes, 8);
+            List<Switch<IBFTMessage>> newSwitches = NetworkTopology.arrangeFoldedClosStructure(nodes, 4, 3);
 
             for (IBFTNode node : nodes) {
                 node.setAllNodes(nodes);

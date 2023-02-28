@@ -17,7 +17,7 @@ public class Switch<T> extends Node<T> {
     //TODO update means to configure timing. Currently set to 0 sec
     private static final RandomNumberGenerator RNG = new TestGenerator(1);
 
-    private List<Switch<T>> neighbors;
+    private List<Switch<T>> switchNeighbors;
     private final Map<String, Node<T>> stringToNodeMap;
     private final List<Node<T>> endpoints;
     private final List<Node<T>> directlyConnectedEndpoints;
@@ -30,16 +30,18 @@ public class Switch<T> extends Node<T> {
         this.directlyConnectedEndpoints = new ArrayList<>(directlyConnectedEndpoints);
         this.stringToNodeMap = allEndpoints.stream()
                 .collect(Collectors.toMap(Node::getName, endPoint -> endPoint));
+        this.switchNeighbors = new ArrayList<>();
+        this.table = new RoutingTable<>(endpoints, directlyConnectedEndpoints, switchNeighbors);
     }
 
-    public void setNeighbors(List<Switch<T>> neighbors) {
-        this.neighbors = new ArrayList<>(neighbors);
-        this.table = new RoutingTable<>(endpoints, directlyConnectedEndpoints, neighbors);
+    public void setSwitchNeighbors(List<Switch<T>> switchNeighbors) {
+        this.switchNeighbors = new ArrayList<>(switchNeighbors);
+        this.table = new RoutingTable<>(endpoints, directlyConnectedEndpoints, switchNeighbors);
     }
 
-    public void updateNeighbors(List<Switch<T>> newNeighbors) {
-        this.neighbors.addAll(newNeighbors);
-        this.table = new RoutingTable<>(endpoints, directlyConnectedEndpoints, newNeighbors);
+    public void updateSwitchNeighbors(List<Switch<T>> newNeighbors) {
+        this.switchNeighbors.addAll(newNeighbors);
+        this.table = new RoutingTable<>(endpoints, directlyConnectedEndpoints, switchNeighbors);
     }
 
     public RoutingTable<Node<T>> getRoutingTable() {
@@ -47,7 +49,7 @@ public class Switch<T> extends Node<T> {
     }
     public boolean update() {
         boolean isUpdated = false;
-        for (var neighbor : neighbors) {
+        for (var neighbor : switchNeighbors) {
             RoutingTable<Node<T>> otherTable = neighbor.getRoutingTable();
             RoutingTable<Node<T>> newTable = table.addOtherRoutingTableInfo(neighbor, otherTable);
             isUpdated = isUpdated || !newTable.equals(table);
@@ -59,7 +61,7 @@ public class Switch<T> extends Node<T> {
     public Node<T> getNextNodeFor(Payload<T> payload) {
         String destinationString = payload.getDestination();
         Node<T> endpoint = stringToNodeMap.get(destinationString);
-        if (endpoints.contains(endpoint)) {
+        if (directlyConnectedEndpoints.contains(endpoint)) {
             return endpoint;
         }
 
@@ -84,5 +86,10 @@ public class Switch<T> extends Node<T> {
     @Override
     public boolean isDone() {
         return false;
+    }
+
+    @Override
+    public String toString() {
+        return super.toString();
     }
 }

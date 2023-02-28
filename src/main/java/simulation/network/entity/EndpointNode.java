@@ -10,6 +10,7 @@ public abstract class EndpointNode<T> extends Node<T> {
 
     public EndpointNode(String name) {
         super(name);
+        this.outflowNodes = new ArrayList<>();
     }
 
     public void setOutflowNodes(List<Node<T>> outflowNodes) {

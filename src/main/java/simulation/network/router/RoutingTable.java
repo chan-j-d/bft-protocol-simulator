@@ -19,6 +19,7 @@ public class RoutingTable<T> {
                 .collect(Collectors.toMap(nodeName -> nodeName, nodeName -> new ArrayList<>()));
         nodeDistanceMap = connectedEndpoints.stream()
                 .collect(Collectors.toMap(point -> point, point -> 1));
+        connectedEndpoints.forEach(endpoint -> nodeNextNodeMap.get(endpoint).add(endpoint));
         this.neighbors = new ArrayList<>(neighbors);
     }
 
@@ -54,7 +55,8 @@ public class RoutingTable<T> {
             if (!isNodeRecorded(nodeName) || getNodeDistance(nodeName) > other.getNodeDistance(nodeName) + 1) {
                 newNodeDistanceMap.put(nodeName, other.getNodeDistance(nodeName) + 1);
                 newNodeNextNodeMap.put(nodeName, new ArrayList<>(List.of(otherNodeName)));
-            } else if (getNodeDistance(nodeName) == other.getNodeDistance(nodeName) + 1) {
+            } else if (getNodeDistance(nodeName) == other.getNodeDistance(nodeName) + 1 &&
+                    !newNodeNextNodeMap.get(nodeName).contains(otherNodeName)) {
                 newNodeNextNodeMap.get(nodeName).add(otherNodeName);
             } else {
                 // do nothing as other path through other node is longer
@@ -74,5 +76,10 @@ public class RoutingTable<T> {
         return nodeNextNodeMap.equals(otherTable.nodeNextNodeMap)
                 && nodeDistanceMap.equals(otherTable.nodeDistanceMap)
                 && neighbors.equals(otherTable.neighbors);
+    }
+
+    @Override
+    public String toString() {
+        return String.format("%s\n%s\n%s", neighbors, nodeDistanceMap, nodeNextNodeMap);
     }
 }
