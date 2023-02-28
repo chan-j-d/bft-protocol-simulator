@@ -71,11 +71,11 @@ public class NetworkTopology {
     }
 
     public static <T> List<Switch<T>> arrangeFoldedClosStructure(
-            List<? extends EndpointNode<T>> nodes, int radix, int levels) {
-        if (!isValidFoldedClosSetup(nodes.size(), radix, levels)) {
+            List<? extends EndpointNode<T>> nodes, int radix) {
+        if (!isValidFoldedClosSetup(nodes.size(), radix)) {
             throw new RuntimeException(String.format(
                     "The dimensions (Size: %d, Radix: %d, Levels: %d), provided do not match the requirements " +
-                            "for a simple folded clos network.", nodes.size(), radix, levels));
+                            "for a simple folded clos network.", nodes.size(), radix));
         }
 
         int numFirstLayerGroups = nodes.size() / radix;
@@ -95,8 +95,9 @@ public class NetworkTopology {
         List<Switch<T>> allSwitches = new ArrayList<>(firstLayerSwitches);
 
         int currentLayer = 2;
+        int nextGroupSize = firstLayerSwitches.size() / radix;
         List<List<Switch<T>>> prevLayerGroupedSwitches = List.of(firstLayerSwitches);
-        while (currentLayer <= levels) {
+        do {
             List<List<Switch<T>>> newLayerGroupedSwitches = new ArrayList<>();
             for (List<Switch<T>> prevGroupedSwitches : prevLayerGroupedSwitches) {
                 newLayerGroupedSwitches.addAll(addNextSwitchLayer(nodes, prevGroupedSwitches, radix, currentLayer));
@@ -104,7 +105,8 @@ public class NetworkTopology {
             currentLayer++;
             prevLayerGroupedSwitches = newLayerGroupedSwitches;
             newLayerGroupedSwitches.forEach(allSwitches::addAll);
-        }
+            nextGroupSize = newLayerGroupedSwitches.get(0).size();
+        } while (nextGroupSize != 1);
 
         RoutingUtil.updateRoutingTables(allSwitches);
         return allSwitches;
@@ -113,19 +115,22 @@ public class NetworkTopology {
     private static <T> List<List<Switch<T>>> addNextSwitchLayer(
             List<? extends EndpointNode<T>> endpoints, List<Switch<T>> prevLayer, int radix, int level) {
         int numNodes = prevLayer.size();
-        int numGroups = numNodes / radix;
+        int numGroups = Math.max(numNodes / radix, 1);
+        radix = Math.min(numNodes, radix);
 
         List<List<Switch<T>>> nextLayerSwitches = new ArrayList<>();
         Stream.generate(() -> new ArrayList<Switch<T>>()).limit(radix).forEach(nextLayerSwitches::add);
         for (int groupNumber = 0; groupNumber < numGroups; groupNumber++) {
             int finalGroupNumber = groupNumber;
-            List<Switch<T>> newNeighborGroup = Stream.iterate(0, index -> index < radix, index -> index + 1)
+            int effectiveRadix = radix;
+            List<Switch<T>> newNeighborGroup =
+                    Stream.iterate(0, index -> index < effectiveRadix, index -> index + 1)
                     .map(index -> new Switch<>(getFoldedClosSwitchName(level, index, finalGroupNumber),
                             new ArrayList<>(endpoints),
                             List.of()))
                     .collect(Collectors.toList());
-            List<Switch<T>> prevLayerGroup = Stream.iterate(0, index -> index < radix, index -> index + 1)
-                    .map(index -> prevLayer.get(finalGroupNumber * radix + index))
+            List<Switch<T>> prevLayerGroup = Stream.iterate(0, index -> index < effectiveRadix, index -> index + 1)
+                    .map(index -> prevLayer.get(finalGroupNumber * effectiveRadix + index))
                     .collect(Collectors.toList());
             prevLayerGroup.forEach(switch_ -> switch_.updateSwitchNeighbors(newNeighborGroup));
             newNeighborGroup.forEach(switch_ -> switch_.setSwitchNeighbors(prevLayerGroup));
@@ -140,10 +145,13 @@ public class NetworkTopology {
         return String.format("Folded-Clos-(Level: %d, Group: %d, Index: %d)", level, group, index);
     }
 
-    private static boolean isValidFoldedClosSetup(int N, int radix, int levels) {
-        if (levels == 1) {
-            return false;
+    private static boolean isValidFoldedClosSetup(int N, int radix) {
+        while (N > radix) {
+            if (N % radix != 0) {
+                return false;
+            }
+            N = N / radix;
         }
-        return N % radix == 0;
+        return true;
     }
 }

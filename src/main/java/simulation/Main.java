@@ -48,7 +48,7 @@ public class Main {
 
             //List<Switch<IBFTMessage>> newSwitches = NetworkTopology.arrangeCliqueStructure(nodes);
             //List<Switch<IBFTMessage>> newSwitches = NetworkTopology.arrangeMeshStructure(nodes, 8);
-            List<Switch<IBFTMessage>> newSwitches = NetworkTopology.arrangeFoldedClosStructure(nodes, 4, 3);
+            List<Switch<IBFTMessage>> newSwitches = NetworkTopology.arrangeFoldedClosStructure(nodes, 2);
 
             for (IBFTNode node : nodes) {
                 node.setAllNodes(nodes);
