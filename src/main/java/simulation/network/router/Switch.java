@@ -3,6 +3,7 @@ package simulation.network.router;
 import simulation.network.entity.Node;
 import simulation.network.entity.Payload;
 import simulation.util.Pair;
+import simulation.util.rng.ExponentialDistribution;
 import simulation.util.rng.RandomNumberGenerator;
 import simulation.util.rng.TestGenerator;
 
@@ -14,8 +15,8 @@ import java.util.stream.Collectors;
 
 public class Switch<T> extends Node<T> {
 
-    //TODO update means to configure timing. Currently set to 0 sec
-    private static final RandomNumberGenerator RNG = new TestGenerator(1);
+    //TODO update means to configure timing.
+    private static final RandomNumberGenerator RNG = new ExponentialDistribution(1.0);
 
     private List<Switch<T>> switchNeighbors;
     private final Map<String, Node<T>> stringToNodeMap;
@@ -69,13 +70,18 @@ public class Switch<T> extends Node<T> {
 
         // tie-breaking mechanism - use a randomized decision
         int randomIndex = new Random().nextInt(nextHopNodeOptions.size());
-
         return nextHopNodeOptions.get(randomIndex);
+    }
+
+    public List<Switch<T>> getSwitchNeighbors() {
+        return switchNeighbors;
     }
 
     @Override
     public Pair<Double, List<Payload<T>>> processPayload(double time, Payload<T> payload) {
-        return new Pair<>(RNG.generateRandomNumber(), List.of(payload));
+        double duration = RNG.generateRandomNumber();
+        super.processPayload(time + duration, payload);
+        return new Pair<>(duration, List.of(payload));
     }
 
     @Override

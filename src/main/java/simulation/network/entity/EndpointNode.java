@@ -17,6 +17,10 @@ public abstract class EndpointNode<T> extends Node<T> {
         this.outflowNodes = new ArrayList<>(outflowNodes);
     }
 
+    public List<Node<T>> getOutflowNodes() {
+        return outflowNodes;
+    }
+
     @Override
     public Node<T> getNextNodeFor(Payload<T> payload) {
         if (outflowNodes.size() == 0) {

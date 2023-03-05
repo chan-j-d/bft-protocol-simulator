@@ -8,6 +8,7 @@ import simulation.network.entity.ibft.IBFTStatistics;
 import simulation.network.router.Switch;
 import simulation.network.topology.NetworkTopology;
 import simulation.simulator.Simulator;
+import simulation.statistics.QueueStatistics;
 import simulation.util.logging.Logger;
 import simulation.util.rng.ExponentialDistribution;
 
@@ -29,18 +30,19 @@ public class Main {
 
         double timeLimit = 100000;
 
-        int numNodes = 64;
+        int numNodes = 16;
         int numTrials = 1;
         int seedMultiplier = 100;
-        int consensusLimit = 10;
+        int consensusLimit = 1000;
 
-        IBFTStatistics statistics = null;
+        IoInterface io = new FileIo("output.txt");
+        IBFTStatistics ibftStats = null;
+        QueueStatistics queueStatistics = null;
         for (int j = 0; j < numTrials; j++) {
             ExponentialDistribution.UNIFORM_DISTRIBUTION = new Random(seedMultiplier * j);
-            IoInterface io = new FileIo("output" + j + ".txt");
             //IoInterface io = new ConsoleIo();
             List<IBFTNode> nodes = new ArrayList<>();
-            Simulator<IBFTMessage> simulator = new Simulator<IBFTMessage>();
+            Simulator<IBFTMessage> simulator = new Simulator<>();
             for (int i = 0; i < numNodes; i++) {
                 nodes.add(new IBFTNode("IBFT-" + i, i, timeLimit, simulator, numNodes, consensusLimit));
             }
@@ -48,7 +50,7 @@ public class Main {
 
             //List<Switch<IBFTMessage>> newSwitches = NetworkTopology.arrangeCliqueStructure(nodes);
             //List<Switch<IBFTMessage>> newSwitches = NetworkTopology.arrangeMeshStructure(nodes, 8);
-            List<Switch<IBFTMessage>> newSwitches = NetworkTopology.arrangeFoldedClosStructure(nodes, 2);
+            List<Switch<IBFTMessage>> newSwitches = NetworkTopology.arrangeFoldedClosStructure(nodes, 4);
 
             for (IBFTNode node : nodes) {
                 node.setAllNodes(nodes);
@@ -61,18 +63,21 @@ public class Main {
             IBFTStatistics runStats = nodes.stream()
                     .map(IBFTNode::getIbftStatistics)
                     .reduce(IBFTStatistics::addStatistics).orElseThrow();
-            statistics = Optional.ofNullable(statistics)
+            ibftStats = Optional.ofNullable(ibftStats)
                     .map(stats -> stats.addStatistics(runStats))
                     .orElse(runStats);
 
-            String statisticsResults = runStats.toString();
+            String ibftStatisticsResults = runStats.toString();
             io.output("\nSummary:");
-            io.output(statisticsResults);
+            io.output(ibftStatisticsResults);
 
-            io.close();
+            newSwitches.stream()
+                    .map(switch_ -> switch_.getName() + "\n" + switch_.getQueueStatistics())
+                    .forEach(System.out::println);
         }
+        io.close();
 
-        String fullRunResults = statistics.toString();
+        String fullRunResults = ibftStats.toString();
         System.out.println(fullRunResults);
 
         cleanup();
