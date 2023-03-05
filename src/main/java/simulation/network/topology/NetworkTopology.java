@@ -23,6 +23,8 @@ public class NetworkTopology {
         for (Switch<T> switch_ : switches) {
             switch_.setSwitchNeighbors(new ArrayList<>(switches));
         }
+
+        RoutingUtil.updateRoutingTables(switches);
         return switches;
     }
 
