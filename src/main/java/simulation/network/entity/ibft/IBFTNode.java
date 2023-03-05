@@ -101,7 +101,7 @@ public class IBFTNode extends TimedNode<IBFTMessage> {
     @Override
     public Pair<Double, List<Payload<IBFTMessage>>> processPayload(double time, Payload<IBFTMessage> payload) {
         double duration = RNG.generateRandomNumber();
-        double timePassed = time - getNodeTime();
+        double timePassed = time - getCurrentTime();
         super.processPayload(time + duration, payload);
         statistics.incrementMesssageArrivedCount();
         statistics.addTime(state, duration + timePassed);

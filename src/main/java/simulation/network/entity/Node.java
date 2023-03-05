@@ -1,50 +1,54 @@
 package simulation.network.entity;
 
+import simulation.statistics.QueueStatistics;
 import simulation.util.Pair;
-import simulation.util.Queueable;
 
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.LinkedList;
 import java.util.List;
 
-public abstract class Node<T> implements Queueable<Payload<T>> {
+public abstract class Node<T> {
 
     private String name;
     private LinkedList<Payload<T>> queue;
+    private LinkedList<Double> messageArrivalTimes;
     private double currentTime;
+    private QueueStatistics queueStatistics;
 
     public Node(String name) {
         this.name = name;
         this.queue = new LinkedList<>();
         this.currentTime = 0;
+        this.queueStatistics = new QueueStatistics();
     }
 
+    public abstract List<Payload<T>> initializationPayloads();
+    public abstract boolean isDone();
+    public abstract Node<T> getNextNodeFor(Payload<T> payload);
+
+    public String getName() {
+        return name;
+    }
     public Pair<Double, List<Payload<T>>> processPayload(double time, Payload<T> payload) {
         this.currentTime = time;
         return new Pair<>(0.0, List.of());
-    }
-
-    public double getNodeTime() {
-        return currentTime;
     }
 
     public boolean isOccupiedAtTime(double time) {
         return currentTime > time;
     }
 
-    public abstract List<Payload<T>> initializationPayloads();
-    public abstract boolean isDone();
-
-    public String getName() {
-        return name;
+    public void setCurrentTime(double time) {
+        this.currentTime = time;
     }
-
-    public abstract Node<T> getNextNodeFor(Payload<T> payload);
-
+    public double getCurrentTime() {
+        return currentTime;
+    }
     public Payload<T> sendMessage(T message, Node<T> node) {
         return new Payload<>(message, node.getName());
     }
+
     public List<Payload<T>> sendMessage(T message, Collection<? extends Node<T>> nodes) {
         List<Payload<T>> payloads = new ArrayList<>();
         for (Node<T> node : nodes) {
@@ -73,18 +77,20 @@ public abstract class Node<T> implements Queueable<Payload<T>> {
         return name;
     }
 
-    @Override
     public boolean isEmpty() {
         return queue.isEmpty();
     }
 
-    @Override
-    public void addToQueue(Payload<T> payload) {
+    public void addToQueue(double time, Payload<T> payload) {
+        double timeElapsed = time - getCurrentTime();
+        setCurrentTime(time);
+        queueStatistics.addMessageArrived(timeElapsed);
+        messageArrivalTimes.add(time);
         queue.add(payload);
     }
 
-    @Override
-    public Payload<T> popFromQueue() {
+    public Payload<T> popFromQueue(double time) {
+        queueStatistics.addMessageQueueTime(time - messageArrivalTimes.pop());
         return queue.pop();
     }
 }
