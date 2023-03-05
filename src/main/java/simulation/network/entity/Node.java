@@ -10,17 +10,18 @@ import java.util.List;
 
 public abstract class Node<T> {
 
-    private String name;
-    private LinkedList<Payload<T>> queue;
-    private LinkedList<Double> messageArrivalTimes;
+    private final String name;
+    private final LinkedList<Payload<T>> queue;
+    private final LinkedList<Double> messageArrivalTimes;
+    private final QueueStatistics queueStatistics;
     private double currentTime;
-    private QueueStatistics queueStatistics;
 
     public Node(String name) {
         this.name = name;
         this.queue = new LinkedList<>();
         this.currentTime = 0;
         this.queueStatistics = new QueueStatistics();
+        this.messageArrivalTimes = new LinkedList<>();
     }
 
     public abstract List<Payload<T>> initializationPayloads();
