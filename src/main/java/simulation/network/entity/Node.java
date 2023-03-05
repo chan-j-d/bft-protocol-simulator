@@ -32,7 +32,8 @@ public abstract class Node<T> {
         return name;
     }
     public Pair<Double, List<Payload<T>>> processPayload(double time, Payload<T> payload) {
-        this.currentTime = time;
+        queueStatistics.updateTimeElapsed(time - currentTime);
+        setCurrentTime(time);
         return new Pair<>(0.0, List.of());
     }
 
@@ -91,7 +92,8 @@ public abstract class Node<T> {
     }
 
     public Payload<T> popFromQueue(double time) {
-        queueStatistics.addMessageQueueTime(time - messageArrivalTimes.pop());
+        queueStatistics.addMessageQueueTime(time - getCurrentTime(), time - messageArrivalTimes.pop());
+        setCurrentTime(time);
         return queue.pop();
     }
 

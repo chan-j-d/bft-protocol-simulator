@@ -8,7 +8,7 @@ public abstract class Statistics {
     @Override
     public String toString() {
         return getSummaryStatistics().entrySet().stream()
-                .map(entry -> entry.getKey() + ": " + entry.getValue() + "\n")
+                .map(entry -> entry.getKey() + ": " + entry.getValue())
                 .reduce((x, y) -> x + "\n" + y)
                 .orElse("");
     }

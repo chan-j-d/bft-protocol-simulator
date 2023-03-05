@@ -58,6 +58,7 @@ public class IBFTNode extends TimedNode<IBFTMessage> {
     private Map<Integer, List<IBFTMessage>> consensusQuorum;
     private Map<Integer, Integer> otherNodeHeights;
     private int inputValue_i; // value passed as input to instance
+    private double previousRecordedTime;
 
 
     public IBFTNode(String name, int identifier, double baseTimeLimit, NodeTimerNotifier<IBFTMessage> timerNotifier,
@@ -79,6 +80,7 @@ public class IBFTNode extends TimedNode<IBFTMessage> {
         this.consensusQuorum = new HashMap<>();
         this.otherNodeHeights = new HashMap<>();
         this.statistics = new IBFTStatistics();
+        this.previousRecordedTime = 0;
     }
 
     public void setAllNodes(List<IBFTNode> allNodes) {
@@ -101,9 +103,11 @@ public class IBFTNode extends TimedNode<IBFTMessage> {
     @Override
     public Pair<Double, List<Payload<IBFTMessage>>> processPayload(double time, Payload<IBFTMessage> payload) {
         double duration = RNG.generateRandomNumber();
-        double timePassed = time - getCurrentTime();
-        super.processPayload(time + duration, payload);
+        double timePassed = time - previousRecordedTime;
+        double newCurrentTime = time + duration;
+        super.processPayload(newCurrentTime, payload);
         statistics.addTime(state, duration + timePassed);
+        previousRecordedTime = newCurrentTime;
         IBFTMessage message = payload.getMessage();
         processMessage(message);
         logger.log(String.format("%.3f: %s processing %s", time, this, message));
