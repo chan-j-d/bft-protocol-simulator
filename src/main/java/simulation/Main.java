@@ -59,7 +59,7 @@ public class Main {
             io.output("\nSnapshot:\n" + simulator.getSnapshotOfNodes());
 
             IBFTStatistics runStats = nodes.stream()
-                    .map(IBFTNode::getStatistics)
+                    .map(IBFTNode::getIbftStatistics)
                     .reduce(IBFTStatistics::addStatistics).orElseThrow();
             statistics = Optional.ofNullable(statistics)
                     .map(stats -> stats.addStatistics(runStats))

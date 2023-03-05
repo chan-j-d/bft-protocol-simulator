@@ -95,7 +95,7 @@ public abstract class Node<T> {
         return queue.pop();
     }
 
-    public QueueStatistics getSummaryStatistics() {
+    public QueueStatistics getQueueStatistics() {
         return queueStatistics;
     }
 }

@@ -103,7 +103,6 @@ public class IBFTNode extends TimedNode<IBFTMessage> {
         double duration = RNG.generateRandomNumber();
         double timePassed = time - getCurrentTime();
         super.processPayload(time + duration, payload);
-        statistics.incrementMesssageArrivedCount();
         statistics.addTime(state, duration + timePassed);
         IBFTMessage message = payload.getMessage();
         processMessage(message);
@@ -124,7 +123,7 @@ public class IBFTNode extends TimedNode<IBFTMessage> {
         return lambda_i > consensusLimit;
     }
 
-    public IBFTStatistics getStatistics() {
+    public IBFTStatistics getIbftStatistics() {
         return statistics;
     }
 

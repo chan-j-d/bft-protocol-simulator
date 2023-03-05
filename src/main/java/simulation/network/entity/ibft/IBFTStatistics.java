@@ -8,16 +8,18 @@ import java.util.LinkedHashMap;
 
 public class IBFTStatistics extends Statistics {
 
+    private static final String KEY_NODE_COUNT = "Total node count";
+    private static final String KEY_CONSENSUS_COUNT = "Total consensus count";
+    private static final String KEY_STATE_AVERAGE_TIME = "Average time at state %s per node per instance";
+    private static final String KEY_AVERAGE_TIME_PER_CONSENSUS = "Average time per consensus instance per node";
     private int nodeCount;
     private int consensusCount;
-    private int numMessagesArrived;
     private double totalTime;
 
     private Map<IBFTState, Double> stateTimeMap;
     public IBFTStatistics() {
         nodeCount = 1;
         consensusCount = 0;
-        numMessagesArrived = 0;
         totalTime = 0;
         stateTimeMap = new HashMap<>();
         for (IBFTState state : IBFTState.STATES) {
@@ -25,21 +27,15 @@ public class IBFTStatistics extends Statistics {
         }
     }
 
-    private IBFTStatistics(int nodeCount, int consensusCount, int numMessagesArrived, double totalTime,
-            Map<IBFTState, Double> stateTimeMap) {
+    private IBFTStatistics(int nodeCount, int consensusCount, double totalTime, Map<IBFTState, Double> stateTimeMap) {
         this.nodeCount = nodeCount;
         this.consensusCount = consensusCount;
-        this.numMessagesArrived = numMessagesArrived;
         this.totalTime = totalTime;
         this.stateTimeMap = stateTimeMap;
     }
 
     public void incrementConsensusCount() {
         this.consensusCount++;
-    }
-
-    public void incrementMesssageArrivedCount() {
-        this.numMessagesArrived++;
     }
 
     public void addTime(IBFTState state, double time) {
@@ -58,17 +54,12 @@ public class IBFTStatistics extends Statistics {
     public IBFTStatistics addStatistics(IBFTStatistics otherStatistics) {
         int totalNodeCount = getNodeCount() + otherStatistics.getNodeCount();
         int newConsensusCount = Math.max(consensusCount, otherStatistics.getConsensusCount());
-        int totalMessageCount = getNumMessagesArrived() + otherStatistics.getNumMessagesArrived();
         double totalTime = getTotalTime() + otherStatistics.getTotalTime();
         Map<IBFTState, Double> newMap = new HashMap<>();
         for (IBFTState state : IBFTState.STATES) {
             newMap.put(state, getTimeForState(state) + otherStatistics.getTimeForState(state));
         }
-        return new IBFTStatistics(totalNodeCount, newConsensusCount, totalMessageCount, totalTime, newMap);
-    }
-
-    private int getNumMessagesArrived() {
-        return numMessagesArrived;
+        return new IBFTStatistics(totalNodeCount, newConsensusCount, totalTime, newMap);
     }
 
     private double getTotalTime() {
@@ -82,15 +73,13 @@ public class IBFTStatistics extends Statistics {
     @Override
     public Map<String, Number> getSummaryStatistics() {
         Map<String, Number> results = new LinkedHashMap<>();
-        results.put("Total node count", getNodeCount());
-        results.put("Total consensus count", getConsensusCount());
+        results.put(KEY_NODE_COUNT, getNodeCount());
+        results.put(KEY_CONSENSUS_COUNT, getConsensusCount());
         for (IBFTState state : IBFTState.STATES) {
             double value = stateTimeMap.get(state) / getNodeCount() / getConsensusCount();
-            results.put(String.format("Average time at state %s per node per instance", state), value);
+            results.put(String.format(KEY_STATE_AVERAGE_TIME, state), value);
         }
-        results.put("Message arrival rate", getNumMessagesArrived() / getTotalTime());
-        results.put("Total time per consensus instance per node",
-                getTotalTime() / getNodeCount() / getConsensusCount());
+        results.put(KEY_AVERAGE_TIME_PER_CONSENSUS, getTotalTime() / getNodeCount() / getConsensusCount());
         return results;
     }
 }
