@@ -94,4 +94,8 @@ public abstract class Node<T> {
         queueStatistics.addMessageQueueTime(time - messageArrivalTimes.pop());
         return queue.pop();
     }
+
+    public QueueStatistics getSummaryStatistics() {
+        return queueStatistics;
+    }
 }
