@@ -29,15 +29,6 @@ public enum IBFTMessageType {
         this.representation = representation;
     }
 
-    public static IBFTMessageType getMessageTypeFromString(String stringType) {
-        IBFTMessageType type = STRING_IBFT_MESSAGE_TYPE_MAP.get(stringType);
-        if (type == null) {
-            throw new RuntimeException("Not a valid string type!");
-        }
-
-        return type;
-    }
-
     @Override
     public String toString() {
         return this.representation;

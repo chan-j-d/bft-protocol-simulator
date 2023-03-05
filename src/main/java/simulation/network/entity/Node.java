@@ -10,14 +10,12 @@ import java.util.List;
 
 public abstract class Node<T> implements Queueable<Payload<T>> {
 
-    private List<Node<T>> neighbors;
     private String name;
     private LinkedList<Payload<T>> queue;
     private double currentTime;
 
     public Node(String name) {
         this.name = name;
-        this.neighbors = new ArrayList<>();
         this.queue = new LinkedList<>();
         this.currentTime = 0;
     }
