@@ -9,6 +9,7 @@ public class QueueStatistics extends Statistics {
     public static final String KEY_MESSAGE_ARRIVAL_RATE = "Average effective arrival rate";
     public static final String KEY_WAITING_TIME = "Average waiting time per message";
     public static final String KEY_PRODUCT_ARRIVAL_WAITING_TIME = "Product of waiting time and arrival rate";
+    public static final String KEY_TOTAL_TIME = "Total time";
 
     private long totalMessageCount;
     private int currentMessageCount;
@@ -16,6 +17,7 @@ public class QueueStatistics extends Statistics {
 
     private double totalTime;
     private double totalQueueingTime;
+    private int numNodes;
 
     public QueueStatistics() {
         totalMessageCount = 0;
@@ -23,23 +25,29 @@ public class QueueStatistics extends Statistics {
         totalMessageQueueTime = 0;
         totalTime = 0;
         totalQueueingTime = 0;
+        numNodes = 1;
     }
 
     private QueueStatistics(long totalMessageCount, int currentMessageCount, double totalMessageQueueTime,
-            double totalTime, double totalQueueingTime) {
+            double totalTime, double totalQueueingTime, int numNodes) {
         this.totalMessageCount = totalMessageCount;
         this.currentMessageCount = currentMessageCount;
         this.totalMessageQueueTime = totalMessageQueueTime;
         this.totalTime = totalTime;
         this.totalQueueingTime = totalQueueingTime;
+        this.numNodes = numNodes;
     }
     @Override
     public Map<String, Number> getSummaryStatistics() {
+        double averageNumMessagesInQueue = totalQueueingTime / totalTime;
+        double messageArrivalRate = totalMessageCount / totalTime;
+        double averageTimeInQueue = totalMessageQueueTime / totalMessageCount;
         Map<String, Number> map = new LinkedHashMap<>();
-        map.put(KEY_NUM_MESSAGES_IN_QUEUE, totalQueueingTime / totalTime);
-        map.put(KEY_MESSAGE_ARRIVAL_RATE, totalMessageCount / totalTime);
-        map.put(KEY_WAITING_TIME, totalMessageQueueTime / totalMessageCount);
-        map.put(KEY_PRODUCT_ARRIVAL_WAITING_TIME, (totalMessageQueueTime / totalTime));
+        map.put(KEY_NUM_MESSAGES_IN_QUEUE, averageNumMessagesInQueue);
+        map.put(KEY_MESSAGE_ARRIVAL_RATE, messageArrivalRate);
+        map.put(KEY_WAITING_TIME, averageTimeInQueue);
+        map.put(KEY_PRODUCT_ARRIVAL_WAITING_TIME, messageArrivalRate * averageTimeInQueue);
+        map.put(KEY_TOTAL_TIME, totalTime / numNodes);
         return map;
     }
 
@@ -50,13 +58,10 @@ public class QueueStatistics extends Statistics {
         totalTime += timeElapsed;
     }
 
-    public void updateTimeElapsed(double timeElapsed) {
-        totalQueueingTime += currentMessageCount * timeElapsed;
-        totalTime += timeElapsed;
-    }
     public void addMessageQueueTime(double timeElapsed, double messageQueueTime) {
         totalQueueingTime += currentMessageCount * timeElapsed;
         totalMessageQueueTime += messageQueueTime;
+        totalTime += timeElapsed;
         currentMessageCount -= 1;
     }
 
@@ -71,6 +76,7 @@ public class QueueStatistics extends Statistics {
                 this.currentMessageCount + other.currentMessageCount,
                 this.totalMessageQueueTime + other.totalMessageQueueTime,
                 this.totalTime + other.totalTime,
-                this.totalQueueingTime + other.totalQueueingTime);
+                this.totalQueueingTime + other.totalQueueingTime,
+                this.numNodes + other.numNodes);
     }
 }

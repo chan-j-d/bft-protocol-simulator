@@ -12,6 +12,7 @@ public class IBFTStatistics extends Statistics {
     private static final String KEY_CONSENSUS_COUNT = "Total consensus count";
     private static final String KEY_STATE_AVERAGE_TIME = "Average time at state %s per node per instance";
     private static final String KEY_AVERAGE_TIME_PER_CONSENSUS = "Average time per consensus instance per node";
+    private static final String KEY_TOTAL_TIME = "Total time";
     private int nodeCount;
     private int consensusCount;
     private double totalTime;
@@ -80,6 +81,7 @@ public class IBFTStatistics extends Statistics {
             results.put(String.format(KEY_STATE_AVERAGE_TIME, state), value);
         }
         results.put(KEY_AVERAGE_TIME_PER_CONSENSUS, getTotalTime() / getNodeCount() / getConsensusCount());
+        results.put(KEY_TOTAL_TIME, getTotalTime() / getNodeCount());
         return results;
     }
 }

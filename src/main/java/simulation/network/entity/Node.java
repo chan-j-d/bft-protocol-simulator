@@ -15,6 +15,7 @@ public abstract class Node<T> {
     private final LinkedList<Double> messageArrivalTimes;
     private final QueueStatistics queueStatistics;
     private double currentTime;
+    private double previousQueueChangedTime;
 
     public Node(String name) {
         this.name = name;
@@ -22,6 +23,7 @@ public abstract class Node<T> {
         this.currentTime = 0;
         this.queueStatistics = new QueueStatistics();
         this.messageArrivalTimes = new LinkedList<>();
+        this.previousQueueChangedTime = 0;
     }
 
     public abstract List<Payload<T>> initializationPayloads();
@@ -32,8 +34,10 @@ public abstract class Node<T> {
         return name;
     }
     public Pair<Double, List<Payload<T>>> processPayload(double time, Payload<T> payload) {
-        queueStatistics.updateTimeElapsed(time - currentTime);
         setCurrentTime(time);
+        double timeElapsed = time - previousQueueChangedTime;
+        previousQueueChangedTime = time;
+        queueStatistics.addMessageQueueTime(timeElapsed, time - messageArrivalTimes.pop());
         return new Pair<>(0.0, List.of());
     }
 
@@ -84,16 +88,14 @@ public abstract class Node<T> {
     }
 
     public void addToQueue(double time, Payload<T> payload) {
-        double timeElapsed = time - getCurrentTime();
-        setCurrentTime(time);
+        double timeElapsed = time - previousQueueChangedTime;
+        previousQueueChangedTime = time;
         queueStatistics.addMessageArrived(timeElapsed);
         messageArrivalTimes.add(time);
         queue.add(payload);
     }
 
     public Payload<T> popFromQueue(double time) {
-        queueStatistics.addMessageQueueTime(time - getCurrentTime(), time - messageArrivalTimes.pop());
-        setCurrentTime(time);
         return queue.pop();
     }
 
