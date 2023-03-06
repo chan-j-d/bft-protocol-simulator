@@ -2,6 +2,7 @@ package simulation;
 
 import simulation.io.FileIo;
 import simulation.io.IoInterface;
+import simulation.network.entity.Node;
 import simulation.network.entity.ibft.IBFTMessage;
 import simulation.network.entity.ibft.IBFTNode;
 import simulation.network.entity.ibft.IBFTStatistics;
@@ -33,10 +34,11 @@ public class Main {
         int numNodes = 16;
         int numTrials = 1;
         int seedMultiplier = 100;
-        int consensusLimit = 1000;
+        int consensusLimit = 100;
 
         IoInterface io = new FileIo("output.txt");
         IBFTStatistics ibftStats = null;
+        QueueStatistics validatorQueueStats = null;
         QueueStatistics queueStatistics = null;
         for (int j = 0; j < numTrials; j++) {
             ExponentialDistribution.UNIFORM_DISTRIBUTION = new Random(seedMultiplier * j);
@@ -49,8 +51,8 @@ public class Main {
             simulator.setNodes(nodes);
 
             //List<Switch<IBFTMessage>> newSwitches = NetworkTopology.arrangeCliqueStructure(nodes);
-            //List<Switch<IBFTMessage>> newSwitches = NetworkTopology.arrangeMeshStructure(nodes, 8);
-            List<Switch<IBFTMessage>> newSwitches = NetworkTopology.arrangeFoldedClosStructure(nodes, 4);
+            List<Switch<IBFTMessage>> newSwitches = NetworkTopology.arrangeMeshStructure(nodes, 4);
+            //List<Switch<IBFTMessage>> newSwitches = NetworkTopology.arrangeFoldedClosStructure(nodes, 4);
 
             for (IBFTNode node : nodes) {
                 node.setAllNodes(nodes);
@@ -67,18 +69,29 @@ public class Main {
                     .map(stats -> stats.addStatistics(runStats))
                     .orElse(runStats);
 
+            QueueStatistics runValidatorQueueStats = nodes.stream()
+                    .map(Node::getQueueStatistics)
+                    .reduce(QueueStatistics::addStatistics).orElseThrow();
+            validatorQueueStats = Optional.ofNullable(validatorQueueStats)
+                    .map(stats -> stats.addStatistics(runValidatorQueueStats))
+                    .orElse(runValidatorQueueStats);
+
+
             String ibftStatisticsResults = runStats.toString();
             io.output("\nSummary:");
             io.output(ibftStatisticsResults);
 
             newSwitches.stream()
                     .map(switch_ -> switch_.getName() + "\n" + switch_.getQueueStatistics())
-                    .forEach(System.out::println);
+                    .forEach(io::output);
         }
+        io.output(ibftStats.toString());
+        io.output(validatorQueueStats.toString());
         io.close();
 
-        String fullRunResults = ibftStats.toString();
-        System.out.println(fullRunResults);
+        System.out.println(ibftStats);
+        System.out.println("\nAverage queue stats");
+        System.out.println(validatorQueueStats);
 
         cleanup();
     }
