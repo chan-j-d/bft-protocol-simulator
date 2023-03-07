@@ -28,30 +28,15 @@ public class NetworkTopology {
         return switches;
     }
 
-    public static <T> List<Switch<T>> arrangeMeshStructure(
-            List<? extends EndpointNode<T>> nodes, int n) {
+    public static <T> List<Switch<T>> arrangeMeshStructure(List<? extends EndpointNode<T>> nodes, int n) {
         if (nodes.size() % n != 0) {
             throw new RuntimeException(String.format(
                     "Specified side length %d does not divide number of nodes %d", n, nodes.size()));
         }
 
-        List<List<Switch<T>>> switchArray = new ArrayList<>();
-        List<Switch<T>> switches = new ArrayList<>();
         int m = nodes.size() / n;
-
-        // creates an incomplete version of all the switches
-        for (int i = 0; i < n; i++) {
-            switchArray.add(new ArrayList<>());
-            for (int j = 0; j < m; j++) {
-                String switchName = String.format("Mesh-Switch-(x: %d, y: %d)", i, j);
-                EndpointNode<T> endNode = nodes.get(i * m + j);
-                Switch<T> newSwitch = new Switch<>(switchName, new ArrayList<>(nodes), List.of(endNode));
-                switchArray.get(i).add(newSwitch);
-                switches.add(newSwitch);
-
-                endNode.setOutflowNodes(List.of(newSwitch));
-            }
-        }
+        List<List<Switch<T>>> switchArray = createSwitchArray(nodes, n, m, "Mesh-Switch-(x: %d, y: %d)");
+        List<Switch<T>> switches = switchArray.stream().flatMap(List::stream).collect(Collectors.toList());
 
         // sets neighbors for each switch
         for (int i = 0; i < n; i++) {
@@ -68,7 +53,50 @@ public class NetworkTopology {
         }
 
         RoutingUtil.updateRoutingTables(switches);
+        return switches;
+    }
 
+    private static <T> List<List<Switch<T>>> createSwitchArray(List<? extends EndpointNode<T>> nodes,
+            int n, int m, String nameFormat) {
+        List<List<Switch<T>>> switchArray = new ArrayList<>();
+        for (int i = 0; i < n; i++) {
+            switchArray.add(new ArrayList<>());
+            for (int j = 0; j < m; j++) {
+                String switchName = String.format(nameFormat, i, j);
+                EndpointNode<T> endNode = nodes.get(i * m + j);
+                Switch<T> newSwitch = new Switch<>(switchName, new ArrayList<>(nodes), List.of(endNode));
+                switchArray.get(i).add(newSwitch);
+                endNode.setOutflowNodes(List.of(newSwitch));
+            }
+        }
+        return switchArray;
+    }
+
+    public static <T> List<Switch<T>> arrangeTorusStructure(List<? extends EndpointNode<T>> nodes, int n) {
+        if (nodes.size() % n != 0) {
+            throw new RuntimeException(String.format(
+                    "Specified side length %d does not divide number of nodes %d", n, nodes.size()));
+        }
+
+        int m = nodes.size() / n;
+        List<List<Switch<T>>> switchArray = createSwitchArray(nodes, n, m, "Torus-Switch-(x: %d, y: %d)");
+        List<Switch<T>> switches = switchArray.stream().flatMap(List::stream).collect(Collectors.toList());
+        // sets neighbors for each switch
+        for (int i = 0; i < n; i++) {
+            for (int j = 0; j < m; j++) {
+                List<Switch<T>> neighboringSwitches = Stream.of(new Pair<>(i - 1, j), new Pair<>(i + 1, j),
+                                new Pair<>(i, j - 1), new Pair<>(i, j + 1))
+                        .map(pair -> new Pair<>(
+                                pair.first() < 0 ? n - 1 : pair.first() == n ? 0 : pair.first(),
+                                pair.second() < 0 ? m - 1 : pair.second() == m ? 0 : pair.second()))
+                        .map(coordinates -> switchArray.get(coordinates.first()).get(coordinates.second()))
+                        .collect(Collectors.toList());
+                Switch<T> switch_ = switchArray.get(i).get(j);
+                switch_.setSwitchNeighbors(neighboringSwitches);
+            }
+        }
+
+        RoutingUtil.updateRoutingTables(switches);
         return switches;
     }
 
@@ -97,12 +125,13 @@ public class NetworkTopology {
         List<Switch<T>> allSwitches = new ArrayList<>(firstLayerSwitches);
 
         int currentLayer = 2;
-        int nextGroupSize = firstLayerSwitches.size() / radix;
+        int nextGroupSize;
         List<List<Switch<T>>> prevLayerGroupedSwitches = List.of(firstLayerSwitches);
         do {
             List<List<Switch<T>>> newLayerGroupedSwitches = new ArrayList<>();
-            for (List<Switch<T>> prevGroupedSwitches : prevLayerGroupedSwitches) {
-                newLayerGroupedSwitches.addAll(addNextSwitchLayer(nodes, prevGroupedSwitches, radix, currentLayer));
+            for (int i = 0; i < prevLayerGroupedSwitches.size(); i++) {
+                List<Switch<T>> prevGroupedSwitches = prevLayerGroupedSwitches.get(i);
+                newLayerGroupedSwitches.addAll(addNextSwitchLayer(nodes, prevGroupedSwitches, radix, currentLayer, i));
             }
             currentLayer++;
             prevLayerGroupedSwitches = newLayerGroupedSwitches;
@@ -115,7 +144,7 @@ public class NetworkTopology {
     }
 
     private static <T> List<List<Switch<T>>> addNextSwitchLayer(
-            List<? extends EndpointNode<T>> endpoints, List<Switch<T>> prevLayer, int radix, int level) {
+            List<? extends EndpointNode<T>> endpoints, List<Switch<T>> prevLayer, int radix, int level, int group) {
         int numNodes = prevLayer.size();
         int numGroups = Math.max(numNodes / radix, 1);
         radix = Math.min(numNodes, radix);
@@ -127,7 +156,8 @@ public class NetworkTopology {
             int effectiveRadix = radix;
             List<Switch<T>> newNeighborGroup =
                     Stream.iterate(0, index -> index < effectiveRadix, index -> index + 1)
-                    .map(index -> new Switch<>(getFoldedClosSwitchName(level, index, finalGroupNumber),
+                    .map(index -> new Switch<>(getFoldedClosSwitchName(level,
+                            effectiveRadix * group + index, finalGroupNumber),
                             new ArrayList<>(endpoints),
                             List.of()))
                     .collect(Collectors.toList());

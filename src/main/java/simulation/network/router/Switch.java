@@ -5,7 +5,6 @@ import simulation.network.entity.Payload;
 import simulation.util.Pair;
 import simulation.util.rng.ExponentialDistribution;
 import simulation.util.rng.RandomNumberGenerator;
-import simulation.util.rng.TestGenerator;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -17,7 +16,7 @@ public class Switch<T> extends Node<T> {
 
     //TODO update means to configure timing.
     //private static final RandomNumberGenerator RNG = new TestGenerator(0);
-    private static final RandomNumberGenerator RNG = new ExponentialDistribution(1.0);
+    private static final RandomNumberGenerator RNG = new ExponentialDistribution(9);
 
     private List<Switch<T>> switchNeighbors;
     private final Map<String, Node<T>> stringToNodeMap;
