@@ -50,9 +50,10 @@ public class Main {
             }
             simulator.setNodes(nodes);
 
-            //List<Switch<IBFTMessage>> newSwitches = NetworkTopology.arrangeCliqueStructure(nodes);
-            List<Switch<IBFTMessage>> newSwitches = NetworkTopology.arrangeMeshStructure(nodes, 4);
-            //List<Switch<IBFTMessage>> newSwitches = NetworkTopology.arrangeFoldedClosStructure(nodes, 4);
+            List<Switch<IBFTMessage>> newSwitches =
+                    //NetworkTopology.arrangeCliqueStructure(nodes, () -> new ExponentialDistribution(9));
+                    NetworkTopology.arrangeTorusStructure(nodes, 4, () -> new ExponentialDistribution(9));
+                    //NetworkTopology.arrangeFoldedClosStructure(nodes, 4, x -> new ExponentialDistribution(9));
 
             for (IBFTNode node : nodes) {
                 node.setAllNodes(nodes);

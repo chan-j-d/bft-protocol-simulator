@@ -3,7 +3,6 @@ package simulation.network.router;
 import simulation.network.entity.Node;
 import simulation.network.entity.Payload;
 import simulation.util.Pair;
-import simulation.util.rng.ExponentialDistribution;
 import simulation.util.rng.RandomNumberGenerator;
 
 import java.util.ArrayList;
@@ -14,24 +13,22 @@ import java.util.stream.Collectors;
 
 public class Switch<T> extends Node<T> {
 
-    //TODO update means to configure timing.
-    //private static final RandomNumberGenerator RNG = new TestGenerator(0);
-    private static final RandomNumberGenerator RNG = new ExponentialDistribution(9);
-
-    private List<Switch<T>> switchNeighbors;
+    private final RandomNumberGenerator rng;
     private final Map<String, Node<T>> stringToNodeMap;
     private final List<Node<T>> endpoints;
     private final List<Node<T>> directlyConnectedEndpoints;
+    private List<Switch<T>> switchNeighbors;
     private RoutingTable<Node<T>> table;
 
     public Switch(String name, List<? extends Node<T>> allEndpoints,
-            List<? extends Node<T>> directlyConnectedEndpoints) {
+            List<? extends Node<T>> directlyConnectedEndpoints, RandomNumberGenerator rng) {
         super(name);
         this.endpoints = new ArrayList<>(allEndpoints);
         this.directlyConnectedEndpoints = new ArrayList<>(directlyConnectedEndpoints);
         this.stringToNodeMap = allEndpoints.stream()
                 .collect(Collectors.toMap(Node::getName, endPoint -> endPoint));
         this.switchNeighbors = new ArrayList<>();
+        this.rng = rng;
         this.table = new RoutingTable<>(endpoints, directlyConnectedEndpoints, switchNeighbors);
     }
 
@@ -79,7 +76,7 @@ public class Switch<T> extends Node<T> {
 
     @Override
     public Pair<Double, List<Payload<T>>> processPayload(double time, Payload<T> payload) {
-        double duration = RNG.generateRandomNumber();
+        double duration = rng.generateRandomNumber();
         super.processPayload(time + duration, payload);
         return new Pair<>(duration, List.of(payload));
     }
