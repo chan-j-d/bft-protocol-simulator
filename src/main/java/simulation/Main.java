@@ -1,5 +1,9 @@
 package simulation;
 
+import com.google.gson.Gson;
+import simulation.json.IBFTResultsJson;
+import simulation.json.QueueResultsJson;
+import simulation.json.RunConfigJson;
 import simulation.io.FileIo;
 import simulation.io.IoInterface;
 import simulation.network.entity.Node;
@@ -14,8 +18,11 @@ import simulation.util.logging.Logger;
 import simulation.util.rng.ExponentialDistribution;
 
 import java.io.File;
+import java.io.FileReader;
+import java.io.FileWriter;
 import java.io.IOException;
 import java.nio.file.Files;
+import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.util.ArrayList;
 import java.util.List;
@@ -26,34 +33,47 @@ import java.util.logging.LogManager;
 public class Main {
 
     public static Logger MAIN_LOGGER;
+    private static final Path JSON_DIRECTORY = Paths.get("json");
+    private static final String RUN_CONFIG_JSON_FILEPATH = JSON_DIRECTORY.resolve("run_config.json").toString();
+    private static final String RESULTS_JSON_FILEPATH =
+            JSON_DIRECTORY.resolve("validator_results.json").toString();
+    private static final String SWITCH_GROUP_STATISTICS =
+            JSON_DIRECTORY.resolve("switch_group_%d.json").toString();
+    private static final Gson GSON = new Gson();
     public static void main(String[] args) {
         setup();
 
-        double timeLimit = 100000;
+        RunConfigJson runConfigJson = readFromJson(RUN_CONFIG_JSON_FILEPATH, RunConfigJson.class);
 
-        int numNodes = 16;
-        int numTrials = 1;
-        int seedMultiplier = 100;
-        int consensusLimit = 100;
+        double timeLimit = runConfigJson.getBaseTimeLimit();
+        int numNodes = runConfigJson.getNumNodes();
+        int numTrials = runConfigJson.getNumRuns();
+        int seedMultiplier = runConfigJson.getSeedMultiplier();
+        int consensusLimit = runConfigJson.getNumConsensus();
+        double validatorServiceRate = runConfigJson.getNodeProcessingRate();
+        double switchServiceRate = runConfigJson.getSwitchProcessingRate();
 
         IoInterface io = new FileIo("output.txt");
         IBFTStatistics ibftStats = null;
         QueueStatistics validatorQueueStats = null;
-        QueueStatistics queueStatistics = null;
-        for (int j = 0; j < numTrials; j++) {
-            ExponentialDistribution.UNIFORM_DISTRIBUTION = new Random(seedMultiplier * j);
+        List<QueueStatistics> switchStatistics = new ArrayList<>();
+        int numGroups = -1;
+        for (int i = 0; i < numTrials; i++) {
+            ExponentialDistribution.UNIFORM_DISTRIBUTION = new Random(seedMultiplier * i);
             //IoInterface io = new ConsoleIo();
             List<IBFTNode> nodes = new ArrayList<>();
             Simulator<IBFTMessage> simulator = new Simulator<>();
-            for (int i = 0; i < numNodes; i++) {
-                nodes.add(new IBFTNode("IBFT-" + i, i, timeLimit, simulator, numNodes, consensusLimit));
+            for (int j = 0; j < numNodes; j++) {
+                nodes.add(new IBFTNode("IBFT-" + j, j, timeLimit, simulator, numNodes, consensusLimit,
+                        new ExponentialDistribution(validatorServiceRate)));
             }
             simulator.setNodes(nodes);
 
-            List<Switch<IBFTMessage>> newSwitches =
+            List<List<Switch<IBFTMessage>>> groupedSwitches =
                     //NetworkTopology.arrangeCliqueStructure(nodes, () -> new ExponentialDistribution(9));
-                    NetworkTopology.arrangeTorusStructure(nodes, 4, () -> new ExponentialDistribution(9));
-                    //NetworkTopology.arrangeFoldedClosStructure(nodes, 4, x -> new ExponentialDistribution(9));
+                    //NetworkTopology.arrangeTorusStructure(nodes, 4, () -> new ExponentialDistribution(9));
+                    NetworkTopology.arrangeFoldedClosStructure(nodes, 4,
+                            x -> new ExponentialDistribution(switchServiceRate));
 
             for (IBFTNode node : nodes) {
                 node.setAllNodes(nodes);
@@ -82,19 +102,60 @@ public class Main {
             io.output("\nSummary:");
             io.output(ibftStatisticsResults);
 
-            newSwitches.stream()
-                    .map(switch_ -> switch_.getName() + "\n" + switch_.getQueueStatistics())
-                    .forEach(io::output);
+            numGroups = groupedSwitches.size();
+            io.output("\nEvery switch summary:");
+            groupedSwitches.forEach(group ->
+                    group.stream().map(switch_ -> switch_.getName() + "\n" + switch_.getQueueStatistics())
+                            .forEach(io::output));
+            if (i == 0) {
+                groupedSwitches.forEach(group -> switchStatistics.add(group.stream().map(Node::getQueueStatistics)
+                        .reduce(QueueStatistics::addStatistics).orElseThrow()));
+            } else {
+                for (int j = 0; j < groupedSwitches.size(); j++) {
+                    QueueStatistics switchQueueStatistics = groupedSwitches.get(j).stream()
+                            .map(Node::getQueueStatistics)
+                            .reduce(QueueStatistics::addStatistics).orElseThrow();
+                    switchStatistics.set(j, switchStatistics.get(j).addStatistics(switchQueueStatistics));
+                }
+            }
         }
         io.output(ibftStats.toString());
         io.output(validatorQueueStats.toString());
         io.close();
+
+        IBFTResultsJson ibftResultsJson = new IBFTResultsJson(numNodes, consensusLimit, ibftStats.getNewRoundTime(),
+                ibftStats.getPrePreparedTime(), ibftStats.getPrepared(), ibftStats.getAverageConsensusTime());
+        writeObjectToJson(ibftResultsJson, RESULTS_JSON_FILEPATH);
+
+        for (int i = 0; i < numGroups; i++) {
+            QueueStatistics queueStatistics = switchStatistics.get(i);
+            QueueResultsJson queueResultsJson = new QueueResultsJson(queueStatistics.getAverageNumMessagesInQueue(),
+                    queueStatistics.getMessageArrivalRate(), queueStatistics.getAverageMessageWaitingTime());
+            writeObjectToJson(queueResultsJson, String.format(SWITCH_GROUP_STATISTICS, i));
+        }
 
         System.out.println(ibftStats);
         System.out.println("\nAverage queue stats");
         System.out.println(validatorQueueStats);
 
         cleanup();
+    }
+
+    public static <T> T readFromJson(String filename, Class<T> clazz) {
+        try (FileReader fr = new FileReader(filename)) {
+            return GSON.fromJson(fr, clazz);
+        } catch (IOException e) {
+            throw new RuntimeException(String.format("Unable to locate/parse %s file to read as Json.",
+                    RUN_CONFIG_JSON_FILEPATH));
+        }
+    }
+
+    public static void writeObjectToJson(Object object, String filename) {
+        try (FileWriter fw = new FileWriter(filename)) {
+            GSON.toJson(object, fw);
+        } catch (IOException e) {
+            throw new RuntimeException(String.format("Unable to write %s to %s json file.", object, filename));
+        }
     }
 
     private static void setup() {

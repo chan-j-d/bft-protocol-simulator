@@ -39,14 +39,11 @@ public class QueueStatistics extends Statistics {
     }
     @Override
     public Map<String, Number> getSummaryStatistics() {
-        double averageNumMessagesInQueue = totalQueueingTime / totalTime;
-        double messageArrivalRate = totalMessageCount / totalTime;
-        double averageTimeInQueue = totalMessageQueueTime / totalMessageCount;
         Map<String, Number> map = new LinkedHashMap<>();
-        map.put(KEY_NUM_MESSAGES_IN_QUEUE, averageNumMessagesInQueue);
-        map.put(KEY_MESSAGE_ARRIVAL_RATE, messageArrivalRate);
-        map.put(KEY_WAITING_TIME, averageTimeInQueue);
-        map.put(KEY_PRODUCT_ARRIVAL_WAITING_TIME, messageArrivalRate * averageTimeInQueue);
+        map.put(KEY_NUM_MESSAGES_IN_QUEUE, getAverageNumMessagesInQueue());
+        map.put(KEY_MESSAGE_ARRIVAL_RATE, getMessageArrivalRate());
+        map.put(KEY_WAITING_TIME, getAverageMessageWaitingTime());
+        map.put(KEY_PRODUCT_ARRIVAL_WAITING_TIME, getMessageArrivalRate() * getAverageMessageWaitingTime());
         map.put(KEY_TOTAL_TIME, totalTime / numNodes);
         return map;
     }
@@ -63,6 +60,18 @@ public class QueueStatistics extends Statistics {
         totalMessageQueueTime += messageQueueTime;
         totalTime += timeElapsed;
         currentMessageCount -= 1;
+    }
+
+    public double getAverageNumMessagesInQueue() {
+        return totalQueueingTime / totalTime;
+    }
+
+    public double getMessageArrivalRate() {
+        return totalMessageCount / totalTime;
+    }
+
+    public double getAverageMessageWaitingTime() {
+        return totalMessageQueueTime / totalMessageCount;
     }
 
     public String getValues() {

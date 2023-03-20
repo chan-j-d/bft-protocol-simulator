@@ -48,10 +48,6 @@ public class IBFTStatistics extends Statistics {
         return nodeCount;
     }
 
-    public double getTimeForState(IBFTState state) {
-        return stateTimeMap.get(state);
-    }
-
     public IBFTStatistics addStatistics(IBFTStatistics otherStatistics) {
         int totalNodeCount = getNodeCount() + otherStatistics.getNodeCount();
         int newConsensusCount = Math.max(consensusCount, otherStatistics.getConsensusCount());
@@ -63,6 +59,10 @@ public class IBFTStatistics extends Statistics {
         return new IBFTStatistics(totalNodeCount, newConsensusCount, totalTime, newMap);
     }
 
+    private double getTimeForState(IBFTState state) {
+        return stateTimeMap.get(state);
+    }
+
     private double getTotalTime() {
         return totalTime;
     }
@@ -71,16 +71,32 @@ public class IBFTStatistics extends Statistics {
         return consensusCount;
     }
 
+    public double getNewRoundTime() {
+        return getNormalizedTimeForState(IBFTState.NEW_ROUND);
+    }
+    public double getPrePreparedTime() {
+        return getNormalizedTimeForState(IBFTState.PREPREPARED);
+    }
+    public double getPrepared() {
+        return getNormalizedTimeForState(IBFTState.PREPARED);
+    }
+    public double getAverageConsensusTime() {
+        return getTotalTime() / getNodeCount() / getConsensusCount();
+    }
+
+    private double getNormalizedTimeForState(IBFTState state) {
+        return stateTimeMap.get(state) / getNodeCount() / getConsensusCount();
+    }
+
     @Override
     public Map<String, Number> getSummaryStatistics() {
         Map<String, Number> results = new LinkedHashMap<>();
         results.put(KEY_NODE_COUNT, getNodeCount());
         results.put(KEY_CONSENSUS_COUNT, getConsensusCount());
         for (IBFTState state : IBFTState.STATES) {
-            double value = stateTimeMap.get(state) / getNodeCount() / getConsensusCount();
-            results.put(String.format(KEY_STATE_AVERAGE_TIME, state), value);
+            results.put(String.format(KEY_STATE_AVERAGE_TIME, state), getNormalizedTimeForState(state));
         }
-        results.put(KEY_AVERAGE_TIME_PER_CONSENSUS, getTotalTime() / getNodeCount() / getConsensusCount());
+        results.put(KEY_AVERAGE_TIME_PER_CONSENSUS, getAverageConsensusTime());
         results.put(KEY_TOTAL_TIME, getTotalTime() / getNodeCount());
         return results;
     }

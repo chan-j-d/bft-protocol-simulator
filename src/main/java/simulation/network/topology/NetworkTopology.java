@@ -14,7 +14,7 @@ import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
 public class NetworkTopology {
-    public static <T> List<Switch<T>> arrangeCliqueStructure(
+    public static <T> List<List<Switch<T>>> arrangeCliqueStructure(
             List<? extends EndpointNode<T>> nodes, Supplier<RandomNumberGenerator> rngSupplier) {
         List<Switch<T>> switches = new ArrayList<>();
         for (EndpointNode<T> node : nodes) {
@@ -29,10 +29,10 @@ public class NetworkTopology {
         }
 
         RoutingUtil.updateRoutingTables(switches);
-        return switches;
+        return List.of(switches);
     }
 
-    public static <T> List<Switch<T>> arrangeMeshStructure(List<? extends EndpointNode<T>> nodes, int n,
+    public static <T> List<List<Switch<T>>> arrangeMeshStructure(List<? extends EndpointNode<T>> nodes, int n,
             Supplier<RandomNumberGenerator> rngSupplier) {
         if (nodes.size() % n != 0) {
             throw new RuntimeException(String.format(
@@ -59,7 +59,7 @@ public class NetworkTopology {
         }
 
         RoutingUtil.updateRoutingTables(switches);
-        return switches;
+        return List.of(switches);
     }
 
     private static <T> List<List<Switch<T>>> createSwitchArray(List<? extends EndpointNode<T>> nodes,
@@ -79,7 +79,7 @@ public class NetworkTopology {
         return switchArray;
     }
 
-    public static <T> List<Switch<T>> arrangeTorusStructure(List<? extends EndpointNode<T>> nodes, int n,
+    public static <T> List<List<Switch<T>>> arrangeTorusStructure(List<? extends EndpointNode<T>> nodes, int n,
             Supplier<RandomNumberGenerator> rngSupplier) {
         if (nodes.size() % n != 0) {
             throw new RuntimeException(String.format(
@@ -106,10 +106,10 @@ public class NetworkTopology {
         }
 
         RoutingUtil.updateRoutingTables(switches);
-        return switches;
+        return List.of(switches);
     }
 
-    public static <T> List<Switch<T>> arrangeFoldedClosStructure(List<? extends EndpointNode<T>> nodes, int radix,
+    public static <T> List<List<Switch<T>>> arrangeFoldedClosStructure(List<? extends EndpointNode<T>> nodes, int radix,
             Function<Integer, RandomNumberGenerator> levelRngFunction) {
         if (!isValidFoldedClosSetup(nodes.size(), radix)) {
             throw new RuntimeException(String.format(
@@ -132,6 +132,7 @@ public class NetworkTopology {
             endpointSublist.forEach(switch_ -> switch_.setOutflowNodes(List.of(firstLayerSwitches.get(index))));
         }
 
+        List<List<Switch<T>>> groupedSwitches = new ArrayList<>(List.of(firstLayerSwitches));
         List<Switch<T>> allSwitches = new ArrayList<>(firstLayerSwitches);
 
         int currentLayer = 2;
@@ -146,12 +147,16 @@ public class NetworkTopology {
             }
             currentLayer++;
             prevLayerGroupedSwitches = newLayerGroupedSwitches;
-            newLayerGroupedSwitches.forEach(allSwitches::addAll);
             nextGroupSize = newLayerGroupedSwitches.get(0).size();
+            newLayerGroupedSwitches.forEach(allSwitches::addAll);
+
+            List<Switch<T>> nextLayerSwitches = new ArrayList<>();
+            newLayerGroupedSwitches.forEach(nextLayerSwitches::addAll);
+            groupedSwitches.add(nextLayerSwitches);
         } while (nextGroupSize != 1);
 
         RoutingUtil.updateRoutingTables(allSwitches);
-        return allSwitches;
+        return groupedSwitches;
     }
 
     private static <T> List<List<Switch<T>>> addNextSwitchLayer(List<? extends EndpointNode<T>> endpoints,

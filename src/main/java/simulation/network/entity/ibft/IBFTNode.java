@@ -7,7 +7,6 @@ import simulation.network.entity.NodeTimerNotifier;
 import simulation.network.entity.Payload;
 import simulation.util.Pair;
 import simulation.util.logging.Logger;
-import simulation.util.rng.ExponentialDistribution;
 import simulation.util.rng.RandomNumberGenerator;
 
 import java.util.ArrayList;
@@ -19,8 +18,6 @@ import java.util.stream.Collectors;
 
 public class IBFTNode extends TimedNode<IBFTMessage> {
 
-    //TODO remove constant and figure out means to configure constant
-    private static final RandomNumberGenerator RNG = new ExponentialDistribution(3);
 
     /**
      * Dummy value to be passed around as part of the protocol.
@@ -31,6 +28,7 @@ public class IBFTNode extends TimedNode<IBFTMessage> {
     private final Logger logger;
 
     // Simulation variables
+    private final RandomNumberGenerator rng;
     private final double baseTimeLimit;
     private final int consensusLimit;
     private int N;
@@ -62,12 +60,13 @@ public class IBFTNode extends TimedNode<IBFTMessage> {
 
 
     public IBFTNode(String name, int identifier, double baseTimeLimit, NodeTimerNotifier<IBFTMessage> timerNotifier,
-            int N, int consensusLimit) {
+            int N, int consensusLimit, RandomNumberGenerator serviceRateGenerator) {
         super(name, timerNotifier);
         logger = new Logger(name);
         this.state = IBFTState.NEW_ROUND;
 
         this.p_i = identifier;
+        this.rng = serviceRateGenerator;
         this.allNodes = new HashMap<>();
         this.baseTimeLimit = baseTimeLimit;
         this.timerExpiryCount = 0;
@@ -102,7 +101,7 @@ public class IBFTNode extends TimedNode<IBFTMessage> {
 
     @Override
     public Pair<Double, List<Payload<IBFTMessage>>> processPayload(double time, Payload<IBFTMessage> payload) {
-        double duration = RNG.generateRandomNumber();
+        double duration = rng.generateRandomNumber();
         double timePassed = time - previousRecordedTime;
         double newCurrentTime = time + duration;
         super.processPayload(newCurrentTime, payload);
