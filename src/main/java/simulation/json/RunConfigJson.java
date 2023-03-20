@@ -1,5 +1,7 @@
 package simulation.json;
 
+import java.util.List;
+
 public class RunConfigJson {
 
     private int numRuns;
@@ -10,6 +12,8 @@ public class RunConfigJson {
     private double nodeProcessingRate;
     private double switchProcessingRate;
     private double baseTimeLimit;
+    private String networkType;
+    private List<Integer> networkParameters;
 
     public int getNumRuns() {
         return numRuns;
@@ -41,5 +45,13 @@ public class RunConfigJson {
 
     public int getSeedMultiplier() {
         return seedMultiplier;
+    }
+
+    public String getNetworkType() {
+        return networkType;
+    }
+
+    public List<Integer> getNetworkParameters() {
+        return networkParameters;
     }
 }

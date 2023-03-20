@@ -14,8 +14,9 @@ import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
 public class NetworkTopology {
-    public static <T> List<List<Switch<T>>> arrangeCliqueStructure(
-            List<? extends EndpointNode<T>> nodes, Supplier<RandomNumberGenerator> rngSupplier) {
+    public static <T> List<List<Switch<T>>> arrangeCliqueStructure(List<? extends EndpointNode<T>> nodes,
+            List<Integer> networkParameters,
+            Supplier<RandomNumberGenerator> rngSupplier) {
         List<Switch<T>> switches = new ArrayList<>();
         for (EndpointNode<T> node : nodes) {
             Switch<T> switch_ = new Switch<>("Switch-" + node.getName(), new ArrayList<>(nodes),
@@ -32,8 +33,13 @@ public class NetworkTopology {
         return List.of(switches);
     }
 
-    public static <T> List<List<Switch<T>>> arrangeMeshStructure(List<? extends EndpointNode<T>> nodes, int n,
+    public static <T> List<List<Switch<T>>> arrangeMeshStructure(List<? extends EndpointNode<T>> nodes,
+            List<Integer> networkParameters,
             Supplier<RandomNumberGenerator> rngSupplier) {
+        if (networkParameters.size() == 0) {
+            throw new RuntimeException("Please specify side length for network parameters.");
+        }
+        int n = networkParameters.get(0);
         if (nodes.size() % n != 0) {
             throw new RuntimeException(String.format(
                     "Specified side length %d does not divide number of nodes %d", n, nodes.size()));
@@ -79,8 +85,13 @@ public class NetworkTopology {
         return switchArray;
     }
 
-    public static <T> List<List<Switch<T>>> arrangeTorusStructure(List<? extends EndpointNode<T>> nodes, int n,
+    public static <T> List<List<Switch<T>>> arrangeTorusStructure(List<? extends EndpointNode<T>> nodes,
+            List<Integer> networkParameters,
             Supplier<RandomNumberGenerator> rngSupplier) {
+        if (networkParameters.size() == 0) {
+            throw new RuntimeException("Please specify side length for network parameters.");
+        }
+        int n = networkParameters.get(0);
         if (nodes.size() % n != 0) {
             throw new RuntimeException(String.format(
                     "Specified side length %d does not divide number of nodes %d", n, nodes.size()));
@@ -109,8 +120,14 @@ public class NetworkTopology {
         return List.of(switches);
     }
 
-    public static <T> List<List<Switch<T>>> arrangeButterflyStructure(List<? extends EndpointNode<T>> nodes, int radix,
+    public static <T> List<List<Switch<T>>> arrangeButterflyStructure(List<? extends EndpointNode<T>> nodes,
+            List<Integer> networkParameters,
             Function<Integer, RandomNumberGenerator> levelRngFunction) {
+        if (networkParameters.size() == 0) {
+            throw new RuntimeException("Please specify radix for the butterfly network.");
+        }
+        int radix = networkParameters.get(0);
+
         if (!isValidTreeSetup(nodes.size(), radix)) {
             throw new RuntimeException(String.format(
                     "The dimensions (Size: %d, Radix: %d), provided do not match the requirements " +
@@ -203,8 +220,13 @@ public class NetworkTopology {
         return String.format("Butterfly-(Level: %d, Group: %d, Index: %d)", level, group, index);
     }
 
-    public static <T> List<List<Switch<T>>> arrangeFoldedClosStructure(List<? extends EndpointNode<T>> nodes, int radix,
+    public static <T> List<List<Switch<T>>> arrangeFoldedClosStructure(List<? extends EndpointNode<T>> nodes,
+            List<Integer> networkParameters,
             Function<Integer, RandomNumberGenerator> levelRngFunction) {
+        if (networkParameters.size() == 0) {
+            throw new RuntimeException("Please specify radix for the folded clos network.");
+        }
+        int radix = networkParameters.get(0);
         if (!isValidTreeSetup(nodes.size(), radix)) {
             throw new RuntimeException(String.format(
                     "The dimensions (Size: %d, Radix: %d), provided do not match the requirements " +

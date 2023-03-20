@@ -6,6 +6,7 @@ import simulation.json.QueueResultsJson;
 import simulation.json.RunConfigJson;
 import simulation.io.FileIo;
 import simulation.io.IoInterface;
+import simulation.network.entity.EndpointNode;
 import simulation.network.entity.Node;
 import simulation.network.entity.ibft.IBFTMessage;
 import simulation.network.entity.ibft.IBFTNode;
@@ -50,8 +51,8 @@ public class Main {
         int numTrials = runConfigJson.getNumRuns();
         int seedMultiplier = runConfigJson.getSeedMultiplier();
         int consensusLimit = runConfigJson.getNumConsensus();
+        int startingSeed = runConfigJson.getStartingSeed();
         double validatorServiceRate = runConfigJson.getNodeProcessingRate();
-        double switchServiceRate = runConfigJson.getSwitchProcessingRate();
 
         IoInterface io = new FileIo("output.txt");
         IBFTStatistics ibftStats = null;
@@ -59,8 +60,8 @@ public class Main {
         List<QueueStatistics> switchStatistics = new ArrayList<>();
         int numGroups = -1;
         for (int i = 0; i < numTrials; i++) {
-            ExponentialDistribution.UNIFORM_DISTRIBUTION = new Random(seedMultiplier * i);
-            //IoInterface io = new ConsoleIo();
+            ExponentialDistribution.UNIFORM_DISTRIBUTION = new Random(startingSeed + seedMultiplier * i);
+//            IoInterface io = new ConsoleIo();
             List<IBFTNode> nodes = new ArrayList<>();
             Simulator<IBFTMessage> simulator = new Simulator<>();
             for (int j = 0; j < numNodes; j++) {
@@ -68,12 +69,7 @@ public class Main {
                         new ExponentialDistribution(validatorServiceRate)));
             }
             simulator.setNodes(nodes);
-
-            List<List<Switch<IBFTMessage>>> groupedSwitches =
-                    //NetworkTopology.arrangeCliqueStructure(nodes, () -> new ExponentialDistribution(9));
-                    //NetworkTopology.arrangeTorusStructure(nodes, 4, () -> new ExponentialDistribution(9));
-                    NetworkTopology.arrangeFoldedClosStructure(nodes, 4,
-                            x -> new ExponentialDistribution(switchServiceRate));
+            List<List<Switch<IBFTMessage>>> groupedSwitches = arrangeNodesFollowingConfigTopology(runConfigJson, nodes);
 
             for (IBFTNode node : nodes) {
                 node.setAllNodes(nodes);
@@ -139,6 +135,33 @@ public class Main {
         System.out.println(validatorQueueStats);
 
         cleanup();
+    }
+
+    public static <T> List<List<Switch<T>>> arrangeNodesFollowingConfigTopology(RunConfigJson json,
+            List<? extends EndpointNode<T>> nodes) {
+        double switchServiceRate = json.getSwitchProcessingRate();
+        String networkType = json.getNetworkType();
+        List<Integer> networkParameters = json.getNetworkParameters();
+        switch (networkType) {
+        case "FoldedClos": case "fc":
+            return NetworkTopology.arrangeFoldedClosStructure(nodes, networkParameters,
+                    x -> new ExponentialDistribution(switchServiceRate));
+        case "Butterfly": case "b":
+            return NetworkTopology.arrangeButterflyStructure(nodes, networkParameters,
+                    x -> new ExponentialDistribution(switchServiceRate));
+        case "Clique": case "c":
+            return NetworkTopology.arrangeCliqueStructure(nodes, networkParameters,
+                    () -> new ExponentialDistribution(switchServiceRate));
+        case "Torus": case "t":
+            return NetworkTopology.arrangeTorusStructure(nodes, networkParameters,
+                    () -> new ExponentialDistribution(switchServiceRate));
+        case "Mesh": case "m":
+            return NetworkTopology.arrangeMeshStructure(nodes, networkParameters,
+                    () -> new ExponentialDistribution(switchServiceRate));
+        default:
+            throw new RuntimeException(String.format("The network type %s has not been defined/implemented.",
+                    networkType));
+        }
     }
 
     public static <T> T readFromJson(String filename, Class<T> clazz) {

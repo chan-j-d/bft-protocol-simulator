@@ -6,5 +6,7 @@
   "numNodes": 16,
   "nodeProcessingRate": 3,
   "switchProcessingRate": 9,
-  "baseTimeLimit": 10000
+  "baseTimeLimit": 10000,
+  "networkType": "FoldedClos",
+  "networkParameters": [4]
 }
