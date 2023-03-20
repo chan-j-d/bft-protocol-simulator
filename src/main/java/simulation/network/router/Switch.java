@@ -1,5 +1,6 @@
 package simulation.network.router;
 
+import simulation.network.entity.EndpointNode;
 import simulation.network.entity.Node;
 import simulation.network.entity.Payload;
 import simulation.util.Pair;
@@ -16,7 +17,7 @@ public class Switch<T> extends Node<T> {
     private final RandomNumberGenerator rng;
     private final Map<String, Node<T>> stringToNodeMap;
     private final List<Node<T>> endpoints;
-    private final List<Node<T>> directlyConnectedEndpoints;
+    private List<Node<T>> directlyConnectedEndpoints;
     private List<Switch<T>> switchNeighbors;
     private RoutingTable<Node<T>> table;
 
@@ -32,12 +33,17 @@ public class Switch<T> extends Node<T> {
         this.table = new RoutingTable<>(endpoints, directlyConnectedEndpoints, switchNeighbors);
     }
 
-    public void setSwitchNeighbors(List<Switch<T>> switchNeighbors) {
+    public void setSwitchNeighbors(List<? extends Switch<T>> switchNeighbors) {
         this.switchNeighbors = new ArrayList<>(switchNeighbors);
         this.table = new RoutingTable<>(endpoints, directlyConnectedEndpoints, switchNeighbors);
     }
 
-    public void updateSwitchNeighbors(List<Switch<T>> newNeighbors) {
+    public void setDirectlyConnectedEndpoints(List<? extends EndpointNode<T>> endpoints) {
+        this.directlyConnectedEndpoints = new ArrayList<>(endpoints);
+        this.table = new RoutingTable<>(endpoints, directlyConnectedEndpoints, switchNeighbors);
+    }
+
+    public void updateSwitchNeighbors(List<? extends Switch<T>> newNeighbors) {
         this.switchNeighbors.addAll(newNeighbors);
         this.table = new RoutingTable<>(endpoints, directlyConnectedEndpoints, switchNeighbors);
     }
