@@ -35,7 +35,6 @@ public class Main {
 
     public static Logger MAIN_LOGGER;
     private static final Path JSON_DIRECTORY = Paths.get("json");
-    private static final String RUN_CONFIG_JSON_FILEPATH = JSON_DIRECTORY.resolve("run_config.json").toString();
     private static final String RESULTS_JSON_FILEPATH =
             JSON_DIRECTORY.resolve("validator_results.json").toString();
     private static final String SWITCH_GROUP_STATISTICS =
@@ -44,7 +43,7 @@ public class Main {
     public static void main(String[] args) {
         setup();
 
-        RunConfigJson runConfigJson = readFromJson(RUN_CONFIG_JSON_FILEPATH, RunConfigJson.class);
+        RunConfigJson runConfigJson = readFromJson(args[0], RunConfigJson.class);
 
         double timeLimit = runConfigJson.getBaseTimeLimit();
         int numNodes = runConfigJson.getNumNodes();
@@ -169,7 +168,7 @@ public class Main {
             return GSON.fromJson(fr, clazz);
         } catch (IOException e) {
             throw new RuntimeException(String.format("Unable to locate/parse %s file to read as Json.",
-                    RUN_CONFIG_JSON_FILEPATH));
+                    filename));
         }
     }
 
