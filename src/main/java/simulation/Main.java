@@ -33,7 +33,6 @@ import java.util.logging.LogManager;
 
 public class Main {
 
-    public static Logger MAIN_LOGGER;
     private static final Path JSON_DIRECTORY = Paths.get("json");
     private static final String RESULTS_JSON_FILEPATH =
             JSON_DIRECTORY.resolve("validator_results.json").toString();
@@ -118,8 +117,9 @@ public class Main {
         io.output(validatorQueueStats.toString());
         io.close();
 
-        IBFTResultsJson ibftResultsJson = new IBFTResultsJson(numNodes, consensusLimit, ibftStats.getNewRoundTime(),
-                ibftStats.getPrePreparedTime(), ibftStats.getPrepared(), ibftStats.getAverageConsensusTime());
+        IBFTResultsJson ibftResultsJson = new IBFTResultsJson(ibftStats.getNewRoundTime(),
+                ibftStats.getPrePreparedTime(), ibftStats.getPreparedTime(), ibftStats.getRoundChangeTime(),
+                ibftStats.getAverageConsensusTime());
         writeObjectToJson(ibftResultsJson, RESULTS_JSON_FILEPATH);
 
         for (int i = 0; i < numGroups; i++) {
@@ -190,11 +190,9 @@ public class Main {
             }
             Files.deleteIfExists(Paths.get(Logger.DEFAULT_DIRECTORY));
         } catch (IOException e) {
-            MAIN_LOGGER.log("Unable to delete log directory before run\n" + e.getMessage());
             e.printStackTrace();
         }
         Logger.setup();
-        MAIN_LOGGER = Logger.MAIN_LOGGER;
     }
 
     private static void cleanup() {

@@ -252,9 +252,9 @@ public class NetworkTopology {
         List<Switch<T>> allSwitches = new ArrayList<>(firstLayerSwitches);
 
         int currentLayer = 2;
-        int nextGroupSize;
         List<List<Switch<T>>> prevLayerGroupedSwitches = List.of(firstLayerSwitches);
-        do {
+        int nextGroupSize = firstLayerSwitches.size();
+        while (nextGroupSize != 1) {
             List<List<Switch<T>>> newLayerGroupedSwitches = new ArrayList<>();
             for (int i = 0; i < prevLayerGroupedSwitches.size(); i++) {
                 List<Switch<T>> prevGroupedSwitches = prevLayerGroupedSwitches.get(i);
@@ -269,7 +269,7 @@ public class NetworkTopology {
             List<Switch<T>> nextLayerSwitches = new ArrayList<>();
             newLayerGroupedSwitches.forEach(nextLayerSwitches::addAll);
             groupedSwitches.add(nextLayerSwitches);
-        } while (nextGroupSize != 1);
+        }
 
         RoutingUtil.updateRoutingTables(allSwitches);
         return groupedSwitches;

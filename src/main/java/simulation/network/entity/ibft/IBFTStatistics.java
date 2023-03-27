@@ -77,8 +77,11 @@ public class IBFTStatistics extends Statistics {
     public double getPrePreparedTime() {
         return getNormalizedTimeForState(IBFTState.PREPREPARED);
     }
-    public double getPrepared() {
+    public double getPreparedTime() {
         return getNormalizedTimeForState(IBFTState.PREPARED);
+    }
+    public double getRoundChangeTime() {
+        return getNormalizedTimeForState(IBFTState.ROUND_CHANGE);
     }
     public double getAverageConsensusTime() {
         return getTotalTime() / getNodeCount() / getConsensusCount();
@@ -100,4 +103,5 @@ public class IBFTStatistics extends Statistics {
         results.put(KEY_TOTAL_TIME, getTotalTime() / getNodeCount());
         return results;
     }
+
 }
