@@ -1,7 +1,10 @@
 /gradle/
 /build/
 .*
-!/.gitignore
 *.txt
 logs/*
 json/*
+
+/py/.*.json
+/py/.ipynb_checkpoints
+
