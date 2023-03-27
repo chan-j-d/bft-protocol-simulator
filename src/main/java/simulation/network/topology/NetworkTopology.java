@@ -169,9 +169,10 @@ public class NetworkTopology {
             throw new RuntimeException("Please specify radix for network.");
         }
         int radix = networkParameters.get(0);
-        int levels = (int) MathUtil.log(nodes.size(), radix);
+        int minimumNodeCount = MathUtil.ceilDiv(nodes.size(), radix);
+        int levels = (int) MathUtil.log(minimumNodeCount, radix);
         int baseGroupSize = (int) Math.pow(radix, levels);
-        int numFirstLayerGroups = MathUtil.ceilDiv(nodes.size(), baseGroupSize) * baseGroupSize;
+        int numFirstLayerGroups = MathUtil.ceilDiv(minimumNodeCount, baseGroupSize) * baseGroupSize;
 
         List<Switch<T>> firstLayerSwitches = new ArrayList<>();
         for (int i = 0; i < numFirstLayerGroups; i++) {
