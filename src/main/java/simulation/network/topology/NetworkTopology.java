@@ -3,10 +3,12 @@ package simulation.network.topology;
 import simulation.network.entity.EndpointNode;
 import simulation.network.router.RoutingUtil;
 import simulation.network.router.Switch;
+import simulation.util.MathUtil;
 import simulation.util.Pair;
 import simulation.util.rng.RandomNumberGenerator;
 
 import java.util.ArrayList;
+import java.util.Collection;
 import java.util.List;
 import java.util.function.Function;
 import java.util.function.Supplier;
@@ -123,126 +125,68 @@ public class NetworkTopology {
     public static <T> List<List<Switch<T>>> arrangeButterflyStructure(List<? extends EndpointNode<T>> nodes,
             List<Integer> networkParameters,
             Function<Integer, RandomNumberGenerator> levelRngFunction) {
-        if (networkParameters.size() == 0) {
-            throw new RuntimeException("Please specify radix for the butterfly network.");
-        }
+        List<List<Switch<T>>> groupedSwitches =
+                arrangeButterflyArrangement(nodes, networkParameters, levelRngFunction, false);
         int radix = networkParameters.get(0);
-
-        if (!isValidTreeSetup(nodes.size(), radix)) {
-            throw new RuntimeException(String.format(
-                    "The dimensions (Size: %d, Radix: %d), provided do not match the requirements " +
-                            "for a butterfly network.", nodes.size(), radix));
-        }
-
-        int numFirstLayerGroups = nodes.size() / radix;
-
-        List<Switch<T>> firstLayerSwitches = new ArrayList<>();
-        for (int i = 0; i < numFirstLayerGroups; i++) {
-            List<? extends EndpointNode<T>> endpointSublist = nodes.subList(i * radix, (i + 1) * radix);
-            Switch<T> firstLayerSwitch = new Switch<>(
-                    getButterflySwitchName(1, 0, i),
-                    new ArrayList<>(nodes),
-                    List.of(),
-                    levelRngFunction.apply(1));
-            firstLayerSwitches.add(firstLayerSwitch);
-            int index = i;
-            endpointSublist.forEach(node -> node.setOutflowNodes(List.of(firstLayerSwitches.get(index))));
-        }
-
-        List<List<Switch<T>>> groupedSwitches = new ArrayList<>(List.of(firstLayerSwitches));
-        List<Switch<T>> allSwitches = new ArrayList<>(firstLayerSwitches);
-
-        int currentLayer = 2;
-        int nextGroupSize;
-        List<List<Switch<T>>> prevLayerGroupedSwitches = List.of(firstLayerSwitches);
-        do {
-            List<List<Switch<T>>> newLayerGroupedSwitches = new ArrayList<>();
-            for (int i = 0; i < prevLayerGroupedSwitches.size(); i++) {
-                List<Switch<T>> prevGroupedSwitches = prevLayerGroupedSwitches.get(i);
-                newLayerGroupedSwitches.addAll(addNextButterflySwitchLayer(nodes, prevGroupedSwitches,
-                        radix, currentLayer, i, levelRngFunction));
+        List<Switch<T>> flattenedLastLayerSwitches = new ArrayList<>(groupedSwitches.get(groupedSwitches.size() - 1));
+        int numGroups = groupedSwitches.get(0).size();
+        for (int i = 0; i < numGroups; i++) {
+            if (i * radix >= nodes.size()) {
+                break;
             }
-            currentLayer++;
-            prevLayerGroupedSwitches = newLayerGroupedSwitches;
-            nextGroupSize = newLayerGroupedSwitches.get(0).size();
-            newLayerGroupedSwitches.forEach(allSwitches::addAll);
-
-            List<Switch<T>> nextLayerSwitches = new ArrayList<>();
-            newLayerGroupedSwitches.forEach(nextLayerSwitches::addAll);
-            groupedSwitches.add(nextLayerSwitches);
-        } while (nextGroupSize != 1);
-
-        List<Switch<T>> flattenedLastLayerSwitches = prevLayerGroupedSwitches.stream().flatMap(List::stream)
-                .collect(Collectors.toList());
-        for (int i = 0; i < numFirstLayerGroups; i++) {
-            List<? extends EndpointNode<T>> endpointSublist = nodes.subList(i * radix, (i + 1) * radix);
+            List<? extends EndpointNode<T>> endpointSublist =
+                    nodes.subList(i * radix, Math.min((i + 1) * radix, nodes.size()));
             Switch<T> lastHopSwitch = flattenedLastLayerSwitches.get(i);
             lastHopSwitch.setDirectlyConnectedEndpoints(endpointSublist);
         }
-
-        RoutingUtil.updateRoutingTables(allSwitches);
+        flattenAndUpdateRoutes(groupedSwitches);
         return groupedSwitches;
     }
 
-    private static <T> List<List<Switch<T>>> addNextButterflySwitchLayer(List<? extends EndpointNode<T>> endpoints,
-            List<Switch<T>> prevLayer, int radix, int level, int group, Function<Integer,
-            RandomNumberGenerator> levelRngFunction) {
-        int numNodes = prevLayer.size();
-        int numGroups = Math.max(numNodes / radix, 1);
-        radix = Math.min(numNodes, radix);
 
-        List<List<Switch<T>>> nextLayerSwitches = new ArrayList<>();
-        Stream.generate(() -> new ArrayList<Switch<T>>()).limit(radix).forEach(nextLayerSwitches::add);
-        for (int groupNumber = 0; groupNumber < numGroups; groupNumber++) {
-            int finalGroupNumber = groupNumber;
-            int effectiveRadix = radix;
-            List<Switch<T>> newNeighborGroup =
-                    Stream.iterate(0, index -> index < effectiveRadix, index -> index + 1)
-                            .map(index -> new Switch<>(getButterflySwitchName(level,
-                                    effectiveRadix * group + index, finalGroupNumber),
-                                    new ArrayList<>(endpoints),
-                                    List.of(),
-                                    levelRngFunction.apply(level)))
-                            .collect(Collectors.toList());
-            List<Switch<T>> prevLayerGroup = Stream.iterate(0, index -> index < effectiveRadix, index -> index + 1)
-                    .map(index -> prevLayer.get(finalGroupNumber * effectiveRadix + index))
-                    .collect(Collectors.toList());
-            prevLayerGroup.forEach(switch_ -> switch_.updateSwitchNeighbors(newNeighborGroup));
-            newNeighborGroup.forEach(switch_ -> switch_.setSwitchNeighbors(prevLayerGroup));
-            for (int index = 0; index < radix; index++) {
-                nextLayerSwitches.get(index).add(newNeighborGroup.get(index));
-            }
-        }
-        return nextLayerSwitches;
+    private static String getTreeSwitchName(int level, int group, int index) {
+        return String.format("(Level: %d, Group: %d, Index: %d)", level, group, index);
     }
 
-    private static String getButterflySwitchName(int level, int group, int index) {
-        return String.format("Butterfly-(Level: %d, Group: %d, Index: %d)", level, group, index);
+    private static <T> void flattenAndUpdateRoutes(List<List<Switch<T>>> groupedSwitches) {
+        List<Switch<T>> allSwitches = groupedSwitches.stream().flatMap(Collection::stream).collect(Collectors.toList());
+        RoutingUtil.updateRoutingTables(allSwitches);
     }
 
     public static <T> List<List<Switch<T>>> arrangeFoldedClosStructure(List<? extends EndpointNode<T>> nodes,
             List<Integer> networkParameters,
             Function<Integer, RandomNumberGenerator> levelRngFunction) {
+        List<List<Switch<T>>> groupedSwitches =
+                arrangeButterflyArrangement(nodes, networkParameters, levelRngFunction, true);
+        flattenAndUpdateRoutes(groupedSwitches);
+        return groupedSwitches;
+    }
+    private static <T> List<List<Switch<T>>> arrangeButterflyArrangement(List<? extends EndpointNode<T>> nodes,
+            List<Integer> networkParameters,
+            Function<Integer, RandomNumberGenerator> levelRngFunction,
+            boolean isBackwardConnecting) {
         if (networkParameters.size() == 0) {
-            throw new RuntimeException("Please specify radix for the folded clos network.");
+            throw new RuntimeException("Please specify radix for network.");
         }
         int radix = networkParameters.get(0);
-        if (!isValidTreeSetup(nodes.size(), radix)) {
-            throw new RuntimeException(String.format(
-                    "The dimensions (Size: %d, Radix: %d), provided do not match the requirements " +
-                            "for a simple folded clos network.", nodes.size(), radix));
-        }
-
-        int numFirstLayerGroups = nodes.size() / radix;
+        int levels = (int) MathUtil.log(nodes.size(), radix);
+        int baseGroupSize = (int) Math.pow(radix, levels);
+        int numFirstLayerGroups = MathUtil.ceilDiv(nodes.size(), baseGroupSize) * baseGroupSize;
 
         List<Switch<T>> firstLayerSwitches = new ArrayList<>();
         for (int i = 0; i < numFirstLayerGroups; i++) {
             int index = i;
-            List<? extends EndpointNode<T>> endpointSublist = nodes.subList(index * radix, (index + 1) * radix);
+            List<? extends EndpointNode<T>> endpointSublist;
+            if (index * radix >= nodes.size()) {
+                endpointSublist = List.of();
+            } else {
+                endpointSublist =
+                        nodes.subList(index * radix, Math.min((index + 1) * radix, nodes.size()));
+            }
             Switch<T> directSwitch_ = new Switch<>(
-                    getFoldedClosSwitchName(1, 0, i),
+                    getTreeSwitchName(1, 0, i),
                     new ArrayList<>(nodes),
-                    endpointSublist,
+                    isBackwardConnecting ? endpointSublist : List.of(),
                     levelRngFunction.apply(1));
             firstLayerSwitches.add(directSwitch_);
             endpointSublist.forEach(node -> node.setOutflowNodes(List.of(firstLayerSwitches.get(index))));
@@ -258,8 +202,8 @@ public class NetworkTopology {
             List<List<Switch<T>>> newLayerGroupedSwitches = new ArrayList<>();
             for (int i = 0; i < prevLayerGroupedSwitches.size(); i++) {
                 List<Switch<T>> prevGroupedSwitches = prevLayerGroupedSwitches.get(i);
-                newLayerGroupedSwitches.addAll(addNextFoldedClosSwitchLayer(nodes, prevGroupedSwitches,
-                        radix, currentLayer, i, levelRngFunction));
+                newLayerGroupedSwitches.addAll(addNextSwitchLayer(nodes, prevGroupedSwitches,
+                        radix, currentLayer, i, levelRngFunction, isBackwardConnecting));
             }
             currentLayer++;
             prevLayerGroupedSwitches = newLayerGroupedSwitches;
@@ -270,14 +214,12 @@ public class NetworkTopology {
             newLayerGroupedSwitches.forEach(nextLayerSwitches::addAll);
             groupedSwitches.add(nextLayerSwitches);
         }
-
-        RoutingUtil.updateRoutingTables(allSwitches);
         return groupedSwitches;
     }
 
-    private static <T> List<List<Switch<T>>> addNextFoldedClosSwitchLayer(List<? extends EndpointNode<T>> endpoints,
+    private static <T> List<List<Switch<T>>> addNextSwitchLayer(List<? extends EndpointNode<T>> endpoints,
             List<Switch<T>> prevLayer, int radix, int level, int group, Function<Integer,
-            RandomNumberGenerator> levelRngFunction) {
+            RandomNumberGenerator> levelRngFunction, boolean isBackwardConnecting) {
         int numNodes = prevLayer.size();
         int numGroups = Math.max(numNodes / radix, 1);
         radix = Math.min(numNodes, radix);
@@ -289,35 +231,23 @@ public class NetworkTopology {
             int effectiveRadix = radix;
             List<Switch<T>> newNeighborGroup =
                     Stream.iterate(0, index -> index < effectiveRadix, index -> index + 1)
-                    .map(index -> new Switch<>(getFoldedClosSwitchName(level,
-                            effectiveRadix * group + index, finalGroupNumber),
-                            new ArrayList<>(endpoints),
-                            List.of(),
-                            levelRngFunction.apply(level)))
-                    .collect(Collectors.toList());
+                            .map(index -> new Switch<>(getTreeSwitchName(level,
+                                    effectiveRadix * group + index, finalGroupNumber),
+                                    new ArrayList<>(endpoints),
+                                    List.of(),
+                                    levelRngFunction.apply(level)))
+                            .collect(Collectors.toList());
             List<Switch<T>> prevLayerGroup = Stream.iterate(0, index -> index < effectiveRadix, index -> index + 1)
                     .map(index -> prevLayer.get(finalGroupNumber * effectiveRadix + index))
                     .collect(Collectors.toList());
             prevLayerGroup.forEach(switch_ -> switch_.updateSwitchNeighbors(newNeighborGroup));
-            newNeighborGroup.forEach(switch_ -> switch_.setSwitchNeighbors(prevLayerGroup));
+            if (isBackwardConnecting) {
+                newNeighborGroup.forEach(switch_ -> switch_.setSwitchNeighbors(prevLayerGroup));
+            }
             for (int index = 0; index < radix; index++) {
                 nextLayerSwitches.get(index).add(newNeighborGroup.get(index));
             }
         }
         return nextLayerSwitches;
-    }
-
-    private static String getFoldedClosSwitchName(int level, int group, int index) {
-        return String.format("Folded-Clos-(Level: %d, Group: %d, Index: %d)", level, group, index);
-    }
-
-    private static boolean isValidTreeSetup(int N, int radix) {
-        while (N > radix) {
-            if (N % radix != 0) {
-                return false;
-            }
-            N = N / radix;
-        }
-        return true;
     }
 }

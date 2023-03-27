@@ -1,12 +1,12 @@
 {
-  "numRuns": 10,
-  "numConsensus": 10,
+  "numRuns": 1,
+  "numConsensus": 100,
   "startingSeed": 0,
   "seedMultiplier": 100,
-  "numNodes": 16,
+  "numNodes": 27,
   "nodeProcessingRate": 3,
   "switchProcessingRate": 9,
   "baseTimeLimit": 10000,
   "networkType": "FoldedClos",
-  "networkParameters": [4]
+  "networkParameters": [3]
 }

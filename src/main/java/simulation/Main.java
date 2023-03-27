@@ -117,6 +117,8 @@ public class Main {
         io.output(validatorQueueStats.toString());
         io.close();
 
+
+
         IBFTResultsJson ibftResultsJson = new IBFTResultsJson(ibftStats.getNewRoundTime(),
                 ibftStats.getPrePreparedTime(), ibftStats.getPreparedTime(), ibftStats.getRoundChangeTime(),
                 ibftStats.getAverageConsensusTime());
@@ -181,8 +183,14 @@ public class Main {
     }
 
     private static void setup() {
+        deleteFilesInDirectory(Logger.DEFAULT_DIRECTORY);
+        deleteFilesInDirectory(JSON_DIRECTORY.toString());
+        Logger.setup();
+    }
+
+    private static void deleteFilesInDirectory(String path) {
         try {
-            File directory = new File(Logger.DEFAULT_DIRECTORY);
+            File directory = new File(path);
             if (directory.exists() && directory.isDirectory()) {
                 for (File file : directory.listFiles()) {
                     file.delete();
@@ -192,7 +200,6 @@ public class Main {
         } catch (IOException e) {
             e.printStackTrace();
         }
-        Logger.setup();
     }
 
     private static void cleanup() {
