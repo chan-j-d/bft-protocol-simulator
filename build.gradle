@@ -1,5 +1,6 @@
 plugins {
     id 'java'
+    id 'application'
 }
 
 group 'org.example'
@@ -22,3 +23,5 @@ test {
 compileJava {
     options.compilerArgs << "-Xlint:unchecked"
 }
+
+mainClassName = 'simulation.Main'
