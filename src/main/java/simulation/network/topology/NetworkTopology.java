@@ -165,8 +165,9 @@ public class NetworkTopology {
             List<Integer> networkParameters,
             Function<Integer, RandomNumberGenerator> levelRngFunction,
             boolean isBackwardConnecting) {
-        if (networkParameters.size() <= 1) {
-            throw new RuntimeException("Please specify parameters for network \"[{radix}, {initialConnection}]\"");
+        if (networkParameters.size() <= 2) {
+            throw new RuntimeException(
+                    "Please specify parameters for network \"[{radix}, {initialConnection}, {version}]\"");
         }
         int radix = networkParameters.get(0);
         int minimumNodeCount = MathUtil.ceilDiv(nodes.size(), radix);
@@ -205,13 +206,20 @@ public class NetworkTopology {
 
         int currentLayer = 2;
         List<List<Switch<T>>> prevLayerGroupedSwitches = List.of(firstLayerSwitches);
-        int nextGroupSize = firstLayerSwitches.size();
-        while (nextGroupSize != 1) {
+        int nextGroupSize;
+        do {
             List<List<Switch<T>>> newLayerGroupedSwitches = new ArrayList<>();
             for (int i = 0; i < prevLayerGroupedSwitches.size(); i++) {
                 List<Switch<T>> prevGroupedSwitches = prevLayerGroupedSwitches.get(i);
-                newLayerGroupedSwitches.addAll(addNextSwitchLayer(nodes, prevGroupedSwitches,
-                        radix, currentLayer, i, levelRngFunction, isBackwardConnecting));
+                if (networkParameters.get(2) == 0) {
+                    newLayerGroupedSwitches.addAll(addNextSwitchLayer(nodes, prevGroupedSwitches,
+                            radix, currentLayer, i, levelRngFunction, isBackwardConnecting));
+                } else if (networkParameters.get(2) == 1) {
+                    newLayerGroupedSwitches.addAll(addNextSwitchLayerTwo(nodes, prevGroupedSwitches,
+                            radix, currentLayer, i, levelRngFunction, isBackwardConnecting));
+                } else {
+                    throw new RuntimeException("Next layer parameter should be 0 or 1.");
+                }
             }
             currentLayer++;
             prevLayerGroupedSwitches = newLayerGroupedSwitches;
@@ -221,10 +229,51 @@ public class NetworkTopology {
             List<Switch<T>> nextLayerSwitches = new ArrayList<>();
             newLayerGroupedSwitches.forEach(nextLayerSwitches::addAll);
             groupedSwitches.add(nextLayerSwitches);
-        }
+        } while (nextGroupSize > 1);
         return groupedSwitches;
     }
 
+
+    /**
+     * Returns the next layer of connection that maximizes group size instead of number of groups.
+     */
+    private static <T> List<List<Switch<T>>> addNextSwitchLayerTwo(List<? extends EndpointNode<T>> endpoints,
+            List<Switch<T>> prevLayer, int radix, int level, int group, Function<Integer,
+            RandomNumberGenerator> levelRngFunction, boolean isBackwardConnecting) {
+        if (level > 3) {
+            return List.of();
+        }
+        int numNodes = prevLayer.size();
+        int groupSize = (int) Math.pow(radix, Math.ceil(MathUtil.log(numNodes, radix) - 1));
+        int numGroups = Math.max(numNodes / groupSize, 1);
+        radix = numGroups;
+
+        List<List<Switch<T>>> nextLayerSwitches = new ArrayList<>();
+        Stream.generate(() -> new ArrayList<Switch<T>>()).limit(numGroups).forEach(nextLayerSwitches::add);
+        for (int groupNumber = 0; groupNumber < numGroups; groupNumber++) {
+            int effectiveRadix = radix;
+            for (int index = 0; index < groupSize; index++) {
+                int finalIndex = index;
+                Switch<T> switch_ = new Switch<>(getTreeSwitchName(level, group * groupSize + groupNumber, index),
+                        new ArrayList<>(endpoints),
+                        List.of(),
+                        levelRngFunction.apply(level));
+                List<Switch<T>> prevLayerNeighbors = Stream.iterate(0, prevIndex -> prevIndex < effectiveRadix, prevIndex -> prevIndex + 1)
+                        .map(prevIndex -> prevLayer.get(finalIndex + groupSize * prevIndex))
+                        .collect(Collectors.toList());
+                prevLayerNeighbors.forEach(switch_2 -> switch_2.updateSwitchNeighbors(List.of(switch_)));
+                if (isBackwardConnecting) {
+                    switch_.setSwitchNeighbors(prevLayerNeighbors);
+                }
+                nextLayerSwitches.get(groupNumber).add(switch_);
+            }
+        }
+        return nextLayerSwitches;
+    }
+
+    /**
+     * Returns the next layer of connection that maximizes number of groups instead of group size.
+     */
     private static <T> List<List<Switch<T>>> addNextSwitchLayer(List<? extends EndpointNode<T>> endpoints,
             List<Switch<T>> prevLayer, int radix, int level, int group, Function<Integer,
             RandomNumberGenerator> levelRngFunction, boolean isBackwardConnecting) {

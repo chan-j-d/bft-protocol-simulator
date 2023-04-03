@@ -8,5 +8,5 @@
   "switchProcessingRate": 9,
   "baseTimeLimit": 10000,
   "networkType": "FoldedClos",
-  "networkParameters": [4, 1]
+  "networkParameters": [5, 1, 0]
 }
