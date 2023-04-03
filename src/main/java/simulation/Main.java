@@ -119,9 +119,7 @@ public class Main {
 
 
 
-        IBFTResultsJson ibftResultsJson = new IBFTResultsJson(ibftStats.getNewRoundTime(),
-                ibftStats.getPrePreparedTime(), ibftStats.getPreparedTime(), ibftStats.getRoundChangeTime(),
-                ibftStats.getAverageConsensusTime());
+        IBFTResultsJson ibftResultsJson = new IBFTResultsJson(ibftStats, validatorQueueStats);
         writeObjectToJson(ibftResultsJson, RESULTS_JSON_FILEPATH);
 
         for (int i = 0; i < numGroups; i++) {

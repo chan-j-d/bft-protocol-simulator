@@ -109,7 +109,8 @@ public class IBFTNode extends TimedNode<IBFTMessage> {
         previousRecordedTime = newCurrentTime;
         IBFTMessage message = payload.getMessage();
         processMessage(message);
-        logger.log(String.format("%.3f-%.3f: %s processing %s\n%s\n%s", time, newCurrentTime, this, message, super.getQueueStatistics(), getIbftStatistics()));
+//        logger.log(String.format("%.3f-%.3f: %s processing %s\n%s\n%s", time, newCurrentTime,
+//                this, message, super.getQueueStatistics(), getIbftStatistics()));
         return new Pair<>(duration, getProcessedPayloads());
     }
 

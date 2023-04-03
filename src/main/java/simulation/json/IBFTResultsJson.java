@@ -1,5 +1,8 @@
 package simulation.json;
 
+import simulation.network.entity.ibft.IBFTStatistics;
+import simulation.statistics.QueueStatistics;
+
 public class IBFTResultsJson {
 
     private double t_newRound;
@@ -7,14 +10,19 @@ public class IBFTResultsJson {
     private double t_prepared;
     private double t_roundChange;
     private double t_total;
+    private double L;
+    private double lambda;
+    private double W;
 
-    public IBFTResultsJson(double t_newRound, double t_prePrepared,
-            double t_prepared, double t_roundChange, double t_total) {
-        this.t_total = t_total;
-        this.t_newRound = t_newRound;
-        this.t_prePrepared = t_prePrepared;
-        this.t_roundChange = t_roundChange;
-        this.t_prepared = t_prepared;
+    public IBFTResultsJson(IBFTStatistics ibftStatistics, QueueStatistics queueStatistics) {
+        t_total = ibftStatistics.getAverageConsensusTime();
+        t_newRound = ibftStatistics.getNewRoundTime();
+        t_prePrepared = ibftStatistics.getPrePreparedTime();
+        t_roundChange = ibftStatistics.getRoundChangeTime();
+        t_prepared = ibftStatistics.getPreparedTime();
+        L = queueStatistics.getAverageNumMessagesInQueue();
+        lambda = queueStatistics.getMessageArrivalRate();
+        W = queueStatistics.getAverageMessageWaitingTime();
     }
 
     @Override
