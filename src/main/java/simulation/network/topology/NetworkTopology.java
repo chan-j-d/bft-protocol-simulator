@@ -165,8 +165,8 @@ public class NetworkTopology {
             List<Integer> networkParameters,
             Function<Integer, RandomNumberGenerator> levelRngFunction,
             boolean isBackwardConnecting) {
-        if (networkParameters.size() == 0) {
-            throw new RuntimeException("Please specify radix for network.");
+        if (networkParameters.size() <= 1) {
+            throw new RuntimeException("Please specify parameters for network \"[{radix}, {initialConnection}]\"");
         }
         int radix = networkParameters.get(0);
         int minimumNodeCount = MathUtil.ceilDiv(nodes.size(), radix);
@@ -175,14 +175,21 @@ public class NetworkTopology {
         int numFirstLayerGroups = MathUtil.ceilDiv(minimumNodeCount, baseGroupSize) * baseGroupSize;
 
         List<Switch<T>> firstLayerSwitches = new ArrayList<>();
+        int minEndpointPerSwitch = nodes.size() / numFirstLayerGroups;
+        int numAdditional = nodes.size() % numFirstLayerGroups;
+        int startIndex = 0;
         for (int i = 0; i < numFirstLayerGroups; i++) {
             int index = i;
             List<? extends EndpointNode<T>> endpointSublist;
-            if (index * radix >= nodes.size()) {
-                endpointSublist = List.of();
+            if (networkParameters.get(1) == 1) {
+                int endIndex = startIndex + minEndpointPerSwitch + (i < numAdditional ? 1 : 0);
+                endpointSublist = nodes.subList(startIndex, endIndex);
+                startIndex = endIndex;
+            } else if (networkParameters.get(1) == 0) {
+                endpointSublist = (i * radix) >= nodes.size() ? List.of() :
+                        nodes.subList(i * radix, Math.min(nodes.size(), (i + 1) * radix));
             } else {
-                endpointSublist =
-                        nodes.subList(index * radix, Math.min((index + 1) * radix, nodes.size()));
+                throw new RuntimeException("Initial connection parameter (second field) must be 1 or 0.");
             }
             Switch<T> directSwitch_ = new Switch<>(
                     getTreeSwitchName(1, 0, i),
@@ -239,7 +246,7 @@ public class NetworkTopology {
                                     levelRngFunction.apply(level)))
                             .collect(Collectors.toList());
             List<Switch<T>> prevLayerGroup = Stream.iterate(0, index -> index < effectiveRadix, index -> index + 1)
-                    .map(index -> prevLayer.get(finalGroupNumber * effectiveRadix + index))
+                    .map(index -> prevLayer.get(index * numGroups + finalGroupNumber))
                     .collect(Collectors.toList());
             prevLayerGroup.forEach(switch_ -> switch_.updateSwitchNeighbors(newNeighborGroup));
             if (isBackwardConnecting) {
