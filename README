@@ -5,7 +5,8 @@ To run the simulator, you will need
 - Java 11 or later
 
 You can run the simulator with the command
-./gradlew run -Dargs="run_config.json"
+gradlew run --args="run_config.json" (Windows)
+./gradlew run --args="run_config.json" (Linux or Mac OS)
 
 To vary the run settings, you can adjust it in the 'run_config.json' file.
 A sample config file looks like this.
@@ -21,3 +22,14 @@ A sample config file looks like this.
   "networkType": "FoldedClos",
   "networkParameters": [5, 1, 0]
 }
+
+The important fields you might want to vary are
+- numConsensus: number of consensus before termination
+- numNodes: number of nodes in the network
+- nodeProcessingRate/switchProcessingRate: processing rates of validator nodes and switches. They use an exponential distribution with the specified rate to generate service time.
+- baseTimeLimit: time limit per round
+- networkType: Choose between "Clique", "Mesh", "Torus", "Butterfly", "FoldedClos"
+- networkParameters:
+    - Clique: no arguments needed
+    - Mesh/Torus: specify the length of one side of the 2D array
+    - Butterfly/FoldedClos: It uses 3 parameters, (Number of uplinks, 0 for flushed or 1 for spread, 0). The last parameter is currently a work in progress.
