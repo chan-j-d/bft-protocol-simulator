@@ -1,10 +1,10 @@
 package simulation.util.rng;
 
-public class TestGenerator implements RandomNumberGenerator {
+public class DegenerateDistribution implements RandomNumberGenerator {
 
     private double duration;
 
-    public TestGenerator(double duration) {
+    public DegenerateDistribution(double duration) {
         this.duration = duration;
     }
     @Override

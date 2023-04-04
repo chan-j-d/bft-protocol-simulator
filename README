@@ -1,0 +1,23 @@
+This simulator is part of the FYP project of Chan Jun Da.
+
+To run the simulator, you will need
+- Gradle version 7.0 or later
+- Java 11 or later
+
+You can run the simulator with the command
+./gradlew run -Dargs="run_config.json"
+
+To vary the run settings, you can adjust it in the 'run_config.json' file.
+A sample config file looks like this.
+{
+  "numRuns": 1,
+  "numConsensus": 100,
+  "startingSeed": 0,
+  "seedMultiplier": 100,
+  "numNodes": 64,
+  "nodeProcessingRate": 3,
+  "switchProcessingRate": 9,
+  "baseTimeLimit": 10000,
+  "networkType": "FoldedClos",
+  "networkParameters": [5, 1, 0]
+}

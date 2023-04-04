@@ -4,6 +4,7 @@ import simulation.network.entity.EndpointNode;
 import simulation.network.entity.Node;
 import simulation.network.entity.Payload;
 import simulation.util.Pair;
+import simulation.util.rng.RNGUtil;
 import simulation.util.rng.RandomNumberGenerator;
 
 import java.util.ArrayList;
@@ -72,7 +73,7 @@ public class Switch<T> extends Node<T> {
         List<Node<T>> nextHopNodeOptions = table.getNextHopNodeFor(endpoint);
 
         // tie-breaking mechanism - use a randomized decision
-        int randomIndex = new Random().nextInt(nextHopNodeOptions.size());
+        int randomIndex = RNGUtil.getRandomInteger(0, nextHopNodeOptions.size());
         return nextHopNodeOptions.get(randomIndex);
     }
 

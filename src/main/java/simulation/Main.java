@@ -16,7 +16,10 @@ import simulation.network.topology.NetworkTopology;
 import simulation.simulator.Simulator;
 import simulation.statistics.QueueStatistics;
 import simulation.util.logging.Logger;
+import simulation.util.rng.DegenerateDistribution;
 import simulation.util.rng.ExponentialDistribution;
+import simulation.util.rng.RNGUtil;
+import simulation.util.rng.RandomNumberGenerator;
 
 import java.io.File;
 import java.io.FileReader;
@@ -28,7 +31,8 @@ import java.nio.file.Paths;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Optional;
-import java.util.Random;
+import java.util.function.Function;
+import java.util.function.Supplier;
 import java.util.logging.LogManager;
 
 public class Main {
@@ -58,8 +62,7 @@ public class Main {
         List<QueueStatistics> switchStatistics = new ArrayList<>();
         int numGroups = -1;
         for (int i = 0; i < numTrials; i++) {
-            ExponentialDistribution.UNIFORM_DISTRIBUTION = new Random(startingSeed + seedMultiplier * i);
-//            IoInterface io = new ConsoleIo();
+            RNGUtil.setSeed(startingSeed + seedMultiplier * i);
             List<IBFTNode> nodes = new ArrayList<>();
             Simulator<IBFTMessage> simulator = new Simulator<>();
             for (int j = 0; j < numNodes; j++) {
@@ -141,22 +144,28 @@ public class Main {
         double switchServiceRate = json.getSwitchProcessingRate();
         String networkType = json.getNetworkType();
         List<Integer> networkParameters = json.getNetworkParameters();
+        Function<Integer, RandomNumberGenerator> processingGeneratorFunction =
+                switchServiceRate < 0 ? x -> new DegenerateDistribution(0)
+                        : x -> new ExponentialDistribution(switchServiceRate);
+        Supplier<RandomNumberGenerator> processingGeneratorSupplier =
+                switchServiceRate < 0 ? () -> new DegenerateDistribution(0)
+                        : () -> new ExponentialDistribution(switchServiceRate);
         switch (networkType) {
         case "FoldedClos": case "fc":
             return NetworkTopology.arrangeFoldedClosStructure(nodes, networkParameters,
-                    x -> new ExponentialDistribution(switchServiceRate));
+                    processingGeneratorFunction);
         case "Butterfly": case "b":
             return NetworkTopology.arrangeButterflyStructure(nodes, networkParameters,
-                    x -> new ExponentialDistribution(switchServiceRate));
+                    processingGeneratorFunction);
         case "Clique": case "c":
             return NetworkTopology.arrangeCliqueStructure(nodes, networkParameters,
-                    () -> new ExponentialDistribution(switchServiceRate));
+                    processingGeneratorSupplier);
         case "Torus": case "t":
             return NetworkTopology.arrangeTorusStructure(nodes, networkParameters,
-                    () -> new ExponentialDistribution(switchServiceRate));
+                    processingGeneratorSupplier);
         case "Mesh": case "m":
             return NetworkTopology.arrangeMeshStructure(nodes, networkParameters,
-                    () -> new ExponentialDistribution(switchServiceRate));
+                    processingGeneratorSupplier);
         default:
             throw new RuntimeException(String.format("The network type %s has not been defined/implemented.",
                     networkType));
