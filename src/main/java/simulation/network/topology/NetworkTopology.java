@@ -183,6 +183,7 @@ public class NetworkTopology {
             int index = i;
             List<? extends EndpointNode<T>> endpointSublist;
             if (networkParameters.get(1) == 1) {
+                // 1 for spread, 0 for flushed
                 int endIndex = startIndex + minEndpointPerSwitch + (i < numAdditional ? 1 : 0);
                 endpointSublist = nodes.subList(startIndex, endIndex);
                 startIndex = endIndex;

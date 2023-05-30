@@ -9,11 +9,13 @@ public class QueueStatistics extends Statistics {
     public static final String KEY_MESSAGE_ARRIVAL_RATE = "Average effective arrival rate";
     public static final String KEY_WAITING_TIME = "Average waiting time per message";
     public static final String KEY_PRODUCT_ARRIVAL_WAITING_TIME = "Product of waiting time and arrival rate";
+    public static final String KEY_TOTAL_TIME_EMPTY = "Total time empty";
     public static final String KEY_TOTAL_TIME = "Total time";
 
     private long totalMessageCount;
     private int currentMessageCount;
     private double totalMessageQueueTime;
+    private double totalTimeEmpty;
 
     private double totalTime;
     private double totalQueueingTime;
@@ -23,16 +25,18 @@ public class QueueStatistics extends Statistics {
         totalMessageCount = 0;
         currentMessageCount = 0;
         totalMessageQueueTime = 0;
+        totalTimeEmpty = 0;
         totalTime = 0;
         totalQueueingTime = 0;
         numNodes = 1;
     }
 
     private QueueStatistics(long totalMessageCount, int currentMessageCount, double totalMessageQueueTime,
-            double totalTime, double totalQueueingTime, int numNodes) {
+            double totalTimeEmpty, double totalTime, double totalQueueingTime, int numNodes) {
         this.totalMessageCount = totalMessageCount;
         this.currentMessageCount = currentMessageCount;
         this.totalMessageQueueTime = totalMessageQueueTime;
+        this.totalTimeEmpty = totalTimeEmpty;
         this.totalTime = totalTime;
         this.totalQueueingTime = totalQueueingTime;
         this.numNodes = numNodes;
@@ -44,12 +48,16 @@ public class QueueStatistics extends Statistics {
         map.put(KEY_MESSAGE_ARRIVAL_RATE, getMessageArrivalRate());
         map.put(KEY_WAITING_TIME, getAverageMessageWaitingTime());
         map.put(KEY_PRODUCT_ARRIVAL_WAITING_TIME, getMessageArrivalRate() * getAverageMessageWaitingTime());
+        map.put(KEY_TOTAL_TIME_EMPTY, totalTimeEmpty / numNodes);
         map.put(KEY_TOTAL_TIME, totalTime / numNodes);
         return map;
     }
 
     public void addMessageArrived(double timeElapsed) {
         totalQueueingTime += currentMessageCount * timeElapsed;
+        if (currentMessageCount == 0) {
+            totalTimeEmpty += timeElapsed;
+        }
         totalMessageCount += 1;
         currentMessageCount += 1;
         totalTime += timeElapsed;
@@ -84,6 +92,7 @@ public class QueueStatistics extends Statistics {
                 this.totalMessageCount + other.totalMessageCount,
                 this.currentMessageCount + other.currentMessageCount,
                 this.totalMessageQueueTime + other.totalMessageQueueTime,
+                this.totalTimeEmpty + other.totalTimeEmpty,
                 this.totalTime + other.totalTime,
                 this.totalQueueingTime + other.totalQueueingTime,
                 this.numNodes + other.numNodes);

@@ -15,7 +15,7 @@ import java.util.PriorityQueue;
 public class Simulator<T> implements NodeTimerNotifier<T> {
 
     private static final int SNAPSHOT_INTERVAL = 1000000;
-    private static final double TIME_CUTOFF = 100000; // for safety
+    private static final double TIME_CUTOFF = 10000000; // for safety
 
     private PriorityQueue<Event> eventQueue;
     private int roundCount;
