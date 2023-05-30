@@ -6,6 +6,7 @@ logs/*
 json/*
 
 /py/*.json
+/py/*.csv
 /py/.ipynb_checkpoints
 /py/__pycache__
 
