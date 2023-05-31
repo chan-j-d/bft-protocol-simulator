@@ -8,14 +8,20 @@ import java.util.List;
 
 public class HSReplica extends TimedNode<HSMessage> {
 
+    private final int n;
+    private final int nodeId;
+
     private int viewNumber;
     private QuorumCertificate lockedQc;
 
-    public HSReplica(String name, NodeTimerNotifier<HSMessage> timerNotifier) {
+    public HSReplica(int nodeId, int n, String name, NodeTimerNotifier<HSMessage> timerNotifier) {
         super(name, timerNotifier);
+        this.nodeId = nodeId;
+        this.n = n;
+        this.viewNumber = 0;
     }
 
-    // Utility methods
+    // Algorithm 1: Utility methods
     private HSMessage voteMessage(HSMessageType type, HSTreeNode node, QuorumCertificate qc) {
         return new HSMessage(type, viewNumber, node, qc);
     }
@@ -34,6 +40,11 @@ public class HSReplica extends TimedNode<HSMessage> {
 
     private boolean safeNode(HSTreeNode node, QuorumCertificate qc) {
         return node.extendsFrom(lockedQc.getNode()) || qc.getViewNumber() > lockedQc.getViewNumber();
+    }
+
+    // Other utilities
+    private int getLeader(int viewNumber) {
+        return viewNumber % n;
     }
 
     @Override

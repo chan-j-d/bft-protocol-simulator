@@ -51,13 +51,13 @@ public abstract class Node<T> {
     public double getCurrentTime() {
         return currentTime;
     }
-    public Payload<T> sendMessage(T message, Node<T> node) {
+    public Payload<T> createPayloads(T message, Node<T> node) {
         return new Payload<>(message, node.getName());
     }
 
-    public List<Payload<T>> sendMessage(T message, Collection<? extends Node<T>> nodes) {
+    public List<Payload<T>> createPayloads(T message, Collection<? extends Node<? extends T>> nodes) {
         List<Payload<T>> payloads = new ArrayList<>();
-        for (Node<T> node : nodes) {
+        for (Node<? extends T> node : nodes) {
             payloads.add(new Payload<>(message, node.getName()));
         }
         return payloads;
