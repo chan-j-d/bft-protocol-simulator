@@ -27,7 +27,6 @@ public class IBFTNode extends TimedNode<IBFTMessage> {
     private final Logger logger;
 
     // Simulation variables
-    private final RandomNumberGenerator rng;
     private final double baseTimeLimit;
     private final int consensusLimit;
     private int N;
@@ -50,17 +49,15 @@ public class IBFTNode extends TimedNode<IBFTMessage> {
     private Map<Integer, List<IBFTMessage>> consensusQuorum;
     private Map<Integer, Integer> otherNodeHeights;
     private int inputValue_i; // value passed as input to instance
-    private double previousRecordedTime;
 
 
     public IBFTNode(String name, int identifier, double baseTimeLimit, NodeTimerNotifier<IBFTMessage> timerNotifier,
             int N, int consensusLimit, RandomNumberGenerator serviceRateGenerator) {
-        super(name, timerNotifier);
+        super(name, timerNotifier, serviceRateGenerator);
         logger = new Logger(name);
         this.state = IBFTState.NEW_ROUND;
 
         this.p_i = identifier;
-        this.rng = serviceRateGenerator;
         this.allNodes = new HashMap<>();
         this.baseTimeLimit = baseTimeLimit;
         this.timerExpiryCount = 0;
@@ -72,7 +69,6 @@ public class IBFTNode extends TimedNode<IBFTMessage> {
         this.consensusQuorum = new HashMap<>();
         this.otherNodeHeights = new HashMap<>();
         this.statistics = new IBFTStatistics();
-        this.previousRecordedTime = 0;
     }
 
     public void setAllNodes(List<IBFTNode> allNodes) {
@@ -81,18 +77,8 @@ public class IBFTNode extends TimedNode<IBFTMessage> {
     }
 
     @Override
-    public Pair<Double, List<Payload<IBFTMessage>>> processPayload(double time, Payload<IBFTMessage> payload) {
-        double duration = rng.generateRandomNumber();
-        double timePassed = time - previousRecordedTime;
-        double newCurrentTime = time + duration;
-        super.processPayload(newCurrentTime, payload);
-        statistics.addTime(state, duration + timePassed);
-        previousRecordedTime = newCurrentTime;
-        IBFTMessage message = payload.getMessage();
-        processMessage(message);
-//        logger.log(String.format("%.3f-%.3f: %s processing %s\n%s\n%s", time, newCurrentTime,
-//                this, message, super.getQueueStatistics(), getIbftStatistics()));
-        return new Pair<>(duration, getProcessedPayloads());
+    public void registerTimeElapsed(double time) {
+        statistics.addTime(state, time);
     }
 
     @Override
@@ -213,7 +199,8 @@ public class IBFTNode extends TimedNode<IBFTMessage> {
     }
 
     // Message parsing methods
-    private void processMessage(IBFTMessage message) {
+    @Override
+    protected List<Payload<IBFTMessage>> processMessage(IBFTMessage message) {
         IBFTMessageType messageType = message.getMessageType();
         int sender = message.getIdentifier();
         int lambda = message.getLambda();
@@ -232,7 +219,7 @@ public class IBFTNode extends TimedNode<IBFTMessage> {
                     commitOperation();
                     break;
                 case SYNC:
-                    message.getPiggybackMessages().forEach(pbm -> messageHolder.addMessageToBacklog(pbm));
+                    message.getPiggybackMessages().forEach(messageHolder::addMessageToBacklog);
                 case ROUND_CHANGE:
                     int messageRound = message.getRound();
                     if (messageRound > r_i) {
@@ -246,6 +233,7 @@ public class IBFTNode extends TimedNode<IBFTMessage> {
             sendMessage(createSingleValueMessage(IBFTMessageType.SYNC, NULL_VALUE,
                     consensusQuorum.get(lambda)), allNodes.get(sender));
         }
+        return getProcessedPayloads();
     }
 
     // Round change handling
