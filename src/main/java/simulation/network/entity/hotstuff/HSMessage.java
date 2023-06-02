@@ -5,13 +5,15 @@ public class HSMessage {
     private final HSMessageType type;
     private final int viewNumber;
     private final HSTreeNode node;
-    private final QuorumCertificate qc;
+    private final QuorumCertificate justify;
+    private final int sender;
 
-    public HSMessage(HSMessageType type, int viewNumber, HSTreeNode node, QuorumCertificate qc) {
+    public HSMessage(int sender, HSMessageType type, int viewNumber, HSTreeNode node, QuorumCertificate qc) {
         this.type = type;
         this.viewNumber = viewNumber;
         this.node = node;
-        this.qc = qc;
+        this.justify = qc;
+        this.sender = sender;
     }
 
     public HSMessageType getType() {
@@ -26,7 +28,11 @@ public class HSMessage {
         return node;
     }
 
-    public QuorumCertificate getQc() {
-        return qc;
+    public QuorumCertificate getJustify() {
+        return justify;
+    }
+
+    public int getSender() {
+        return sender;
     }
 }

@@ -1,12 +1,12 @@
 package simulation.network.entity.hotstuff;
 
-public enum HSMessageType {
+public enum HSState {
 
-    NEW_VIEW("NEW_VIEW"), PREPARE("PREPARE"), PRE_COMMIT("PRE_COMMIT"), COMMIT("COMMIT"), DECIDE("DECIDE");
+    PREPARE("PREPARE"), PRECOMMIT("PRECOMMIT"), COMMIT("COMMIT"), DECIDE("DECIDE");
 
     private String name;
 
-    HSMessageType(String name) {
+    HSState(String name) {
         this.name = name;
     }
 

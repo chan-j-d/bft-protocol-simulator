@@ -1,10 +1,8 @@
 package simulation.network.entity.ibft;
 
-import static simulation.network.entity.ibft.IBFTMessage.NULL_VALUE;
-
-import simulation.network.entity.TimedNode;
 import simulation.network.entity.NodeTimerNotifier;
 import simulation.network.entity.Payload;
+import simulation.network.entity.Validator;
 import simulation.util.Pair;
 import simulation.util.logging.Logger;
 import simulation.util.rng.RandomNumberGenerator;
@@ -15,7 +13,9 @@ import java.util.Map;
 import java.util.Set;
 import java.util.stream.Collectors;
 
-public class IBFTNode extends TimedNode<IBFTMessage> {
+import static simulation.network.entity.ibft.IBFTMessage.NULL_VALUE;
+
+public class IBFTNode extends Validator<IBFTMessage> {
 
 
     /**
@@ -31,7 +31,6 @@ public class IBFTNode extends TimedNode<IBFTMessage> {
     private final int consensusLimit;
     private int N;
     private int F;
-    private Map<Integer, IBFTNode> allNodes;
 
     // Helper attributes
     private int timerExpiryCount; // Used to differentiate multiple timers in the same instance & round
@@ -51,14 +50,13 @@ public class IBFTNode extends TimedNode<IBFTMessage> {
     private int inputValue_i; // value passed as input to instance
 
 
-    public IBFTNode(String name, int identifier, double baseTimeLimit, NodeTimerNotifier<IBFTMessage> timerNotifier,
+    public IBFTNode(String name, int id, double baseTimeLimit, NodeTimerNotifier<IBFTMessage> timerNotifier,
             int N, int consensusLimit, RandomNumberGenerator serviceRateGenerator) {
-        super(name, timerNotifier, serviceRateGenerator);
+        super(name, id, timerNotifier, serviceRateGenerator);
         logger = new Logger(name);
         this.state = IBFTState.NEW_ROUND;
 
-        this.p_i = identifier;
-        this.allNodes = new HashMap<>();
+        this.p_i = id;
         this.baseTimeLimit = baseTimeLimit;
         this.timerExpiryCount = 0;
         this.N = N;
@@ -69,11 +67,6 @@ public class IBFTNode extends TimedNode<IBFTMessage> {
         this.consensusQuorum = new HashMap<>();
         this.otherNodeHeights = new HashMap<>();
         this.statistics = new IBFTStatistics();
-    }
-
-    public void setAllNodes(List<IBFTNode> allNodes) {
-        this.allNodes = allNodes.stream()
-                .collect(Collectors.toMap(node -> node.p_i, node -> node));
     }
 
     @Override
@@ -111,10 +104,6 @@ public class IBFTNode extends TimedNode<IBFTMessage> {
     private void startTimer() {
         timerExpiryCount++; // Every time a timer starts, a unique one is set.
         notifyAtTime(getTime() + timerFunction(r_i), createTimerNotificationMessage());
-    }
-
-    private void broadcastMessageToAll(IBFTMessage message) {
-        broadcastMessage(message, allNodes.values());
     }
 
     private int getQuorumCount() {
@@ -231,7 +220,7 @@ public class IBFTNode extends TimedNode<IBFTMessage> {
             }
         } else if (messageType == IBFTMessageType.ROUND_CHANGE) {
             sendMessage(createSingleValueMessage(IBFTMessageType.SYNC, NULL_VALUE,
-                    consensusQuorum.get(lambda)), allNodes.get(sender));
+                    consensusQuorum.get(lambda)), getNode(sender));
         }
         return getProcessedPayloads();
     }
