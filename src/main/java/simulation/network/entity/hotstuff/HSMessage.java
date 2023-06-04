@@ -7,13 +7,16 @@ public class HSMessage {
     private final HSTreeNode node;
     private final QuorumCertificate justify;
     private final int sender;
+    private final boolean isVote;
 
-    public HSMessage(int sender, HSMessageType type, int viewNumber, HSTreeNode node, QuorumCertificate qc) {
+    public HSMessage(int sender, HSMessageType type, int viewNumber, HSTreeNode node, QuorumCertificate qc,
+            boolean isVote) {
         this.type = type;
         this.viewNumber = viewNumber;
         this.node = node;
         this.justify = qc;
         this.sender = sender;
+        this.isVote = isVote;
     }
 
     public HSMessageType getType() {
@@ -34,5 +37,9 @@ public class HSMessage {
 
     public int getSender() {
         return sender;
+    }
+
+    public boolean isVote() {
+        return isVote;
     }
 }

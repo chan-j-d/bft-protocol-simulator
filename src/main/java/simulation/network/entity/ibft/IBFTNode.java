@@ -196,7 +196,7 @@ public class IBFTNode extends Validator<IBFTMessage> {
         otherNodeHeights.compute(sender, (k, v) -> (v == null) ? lambda : Math.max(v, lambda));
 
         if (lambda >= lambda_i) {
-            messageHolder.addMessageToBacklog(message);
+            messageHolder.addMessage(message);
             switch (messageType) {
                 case PREPREPARED:
                     prePrepareOperation();
@@ -208,7 +208,7 @@ public class IBFTNode extends Validator<IBFTMessage> {
                     commitOperation();
                     break;
                 case SYNC:
-                    message.getPiggybackMessages().forEach(messageHolder::addMessageToBacklog);
+                    message.getPiggybackMessages().forEach(messageHolder::addMessage);
                 case ROUND_CHANGE:
                     int messageRound = message.getRound();
                     if (messageRound > r_i) {

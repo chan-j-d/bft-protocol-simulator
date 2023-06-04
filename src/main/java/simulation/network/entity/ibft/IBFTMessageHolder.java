@@ -1,5 +1,7 @@
 package simulation.network.entity.ibft;
 
+import simulation.util.Pair;
+
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.HashMap;
@@ -7,8 +9,6 @@ import java.util.List;
 import java.util.Map;
 import java.util.Optional;
 import java.util.stream.Collectors;
-
-import simulation.util.Pair;
 
 import static simulation.network.entity.ibft.IBFTMessage.NULL_VALUE;
 import static simulation.network.entity.ibft.IBFTMessageType.MESSAGE_TYPES;
@@ -29,7 +29,7 @@ public class IBFTMessageHolder {
         this.currentConsensusInstance = lambda;
     }
 
-    public void addMessageToBacklog(IBFTMessage message) {
+    public void addMessage(IBFTMessage message) {
         IBFTMessageType type = message.getMessageType();
         int consensusInstance = message.getLambda();
         if (consensusInstance < currentConsensusInstance) {
@@ -139,6 +139,10 @@ public class IBFTMessageHolder {
         return toCommitRoundValueMap.get(consensusInstance);
     }
 
+    /**
+     * Removes stale messages between {@code oldLambda} (inclusive) and {@code newLambda} (exclusive).
+     * Necessary for keeping memory usage in check.
+     */
     public void advanceConsensusInstance(int oldLambda, int newLambda) {
         for (int i = oldLambda; i < newLambda; i++) {
             for (IBFTMessageType type : MESSAGE_TYPES) {

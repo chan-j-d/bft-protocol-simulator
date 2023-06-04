@@ -5,20 +5,22 @@ import simulation.network.entity.Payload;
 import simulation.network.entity.Validator;
 import simulation.util.rng.RandomNumberGenerator;
 
-import java.util.ArrayList;
 import java.util.List;
 
 public class HSReplica extends Validator<HSMessage> {
+
+    // TODO add asynchronous message holding
+
+    private int consensusInstance;
 
     private final int n;
     private final int f;
     private final int id;
 
     private int curView;
-    private HSState state;
+    private HSMessageType state;
 
-    private int messageCount;
-    private List<HSMessage> messages;
+    private HSMessageHolder messageHolder;
     private HSTreeNode curProposal;
 
     private QuorumCertificate highQc;
@@ -30,18 +32,25 @@ public class HSReplica extends Validator<HSMessage> {
     public HSReplica(int id, int n, int f, String name, NodeTimerNotifier<HSMessage> timerNotifier,
             RandomNumberGenerator serviceRateGenerator) {
         super(name, id, timerNotifier, serviceRateGenerator);
+        this.consensusInstance = 0;
         this.id = id;
         this.n = n;
         this.f = f;
-        this.curView = 0;
-        this.state = HSState.PREPARE;
-        this.messageCount = 0;
-        messages = new ArrayList<>();
+        this.curView = 1;
+        this.state = HSMessageType.PREPARE;
+        this.messageHolder = new HSMessageHolder();
+
+        this.lockedQc = null;
+        this.prepareQc = null;
     }
 
     // Algorithm 1: Utility methods
-    private HSMessage voteMessage(HSMessageType type, HSTreeNode node, QuorumCertificate qc) {
-        return new HSMessage(id, type, curView, node, qc);
+    private HSMessage msg(HSMessageType type, HSTreeNode node, QuorumCertificate qc) {
+        return new HSMessage(id, type, curView, node, qc, false);
+    }
+    private HSMessage voteMsg(HSMessageType type, HSTreeNode node, QuorumCertificate qc) {
+        // Here, we ignore the signing component of the vote message as we are not concerned with verification.
+        return new HSMessage(id, type, curView, node, qc, true);
     }
 
     private HSTreeNode createLeaf(HSTreeNode parent, HSCommand command) {
@@ -57,7 +66,8 @@ public class HSReplica extends Validator<HSMessage> {
     }
 
     private boolean safeNode(HSTreeNode node, QuorumCertificate qc) {
-        return node.extendsFrom(lockedQc.getNode()) || qc.getViewNumber() > lockedQc.getViewNumber();
+        return lockedQc == null || // handling curView = 1
+                node.extendsFrom(lockedQc.getNode()) || qc.getViewNumber() > lockedQc.getViewNumber();
     }
 
     // Other utilities
@@ -65,59 +75,73 @@ public class HSReplica extends Validator<HSMessage> {
         return viewNumber % n;
     }
 
-    private HSMessage createNewViewMessage(int currentView, QuorumCertificate qc) {
-        return new HSMessage(id, HSMessageType.NEW_VIEW, currentView, null, qc);
+    private boolean hasLeaderMessage() {
+        return messageHolder.containsLeaderMessage(state, curView);
+    }
+
+    private HSMessage getLeaderMessage() {
+        return messageHolder.getLeaderMessage(state, curView);
     }
 
     // Algorithm 2: Basic HotStuff protocol (following HotStuff paper)
-
     @Override
     public List<Payload<HSMessage>> initializationPayloads() {
-        sendMessage(createNewViewMessage(curView, null), getNode(getLeader(curView + 1)));
-        curView++;
+        if (id == getLeader(curView)) {
+            curProposal = createLeaf(null, new HSCommand(curView));
+            broadcastMessageToAll(msg(HSMessageType.PREPARE, curProposal, highQc));
+        }
         return getProcessedPayloads();
     }
-
-
 
     @Override
     protected List<Payload<HSMessage>> processMessage(HSMessage message) {
+        int messageView = message.getViewNumber();
+        if (messageView < curView) {
+            // ignore message
+            return List.of();
+        }
+
+        messageHolder.addMessage(message);
         switch (state) {
             case PREPARE:
-                prepareOperation(message);
+                prepareOperation();
                 break;
-            case PRECOMMIT:
-                preCommitOperation(message);
+            case PRE_COMMIT:
+                preCommitOperation();
                 break;
             case COMMIT:
-                commitOperation(message);
+                commitOperation();
                 break;
             case DECIDE:
-                decideOperation(message);
+                decideOperation();
                 break;
         }
         return getProcessedPayloads();
     }
 
-    private void prepareOperation(HSMessage m) {
+    private void prepareOperation() {
         int leader = getLeader(curView);
         if (id == leader) {
-            if (matchingMessage(m, HSMessageType.NEW_VIEW, curView - 1)) {
-                messages.add(m);
-            }
-            if (messages.size() < n - f) {
+            List<HSMessage> newViewMessages = messageHolder.getVoteMessages(HSMessageType.NEW_VIEW, curView - 1);
+            if (newViewMessages.size() < n - f) {
                 return;
             }
 
-            highQc = getMaxViewNumberQc(messages);
-            curProposal = createLeaf(highQc.getNode(), new HSCommand());
-            broadcastMessageToAll(createLeaderMessage(HSMessageType.PREPARE, curProposal, highQc));
-            messages = new ArrayList<>();
+            highQc = getMaxViewNumberQc(newViewMessages);
+            // creates a generic command as the contents are not important
+            curProposal = createLeaf(highQc.getNode(), new HSCommand(curView));
+            broadcastMessageToAll(msg(HSMessageType.PREPARE, curProposal, highQc));
         }
-        if (m.getSender() == leader && matchingQc(m.getJustify(), HSMessageType.PREPARE, curView))
-            if (m.getNode().extendsFrom(m.getJustify().getNode()) &&
-                    safeNode(m.getNode(), m.getJustify())) {
-                sendMessage(createVoteMessage(HSMessageType.PREPARE, m.getNode()), getNode(leader));
+        if (hasLeaderMessage()) {
+            HSMessage m = getLeaderMessage();
+            if (m.getSender() == leader && matchingQc(m.getJustify(), HSMessageType.PREPARE, curView)) {
+                if (m.getNode().extendsFrom(m.getJustify().getNode()) &&
+                        safeNode(m.getNode(), m.getJustify())) {
+                    sendMessage(voteMsg(HSMessageType.PREPARE, m.getNode(), null), getNode(leader));
+                    state = HSMessageType.PRE_COMMIT;
+                    preCommitOperation();
+                }
+            }
         }
     }
 
@@ -133,73 +157,78 @@ public class HSReplica extends Validator<HSMessage> {
         return maxViewNumberMessage.getJustify();
     }
 
-    private HSMessage createVoteMessage(HSMessageType type, HSTreeNode node) {
-        return new HSMessage(id, type, curView, node, null);
-    }
-
-    private void preCommitOperation(HSMessage m) {
+    private void preCommitOperation() {
         int leader = getLeader(curView);
         if (id == leader) {
-            if (matchingMessage(m, HSMessageType.PREPARE, curView)) {
-                messages.add(m);
-            }
-            if (messages.size() < n - f) {
+            List<HSMessage> prepareMessages = messageHolder.getVoteMessages(HSMessageType.PREPARE, curView);
+            if (prepareMessages.size() < n - f) {
                 return;
             }
 
-            prepareQc = new QuorumCertificate(messages);
-            broadcastMessageToAll(createLeaderMessage(HSMessageType.PRE_COMMIT, null, prepareQc));
-            messages = new ArrayList<>();
+            prepareQc = new QuorumCertificate(prepareMessages);
+            broadcastMessageToAll(msg(HSMessageType.PRE_COMMIT, null, prepareQc));
         }
-        if (m.getSender() == leader && matchingQc(m.getJustify(), HSMessageType.PREPARE, curView)) {
+        if (hasLeaderMessage()) {
+            HSMessage m = getLeaderMessage();
+            if (m.getSender() == leader && matchingQc(m.getJustify(), HSMessageType.PREPARE, curView)) {
                 prepareQc = m.getJustify();
-                sendMessage(createVoteMessage(HSMessageType.PRE_COMMIT,
-                        m.getJustify().getNode()), getNode(leader));
+                sendMessage(voteMsg(HSMessageType.PRE_COMMIT,
+                        m.getJustify().getNode(), null), getNode(leader));
+                state = HSMessageType.COMMIT;
+                commitOperation();
+            }
         }
     }
 
-    private void commitOperation(HSMessage m) {
+    private void commitOperation() {
         int leader = getLeader(curView);
         if (id == leader) {
-            if (matchingMessage(m, HSMessageType.PRE_COMMIT, curView)) {
-                messages.add(m);
-            }
-            if (messages.size() < n - f) {
+            List<HSMessage> preCommitMessages = messageHolder.getVoteMessages(HSMessageType.PRE_COMMIT, curView);
+            if (preCommitMessages.size() < n - f) {
                 return;
             }
 
-            preCommitQc = new QuorumCertificate(messages);
-            broadcastMessageToAll(createLeaderMessage(HSMessageType.COMMIT, null, preCommitQc));
-            messages = new ArrayList<>();
+            preCommitQc = new QuorumCertificate(preCommitMessages);
+            broadcastMessageToAll(msg(HSMessageType.COMMIT, null, preCommitQc));
         }
-        if (m.getSender() == leader && matchingMessage(m, HSMessageType.PRE_COMMIT, curView)) {
-            lockedQc = m.getJustify();
-            sendMessage(createVoteMessage(HSMessageType.COMMIT, m.getJustify().getNode()), getNode(leader));
+        if (hasLeaderMessage()) {
+            HSMessage m = getLeaderMessage();
+            if (m.getSender() == leader && matchingMessage(m, HSMessageType.PRE_COMMIT, curView)) {
+                lockedQc = m.getJustify();
+                sendMessage(voteMsg(HSMessageType.COMMIT, m.getJustify().getNode(), null), getNode(leader));
+                state = HSMessageType.DECIDE;
+                decideOperation();
+            }
         }
     }
 
-    private void decideOperation(HSMessage m) {
+    private void decideOperation() {
         int leader = getLeader(curView);
         if (id == leader) {
-            if (matchingMessage(m, HSMessageType.COMMIT, curView)) {
-                messages.add(m);
-            }
-            if (messages.size() < n - f) {
+            List<HSMessage> commitMessages = messageHolder.getVoteMessages(HSMessageType.COMMIT, curView);
+            if (commitMessages.size() < n - f) {
                 return;
             }
 
-            commitQc = new QuorumCertificate(messages);
-            broadcastMessageToAll(createLeaderMessage(HSMessageType.DECIDE, null, commitQc));
-            messages = new ArrayList<>();
+            commitQc = new QuorumCertificate(commitMessages);
+            broadcastMessageToAll(msg(HSMessageType.DECIDE, null, commitQc));
         }
 
-        if (m.getSender() == leader && matchingQc(m.getJustify(), HSMessageType.COMMIT, curView)) {
-            // consensus achieved (?)
+        if (hasLeaderMessage()) {
+            HSMessage m = getLeaderMessage();
+            if (m.getSender() == leader && matchingQc(m.getJustify(), HSMessageType.COMMIT, curView)) {
+                // consensus achieved (?)
+                startNextView();
+            }
         }
     }
 
-    private HSMessage createLeaderMessage(HSMessageType type, HSTreeNode proposal, QuorumCertificate qc) {
-        return new HSMessage(id, type, curView, proposal, qc);
+    private void startNextView() {
+        sendMessage(voteMsg(HSMessageType.NEW_VIEW, null, prepareQc), getNode(getLeader(curView + 1)));
+        messageHolder.advanceView(curView, curView + 1);
+        curView++;
+        state = HSMessageType.PREPARE;
+        prepareOperation();
     }
 
     @Override
