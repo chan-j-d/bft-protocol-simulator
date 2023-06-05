@@ -87,7 +87,7 @@ public class QueueStatistics extends Statistics {
                 totalMessageCount, currentMessageCount, totalMessageQueueTime, totalTime, totalQueueingTime);
     }
 
-    public QueueStatistics addStatistics(QueueStatistics other) {
+    public QueueStatistics combineStatistics(QueueStatistics other) {
         return new QueueStatistics(
                 this.totalMessageCount + other.totalMessageCount,
                 this.currentMessageCount + other.currentMessageCount,

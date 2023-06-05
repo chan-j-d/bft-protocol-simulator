@@ -6,21 +6,12 @@ import simulation.io.IoInterface;
 import simulation.json.QueueResultsJson;
 import simulation.json.RunConfigJson;
 import simulation.json.ValidatorResultsJson;
-import simulation.network.entity.EndpointNode;
-import simulation.network.entity.Node;
-import simulation.network.entity.Validator;
-import simulation.network.entity.hotstuff.HSMessage;
-import simulation.network.entity.hotstuff.HSReplica;
-import simulation.network.router.Switch;
-import simulation.network.topology.NetworkTopology;
+import simulation.simulator.RunResults;
 import simulation.simulator.Simulator;
 import simulation.statistics.ConsensusStatistics;
 import simulation.statistics.QueueStatistics;
 import simulation.util.logging.Logger;
-import simulation.util.rng.DegenerateDistribution;
-import simulation.util.rng.ExponentialDistribution;
 import simulation.util.rng.RNGUtil;
-import simulation.util.rng.RandomNumberGenerator;
 
 import java.io.File;
 import java.io.FileReader;
@@ -29,12 +20,10 @@ import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
-import java.util.ArrayList;
 import java.util.List;
-import java.util.Optional;
-import java.util.function.Function;
-import java.util.function.Supplier;
 import java.util.logging.LogManager;
+
+import static simulation.simulator.RunConfigUtil.createSimulator;
 
 public class Main {
 
@@ -49,86 +38,30 @@ public class Main {
 
         RunConfigJson runConfigJson = readFromJson(args[0], RunConfigJson.class);
 
-        double timeLimit = runConfigJson.getBaseTimeLimit();
-        int numNodes = runConfigJson.getNumNodes();
         int numTrials = runConfigJson.getNumRuns();
         int seedMultiplier = runConfigJson.getSeedMultiplier();
-        int consensusLimit = runConfigJson.getNumConsensus();
         int startingSeed = runConfigJson.getStartingSeed();
-        double validatorServiceRate = runConfigJson.getNodeProcessingRate();
 
         IoInterface io = new FileIo("output.txt");
-        ConsensusStatistics consensusStatistics = null;
-        QueueStatistics validatorQueueStats = null;
-        List<QueueStatistics> switchStatistics = new ArrayList<>();
+        RunResults runResults = null;
         int numGroups = -1;
         for (int i = 0; i < numTrials; i++) {
-            RNGUtil.setSeed(startingSeed + seedMultiplier * i);
-//            List<IBFTNode> nodes = new ArrayList<>();
-//            Simulator<IBFTMessage> simulator = new Simulator<>();
-            List<Validator<HSMessage>> nodes = new ArrayList<>();
-            Simulator<HSMessage> simulator = new Simulator<>();
-            for (int j = 0; j < numNodes; j++) {
-//                nodes.add(new IBFTNode("IBFT-" + j, j, timeLimit, simulator, numNodes, consensusLimit,
-//                        new ExponentialDistribution(validatorServiceRate)));
-                nodes.add(new HSReplica("HS-" + j, j, timeLimit, simulator, numNodes, consensusLimit,
-                        new ExponentialDistribution(validatorServiceRate)));
-            }
-            simulator.setNodes(nodes);
-//            List<List<Switch<IBFTMessage>>> groupedSwitches = arrangeNodesFollowingConfigTopology(runConfigJson, nodes);
-            List<List<Switch<HSMessage>>> groupedSwitches = arrangeNodesFollowingConfigTopology(runConfigJson, nodes);
+            long seed = startingSeed + seedMultiplier * i;
+            RunResults currentRunResults = runSimulation(seed, io, runConfigJson);
 
-            for (Validator<HSMessage> node : nodes) {
-                node.setAllNodes(nodes);
-            }
-            while (!simulator.isSimulationOver()) {
-                simulator.simulate().ifPresent(io::output);
-            }
-            io.output("\nSnapshot:\n" + simulator.getSnapshotOfNodes());
-
-            ConsensusStatistics runStats = nodes.stream()
-                    .map(Validator::getConsensusStatistics)
-                    .reduce(ConsensusStatistics::combineStatistics).orElseThrow();
-            consensusStatistics = Optional.ofNullable(consensusStatistics)
-                    .map(stats -> stats.combineStatistics(runStats))
-                    .orElse(runStats);
-
-            QueueStatistics runValidatorQueueStats = nodes.stream()
-                    .map(Node::getQueueStatistics)
-                    .reduce(QueueStatistics::addStatistics).orElseThrow();
-            validatorQueueStats = Optional.ofNullable(validatorQueueStats)
-                    .map(stats -> stats.addStatistics(runValidatorQueueStats))
-                    .orElse(runValidatorQueueStats);
-
-
-            String runResults = runStats.toString();
             io.output("\nSummary:");
-            io.output(runResults);
+            io.output(currentRunResults.toString());
 
-            numGroups = groupedSwitches.size();
-            io.output("\nEvery switch summary:");
-            groupedSwitches.forEach(group ->
-                    group.stream().map(switch_ -> switch_.getName() + "\n" + switch_.getQueueStatistics())
-                            .forEach(io::output));
-            if (i == 0) {
-                groupedSwitches.forEach(group -> switchStatistics.add(group.stream().map(Node::getQueueStatistics)
-                        .reduce(QueueStatistics::addStatistics).orElseThrow()));
-            } else {
-                for (int j = 0; j < groupedSwitches.size(); j++) {
-                    QueueStatistics switchQueueStatistics = groupedSwitches.get(j).stream()
-                            .map(Node::getQueueStatistics)
-                            .reduce(QueueStatistics::addStatistics).orElseThrow();
-                    switchStatistics.set(j, switchStatistics.get(j).addStatistics(switchQueueStatistics));
-                }
-            }
+            runResults = runResults == null ? currentRunResults : runResults.mergeRunResults(currentRunResults);
         }
-        io.output(consensusStatistics.toString());
-        io.output(validatorQueueStats.toString());
+        io.output(runResults.toString());
         io.close();
 
+        ConsensusStatistics consensusStatistics = runResults.getValidatorStatistics();
+        QueueStatistics validatorQueueStats = runResults.getValidatorQueueStatistics();
+        List<QueueStatistics> switchStatistics = runResults.getSwitchStatistics();
+        numGroups = switchStatistics.size();
 
-
-        // TODO Rewrite json file write to be more generic
         ValidatorResultsJson resultsJson = new ValidatorResultsJson(consensusStatistics, validatorQueueStats);
         writeObjectToJson(resultsJson, RESULTS_JSON_FILEPATH);
 
@@ -146,37 +79,13 @@ public class Main {
         cleanup();
     }
 
-    public static <T> List<List<Switch<T>>> arrangeNodesFollowingConfigTopology(RunConfigJson json,
-            List<? extends EndpointNode<T>> nodes) {
-        double switchServiceRate = json.getSwitchProcessingRate();
-        String networkType = json.getNetworkType();
-        List<Integer> networkParameters = json.getNetworkParameters();
-        Function<Integer, RandomNumberGenerator> processingGeneratorFunction =
-                switchServiceRate < 0 ? x -> new DegenerateDistribution(0)
-                        : x -> new ExponentialDistribution(switchServiceRate);
-        Supplier<RandomNumberGenerator> processingGeneratorSupplier =
-                switchServiceRate < 0 ? () -> new DegenerateDistribution(0)
-                        : () -> new ExponentialDistribution(switchServiceRate);
-        switch (networkType) {
-        case "FoldedClos": case "fc":
-            return NetworkTopology.arrangeFoldedClosStructure(nodes, networkParameters,
-                    processingGeneratorFunction);
-        case "Butterfly": case "b":
-            return NetworkTopology.arrangeButterflyStructure(nodes, networkParameters,
-                    processingGeneratorFunction);
-        case "Clique": case "c":
-            return NetworkTopology.arrangeCliqueStructure(nodes, networkParameters,
-                    processingGeneratorSupplier);
-        case "Torus": case "t":
-            return NetworkTopology.arrangeTorusStructure(nodes, networkParameters,
-                    processingGeneratorSupplier);
-        case "Mesh": case "m":
-            return NetworkTopology.arrangeMeshStructure(nodes, networkParameters,
-                    processingGeneratorSupplier);
-        default:
-            throw new RuntimeException(String.format("The network type %s has not been defined/implemented.",
-                    networkType));
+    private static RunResults runSimulation(long seed, IoInterface io, RunConfigJson configJson) {
+        RNGUtil.setSeed(seed);
+        Simulator simulator = createSimulator(configJson);
+        while (!simulator.isSimulationOver()) {
+            simulator.simulate().ifPresent(io::output);
         }
+        return simulator.getRunResults();
     }
 
     public static <T> T readFromJson(String filename, Class<T> clazz) {

@@ -3,10 +3,11 @@
   "numConsensus": 100,
   "startingSeed": 0,
   "seedMultiplier": 100,
-  "numNodes": 64,
+  "numNodes": 27,
   "nodeProcessingRate": 3,
-  "switchProcessingRate": -1,
+  "switchProcessingRate": 9,
   "baseTimeLimit": 10000,
-  "networkType": "Clique",
-  "networkParameters": [5, 1, 0]
+  "networkType": "FoldedClos",
+  "validatorType": "IBFT",
+  "networkParameters": [3, 1, 0]
 }

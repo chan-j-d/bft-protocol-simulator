@@ -1,5 +1,6 @@
 package simulation.network.entity;
 
+import simulation.simulator.ValidatorResults;
 import simulation.statistics.ConsensusStatistics;
 import simulation.util.rng.RandomNumberGenerator;
 
@@ -8,12 +9,11 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
-public abstract class Validator<T> extends TimedNode<T> {
+public abstract class Validator<T> extends TimedNode<T> implements ValidatorResults {
 
     private final int id;
     private final Map<Integer, Validator<T>> allNodes;
     private final ConsensusStatistics statistics;
-
 
     public Validator(String name, int id, NodeTimerNotifier<T> timerNotifier,
             RandomNumberGenerator serviceTimeGenerator, Collection<Object> states) {
@@ -45,6 +45,7 @@ public abstract class Validator<T> extends TimedNode<T> {
         return id;
     }
 
+    @Override
     public ConsensusStatistics getConsensusStatistics() {
         return statistics;
     }
