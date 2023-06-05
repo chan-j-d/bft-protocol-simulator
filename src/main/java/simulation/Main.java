@@ -5,14 +5,16 @@ import simulation.io.FileIo;
 import simulation.io.IoInterface;
 import simulation.json.QueueResultsJson;
 import simulation.json.RunConfigJson;
+import simulation.json.ValidatorResultsJson;
 import simulation.network.entity.EndpointNode;
 import simulation.network.entity.Node;
+import simulation.network.entity.Validator;
 import simulation.network.entity.hotstuff.HSMessage;
 import simulation.network.entity.hotstuff.HSReplica;
-import simulation.network.entity.ibft.IBFTStatistics;
 import simulation.network.router.Switch;
 import simulation.network.topology.NetworkTopology;
 import simulation.simulator.Simulator;
+import simulation.statistics.ConsensusStatistics;
 import simulation.statistics.QueueStatistics;
 import simulation.util.logging.Logger;
 import simulation.util.rng.DegenerateDistribution;
@@ -56,7 +58,7 @@ public class Main {
         double validatorServiceRate = runConfigJson.getNodeProcessingRate();
 
         IoInterface io = new FileIo("output.txt");
-        IBFTStatistics ibftStats = null;
+        ConsensusStatistics consensusStatistics = null;
         QueueStatistics validatorQueueStats = null;
         List<QueueStatistics> switchStatistics = new ArrayList<>();
         int numGroups = -1;
@@ -64,7 +66,7 @@ public class Main {
             RNGUtil.setSeed(startingSeed + seedMultiplier * i);
 //            List<IBFTNode> nodes = new ArrayList<>();
 //            Simulator<IBFTMessage> simulator = new Simulator<>();
-            List<HSReplica> nodes = new ArrayList<>();
+            List<Validator<HSMessage>> nodes = new ArrayList<>();
             Simulator<HSMessage> simulator = new Simulator<>();
             for (int j = 0; j < numNodes; j++) {
 //                nodes.add(new IBFTNode("IBFT-" + j, j, timeLimit, simulator, numNodes, consensusLimit,
@@ -76,8 +78,7 @@ public class Main {
 //            List<List<Switch<IBFTMessage>>> groupedSwitches = arrangeNodesFollowingConfigTopology(runConfigJson, nodes);
             List<List<Switch<HSMessage>>> groupedSwitches = arrangeNodesFollowingConfigTopology(runConfigJson, nodes);
 
-//            for (IBFTNode node : nodes) {
-            for (HSReplica node : nodes) {
+            for (Validator<HSMessage> node : nodes) {
                 node.setAllNodes(nodes);
             }
             while (!simulator.isSimulationOver()) {
@@ -85,12 +86,12 @@ public class Main {
             }
             io.output("\nSnapshot:\n" + simulator.getSnapshotOfNodes());
 
-//            IBFTStatistics runStats = nodes.stream()
-//                    .map(IBFTNode::getIbftStatistics)
-//                    .reduce(IBFTStatistics::addStatistics).orElseThrow();
-//            ibftStats = Optional.ofNullable(ibftStats)
-//                    .map(stats -> stats.addStatistics(runStats))
-//                    .orElse(runStats);
+            ConsensusStatistics runStats = nodes.stream()
+                    .map(Validator::getConsensusStatistics)
+                    .reduce(ConsensusStatistics::combineStatistics).orElseThrow();
+            consensusStatistics = Optional.ofNullable(consensusStatistics)
+                    .map(stats -> stats.combineStatistics(runStats))
+                    .orElse(runStats);
 
             QueueStatistics runValidatorQueueStats = nodes.stream()
                     .map(Node::getQueueStatistics)
@@ -100,9 +101,9 @@ public class Main {
                     .orElse(runValidatorQueueStats);
 
 
-//            String ibftStatisticsResults = runStats.toString();
-//            io.output("\nSummary:");
-//            io.output(ibftStatisticsResults);
+            String runResults = runStats.toString();
+            io.output("\nSummary:");
+            io.output(runResults);
 
             numGroups = groupedSwitches.size();
             io.output("\nEvery switch summary:");
@@ -121,14 +122,15 @@ public class Main {
                 }
             }
         }
-//        io.output(ibftStats.toString());
-//        io.output(validatorQueueStats.toString());
+        io.output(consensusStatistics.toString());
+        io.output(validatorQueueStats.toString());
         io.close();
 
 
 
-//        IBFTResultsJson ibftResultsJson = new IBFTResultsJson(ibftStats, validatorQueueStats);
-//        writeObjectToJson(ibftResultsJson, RESULTS_JSON_FILEPATH);
+        // TODO Rewrite json file write to be more generic
+        ValidatorResultsJson resultsJson = new ValidatorResultsJson(consensusStatistics, validatorQueueStats);
+        writeObjectToJson(resultsJson, RESULTS_JSON_FILEPATH);
 
         for (int i = 0; i < numGroups; i++) {
             QueueStatistics queueStatistics = switchStatistics.get(i);
@@ -137,7 +139,7 @@ public class Main {
             writeObjectToJson(queueResultsJson, String.format(SWITCH_GROUP_STATISTICS, i));
         }
 
-//        System.out.println(ibftStats);
+        System.out.println(consensusStatistics);
         System.out.println("\nAverage queue stats");
         System.out.println(validatorQueueStats);
 

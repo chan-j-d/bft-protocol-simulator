@@ -7,6 +7,7 @@ import simulation.util.Pair;
 import simulation.util.logging.Logger;
 import simulation.util.rng.RandomNumberGenerator;
 
+import java.util.Arrays;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -16,7 +17,6 @@ import java.util.stream.Collectors;
 import static simulation.network.entity.ibft.IBFTMessage.NULL_VALUE;
 
 public class IBFTNode extends Validator<IBFTMessage> {
-
 
     /**
      * Dummy value to be passed around as part of the protocol.
@@ -35,7 +35,6 @@ public class IBFTNode extends Validator<IBFTMessage> {
     // Helper attributes
     private int timerExpiryCount; // Used to differentiate multiple timers in the same instance & round
     private final IBFTMessageHolder messageHolder;
-    private final IBFTStatistics statistics;
 
     private IBFTState state;
 
@@ -52,7 +51,7 @@ public class IBFTNode extends Validator<IBFTMessage> {
 
     public IBFTNode(String name, int id, double baseTimeLimit, NodeTimerNotifier<IBFTMessage> timerNotifier,
             int N, int consensusLimit, RandomNumberGenerator serviceRateGenerator) {
-        super(name, id, timerNotifier, serviceRateGenerator);
+        super(name, id, timerNotifier, serviceRateGenerator, Arrays.asList((Object[]) IBFTState.values()));
         logger = new Logger(name);
         this.state = IBFTState.NEW_ROUND;
 
@@ -66,12 +65,6 @@ public class IBFTNode extends Validator<IBFTMessage> {
         this.messageHolder = new IBFTMessageHolder(getQuorumCount(), FIRST_CONSENSUS_INSTANCE);
         this.consensusQuorum = new HashMap<>();
         this.otherNodeHeights = new HashMap<>();
-        this.statistics = new IBFTStatistics();
-    }
-
-    @Override
-    public void registerTimeElapsed(double time) {
-        statistics.addTime(state, time);
     }
 
     @Override
@@ -87,8 +80,14 @@ public class IBFTNode extends Validator<IBFTMessage> {
         return lambda_i > consensusLimit;
     }
 
-    public IBFTStatistics getIbftStatistics() {
-        return statistics;
+    @Override
+    public int getConsensusCount() {
+        return lambda_i - 1;
+    }
+
+    @Override
+    public Object getState() {
+        return null;
     }
 
     @Override
@@ -306,7 +305,6 @@ public class IBFTNode extends Validator<IBFTMessage> {
     }
 
     private void commit(int consensusInstance, int value, List<IBFTMessage> messages) {
-        statistics.incrementConsensusCount();
         consensusQuorum.put(consensusInstance, messages);
     }
 

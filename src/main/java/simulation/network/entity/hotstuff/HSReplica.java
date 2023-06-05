@@ -5,6 +5,7 @@ import simulation.network.entity.Payload;
 import simulation.network.entity.Validator;
 import simulation.util.rng.RandomNumberGenerator;
 
+import java.util.Arrays;
 import java.util.List;
 
 public class HSReplica extends Validator<HSMessage> {
@@ -34,7 +35,7 @@ public class HSReplica extends Validator<HSMessage> {
 
     public HSReplica(String name, int id, double baseTimeLimit, NodeTimerNotifier<HSMessage> timerNotifier, int n,
             int consensusLimit, RandomNumberGenerator serviceRateGenerator) {
-        super(name, id, timerNotifier, serviceRateGenerator);
+        super(name, id, timerNotifier, serviceRateGenerator, Arrays.asList((Object[]) HSMessageType.values()));
         this.numConsensus = 0;
         this.id = id;
         this.n = n;
@@ -217,11 +218,15 @@ public class HSReplica extends Validator<HSMessage> {
         if (hasLeaderMessage()) {
             HSMessage m = getLeaderMessage();
             if (m.getSender() == leader && matchingQc(m.getJustify(), HSMessageType.COMMIT, curView)) {
-                // consensus achieved (?)
                 numConsensus = m.getJustify().getNode().getHeight();
+                commit(numConsensus);
                 startNextView();
             }
         }
+    }
+
+    private void commit(int numConsensus) {
+        // consensus achieved
     }
 
     private void startNextView() {
@@ -233,13 +238,8 @@ public class HSReplica extends Validator<HSMessage> {
     }
 
     @Override
-    protected void registerTimeElapsed(double time) {
-        // TODO Add statistics tracking for timing
-    }
-
-    @Override
     public boolean isDone() {
-        return numConsensus >= consensusLimit;
+        return numConsensus > consensusLimit;
     }
 
     @Override
@@ -253,5 +253,15 @@ public class HSReplica extends Validator<HSMessage> {
                 getName(),
                 state,
                 curView);
+    }
+
+    @Override
+    public int getConsensusCount() {
+        return numConsensus;
+    }
+
+    @Override
+    public Object getState() {
+        return state;
     }
 }
