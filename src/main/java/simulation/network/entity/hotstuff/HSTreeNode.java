@@ -9,7 +9,7 @@ public class HSTreeNode {
     public HSTreeNode(HSTreeNode parent, HSCommand command) {
         this.parent = parent;
         this.command = command;
-        this.height = parent == null ? 0 : parent.height + 1;
+        this.height = parent == null ? 1 : parent.height + 1;
     }
 
     private HSTreeNode(HSTreeNode parent, HSCommand command, int height) {
@@ -31,6 +31,10 @@ public class HSTreeNode {
         }
 
         return this.parent.extendsFrom(node);
+    }
+
+    public int getHeight() {
+        return height;
     }
 
     @Override

@@ -167,9 +167,6 @@ public class IBFTNode extends Validator<IBFTMessage> {
         pv_i = NULL_VALUE;
         preparedMessageJustification = List.of();
         inputValue_i = value;
-        if (isDone()) {
-            return;
-        }
         newRoundCleanup();
         if (getLeader(lambda_i, r_i, N) == p_i) {
             broadcastMessageToAll(createSingleValueMessage(IBFTMessageType.PREPREPARED, inputValue_i));

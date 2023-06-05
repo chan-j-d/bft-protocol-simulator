@@ -25,6 +25,9 @@ public class ProcessPayloadEvent<T> extends Event {
     @Override
     public List<Event> simulate() {
         Pair<Double, List<Payload<T>>> durationPayloadsPair = node.processPayload(getTime(), payload);
+        if (node.isDone()) {
+            return List.of();
+        }
         List<Payload<T>> processedPayloads = durationPayloadsPair.second();
         processingEndTime = getTime() + durationPayloadsPair.first();
         List<Event> eventList =

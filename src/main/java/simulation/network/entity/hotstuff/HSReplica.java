@@ -12,7 +12,7 @@ public class HSReplica extends Validator<HSMessage> {
     // TODO consensus count (use node height?)
     // TODO implement time limit (but not needed for testing)
 
-    private int consensusInstance;
+    private int numConsensus;
     private final int consensusLimit;
 
     private final int n;
@@ -35,7 +35,7 @@ public class HSReplica extends Validator<HSMessage> {
     public HSReplica(String name, int id, double baseTimeLimit, NodeTimerNotifier<HSMessage> timerNotifier, int n,
             int consensusLimit, RandomNumberGenerator serviceRateGenerator) {
         super(name, id, timerNotifier, serviceRateGenerator);
-        this.consensusInstance = 0;
+        this.numConsensus = 0;
         this.id = id;
         this.n = n;
         this.f = (this.n - 1) / 3;
@@ -101,7 +101,8 @@ public class HSReplica extends Validator<HSMessage> {
     @Override
     protected List<Payload<HSMessage>> processMessage(HSMessage message) {
         int messageView = message.getViewNumber();
-        if (messageView < curView) {
+        HSMessageType type = message.getType();
+        if (messageView < curView - 1 || (type != HSMessageType.NEW_VIEW && messageView == curView - 1)) {
             // ignore message
             return List.of();
         }
@@ -127,20 +128,18 @@ public class HSReplica extends Validator<HSMessage> {
     private void prepareOperation() {
         int leader = getLeader(curView);
         if (id == leader) {
-            List<HSMessage> newViewMessages = messageHolder.getVoteMessages(HSMessageType.NEW_VIEW, curView - 1);
-            if (newViewMessages.size() < n - f) {
-                return;
-            }
-            System.out.println(newViewMessages + " " + n + " " + f);
+            if (messageHolder.hasQuorumOfMessages(HSMessageType.NEW_VIEW, curView - 1, n - f)) {
+                List<HSMessage> newViewMessages = messageHolder.getVoteMessages(HSMessageType.NEW_VIEW, curView - 1);
 
-            highQc = getMaxViewNumberQc(newViewMessages);
-            // creates a generic command as the contents are not important
-            curProposal = createLeaf(highQc.getNode(), new HSCommand(curView));
-            broadcastMessageToAll(msg(HSMessageType.PREPARE, curProposal, highQc));
+                highQc = getMaxViewNumberQc(newViewMessages);
+                // creates a generic command as the contents are not important
+                curProposal = createLeaf(highQc.getNode(), new HSCommand(curView));
+                broadcastMessageToAll(msg(HSMessageType.PREPARE, curProposal, highQc));
+            }
         }
         if (hasLeaderMessage()) {
             HSMessage m = getLeaderMessage();
-            if (m.getSender() == leader && matchingQc(m.getJustify(), HSMessageType.PREPARE, curView)) {
+            if (m.getSender() == leader && matchingMessage(m, HSMessageType.PREPARE, curView)) {
                 if (m.getJustify() == null || (m.getNode().extendsFrom(m.getJustify().getNode()) &&
                         safeNode(m.getNode(), m.getJustify()))) {
                     sendMessage(voteMsg(HSMessageType.PREPARE, m.getNode(), null), getNode(leader));
@@ -166,13 +165,11 @@ public class HSReplica extends Validator<HSMessage> {
     private void preCommitOperation() {
         int leader = getLeader(curView);
         if (id == leader) {
-            List<HSMessage> prepareMessages = messageHolder.getVoteMessages(HSMessageType.PREPARE, curView);
-            if (prepareMessages.size() < n - f) {
-                return;
+            if (messageHolder.hasQuorumOfMessages(HSMessageType.PREPARE, curView, n - f)) {
+                List<HSMessage> prepareMessages = messageHolder.getVoteMessages(HSMessageType.PREPARE, curView);
+                prepareQc = new QuorumCertificate(prepareMessages);
+                broadcastMessageToAll(msg(HSMessageType.PRE_COMMIT, null, prepareQc));
             }
-
-            prepareQc = new QuorumCertificate(prepareMessages);
-            broadcastMessageToAll(msg(HSMessageType.PRE_COMMIT, null, prepareQc));
         }
         if (hasLeaderMessage()) {
             HSMessage m = getLeaderMessage();
@@ -189,17 +186,15 @@ public class HSReplica extends Validator<HSMessage> {
     private void commitOperation() {
         int leader = getLeader(curView);
         if (id == leader) {
-            List<HSMessage> preCommitMessages = messageHolder.getVoteMessages(HSMessageType.PRE_COMMIT, curView);
-            if (preCommitMessages.size() < n - f) {
-                return;
+            if (messageHolder.hasQuorumOfMessages(HSMessageType.PRE_COMMIT, curView, n - f)) {
+                List<HSMessage> preCommitMessages = messageHolder.getVoteMessages(HSMessageType.PRE_COMMIT, curView);
+                preCommitQc = new QuorumCertificate(preCommitMessages);
+                broadcastMessageToAll(msg(HSMessageType.COMMIT, null, preCommitQc));
             }
-
-            preCommitQc = new QuorumCertificate(preCommitMessages);
-            broadcastMessageToAll(msg(HSMessageType.COMMIT, null, preCommitQc));
         }
         if (hasLeaderMessage()) {
             HSMessage m = getLeaderMessage();
-            if (m.getSender() == leader && matchingMessage(m, HSMessageType.PRE_COMMIT, curView)) {
+            if (m.getSender() == leader && matchingQc(m.getJustify(), HSMessageType.PRE_COMMIT, curView)) {
                 lockedQc = m.getJustify();
                 sendMessage(voteMsg(HSMessageType.COMMIT, m.getJustify().getNode(), null), getNode(leader));
                 state = HSMessageType.DECIDE;
@@ -211,19 +206,19 @@ public class HSReplica extends Validator<HSMessage> {
     private void decideOperation() {
         int leader = getLeader(curView);
         if (id == leader) {
-            List<HSMessage> commitMessages = messageHolder.getVoteMessages(HSMessageType.COMMIT, curView);
-            if (commitMessages.size() < n - f) {
+            if (messageHolder.hasQuorumOfMessages(HSMessageType.COMMIT, curView, n - f)) {
+                List<HSMessage> commitMessages = messageHolder.getVoteMessages(HSMessageType.COMMIT, curView);
+                commitQc = new QuorumCertificate(commitMessages);
+                broadcastMessageToAll(msg(HSMessageType.DECIDE, null, commitQc));
                 return;
             }
-
-            commitQc = new QuorumCertificate(commitMessages);
-            broadcastMessageToAll(msg(HSMessageType.DECIDE, null, commitQc));
         }
 
         if (hasLeaderMessage()) {
             HSMessage m = getLeaderMessage();
             if (m.getSender() == leader && matchingQc(m.getJustify(), HSMessageType.COMMIT, curView)) {
                 // consensus achieved (?)
+                numConsensus = m.getJustify().getNode().getHeight();
                 startNextView();
             }
         }
@@ -244,11 +239,19 @@ public class HSReplica extends Validator<HSMessage> {
 
     @Override
     public boolean isDone() {
-        return false;
+        return numConsensus >= consensusLimit;
     }
 
     @Override
     public List<Payload<HSMessage>> notifyTime(double time, HSMessage message) {
         return null;
+    }
+
+    @Override
+    public String toString() {
+        return String.format("%s (%s, %d)",
+                getName(),
+                state,
+                curView);
     }
 }

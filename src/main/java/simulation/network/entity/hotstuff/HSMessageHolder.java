@@ -4,6 +4,7 @@ import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Optional;
 
 public class HSMessageHolder {
 
@@ -37,8 +38,11 @@ public class HSMessageHolder {
         }
     }
 
+    public boolean hasQuorumOfMessages(HSMessageType type, int view, int quorum) {
+        return voteMessageStorage.get(type).getOrDefault(view, List.of()).size() >= quorum;
+    }
     public List<HSMessage> getVoteMessages(HSMessageType type, int view) {
-        return voteMessageStorage.get(type).getOrDefault(view, List.of());
+        return Optional.of(voteMessageStorage.get(type).remove(view)).orElse(List.of());
     }
 
     public boolean containsLeaderMessage(HSMessageType type, int view) {
