@@ -38,7 +38,7 @@ public class HSMessageHolder {
     }
 
     public List<HSMessage> getVoteMessages(HSMessageType type, int view) {
-        return voteMessageStorage.get(type).get(view);
+        return voteMessageStorage.get(type).getOrDefault(view, List.of());
     }
 
     public boolean containsLeaderMessage(HSMessageType type, int view) {

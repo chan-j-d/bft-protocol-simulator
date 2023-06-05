@@ -1,5 +1,10 @@
 package simulation.network.entity.hotstuff;
 
+import java.util.Objects;
+import java.util.stream.Stream;
+
+import static simulation.util.StringUtil.MESSAGE_SEPARATOR;
+
 public class HSMessage {
 
     private final HSMessageType type;
@@ -41,5 +46,13 @@ public class HSMessage {
 
     public boolean isVote() {
         return isVote;
+    }
+
+    @Override
+    public String toString() {
+        return Stream.of(sender, type, viewNumber, node, justify, isVote ? "vote" : "non-vote")
+                .map(Objects::toString)
+                .reduce((x, y) -> x + MESSAGE_SEPARATOR + y)
+                .get();
     }
 }

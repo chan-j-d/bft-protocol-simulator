@@ -9,7 +9,7 @@ public class HSTreeNode {
     public HSTreeNode(HSTreeNode parent, HSCommand command) {
         this.parent = parent;
         this.command = command;
-        this.height = parent.height + 1;
+        this.height = parent == null ? 0 : parent.height + 1;
     }
 
     private HSTreeNode(HSTreeNode parent, HSCommand command, int height) {

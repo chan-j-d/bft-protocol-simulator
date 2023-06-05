@@ -9,13 +9,16 @@ import java.util.List;
 
 public class HSReplica extends Validator<HSMessage> {
 
-    // TODO add asynchronous message holding
+    // TODO consensus count (use node height?)
+    // TODO implement time limit (but not needed for testing)
 
     private int consensusInstance;
+    private final int consensusLimit;
 
     private final int n;
     private final int f;
     private final int id;
+    private final double baseTimeLimit;
 
     private int curView;
     private HSMessageType state;
@@ -29,13 +32,15 @@ public class HSReplica extends Validator<HSMessage> {
     private QuorumCertificate commitQc;
     private QuorumCertificate lockedQc;
 
-    public HSReplica(int id, int n, int f, String name, NodeTimerNotifier<HSMessage> timerNotifier,
-            RandomNumberGenerator serviceRateGenerator) {
+    public HSReplica(String name, int id, double baseTimeLimit, NodeTimerNotifier<HSMessage> timerNotifier, int n,
+            int consensusLimit, RandomNumberGenerator serviceRateGenerator) {
         super(name, id, timerNotifier, serviceRateGenerator);
         this.consensusInstance = 0;
         this.id = id;
         this.n = n;
-        this.f = f;
+        this.f = (this.n - 1) / 3;
+        this.consensusLimit = consensusLimit;
+        this.baseTimeLimit = baseTimeLimit;
         this.curView = 1;
         this.state = HSMessageType.PREPARE;
         this.messageHolder = new HSMessageHolder();
@@ -62,7 +67,7 @@ public class HSReplica extends Validator<HSMessage> {
     }
 
     private boolean matchingQc(QuorumCertificate qc, HSMessageType type, int viewNumber) {
-        return qc.getType().equals(type) && viewNumber == qc.getViewNumber();
+        return qc == null || (qc.getType().equals(type) && viewNumber == qc.getViewNumber());
     }
 
     private boolean safeNode(HSTreeNode node, QuorumCertificate qc) {
@@ -126,6 +131,7 @@ public class HSReplica extends Validator<HSMessage> {
             if (newViewMessages.size() < n - f) {
                 return;
             }
+            System.out.println(newViewMessages + " " + n + " " + f);
 
             highQc = getMaxViewNumberQc(newViewMessages);
             // creates a generic command as the contents are not important
@@ -135,8 +141,8 @@ public class HSReplica extends Validator<HSMessage> {
         if (hasLeaderMessage()) {
             HSMessage m = getLeaderMessage();
             if (m.getSender() == leader && matchingQc(m.getJustify(), HSMessageType.PREPARE, curView)) {
-                if (m.getNode().extendsFrom(m.getJustify().getNode()) &&
-                        safeNode(m.getNode(), m.getJustify())) {
+                if (m.getJustify() == null || (m.getNode().extendsFrom(m.getJustify().getNode()) &&
+                        safeNode(m.getNode(), m.getJustify()))) {
                     sendMessage(voteMsg(HSMessageType.PREPARE, m.getNode(), null), getNode(leader));
                     state = HSMessageType.PRE_COMMIT;
                     preCommitOperation();
