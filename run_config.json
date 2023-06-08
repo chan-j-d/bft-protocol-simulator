@@ -1,13 +1,13 @@
 {
-  "numRuns": 1,
-  "numConsensus": 100,
+  "numRuns": 2,
+  "numConsensus": 500,
   "startingSeed": 0,
   "seedMultiplier": 100,
-  "numNodes": 27,
+  "numNodes": 8,
   "nodeProcessingRate": 3,
-  "switchProcessingRate": 9,
+  "switchProcessingRate": -1,
   "baseTimeLimit": 10000,
-  "networkType": "FoldedClos",
+  "networkType": "Clique",
   "validatorType": "IBFT",
   "networkParameters": [3, 1, 0]
 }
