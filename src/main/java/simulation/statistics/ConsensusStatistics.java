@@ -35,10 +35,6 @@ public class ConsensusStatistics extends Statistics {
         this.stateTimeMap = stateTimeMap;
     }
 
-    public void incrementConsensusCount() {
-        this.consensusCount++;
-    }
-
     public void setConsensusCount(int consensusCount) {
         this.consensusCount = consensusCount;
     }

@@ -95,8 +95,6 @@ public class SimulatorImpl<T> implements Simulator, NodeTimerNotifier<T> {
                 .map(Validator::getConsensusStatistics)
                 .reduce(ConsensusStatistics::combineStatistics).orElseThrow();
 
-        nodes.stream().map(Node::getQueueStatistics)
-                .forEach(System.out::println);
         QueueStatistics runValidatorQueueStats = nodes.stream()
                 .map(Node::getQueueStatistics)
                 .reduce(QueueStatistics::combineStatistics).orElseThrow();
