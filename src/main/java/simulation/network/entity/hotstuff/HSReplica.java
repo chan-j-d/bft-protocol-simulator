@@ -1,6 +1,6 @@
 package simulation.network.entity.hotstuff;
 
-import simulation.network.entity.NodeTimerNotifier;
+import simulation.network.entity.timer.TimerNotifier;
 import simulation.network.entity.Payload;
 import simulation.network.entity.Validator;
 import simulation.util.rng.RandomNumberGenerator;
@@ -33,7 +33,7 @@ public class HSReplica extends Validator<HSMessage> {
     private QuorumCertificate commitQc;
     private QuorumCertificate lockedQc;
 
-    public HSReplica(String name, int id, double baseTimeLimit, NodeTimerNotifier<HSMessage> timerNotifier, int n,
+    public HSReplica(String name, int id, double baseTimeLimit, TimerNotifier<HSMessage> timerNotifier, int n,
             int consensusLimit, RandomNumberGenerator serviceRateGenerator) {
         super(name, id, timerNotifier, serviceRateGenerator, Arrays.asList((Object[]) HSMessageType.values()));
         this.numConsensus = 0;
@@ -124,6 +124,11 @@ public class HSReplica extends Validator<HSMessage> {
                 break;
         }
         return getProcessedPayloads();
+    }
+
+    @Override
+    protected List<Payload<HSMessage>> onTimerExpiry() {
+        return null;
     }
 
     private void prepareOperation() {
@@ -240,11 +245,6 @@ public class HSReplica extends Validator<HSMessage> {
     @Override
     public boolean isDone() {
         return numConsensus > consensusLimit;
-    }
-
-    @Override
-    public List<Payload<HSMessage>> notifyTime(double time, HSMessage message) {
-        return null;
     }
 
     @Override

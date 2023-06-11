@@ -1,6 +1,6 @@
 package simulation.network.entity.ibft;
 
-import simulation.network.entity.NodeTimerNotifier;
+import simulation.network.entity.timer.TimerNotifier;
 import simulation.network.entity.Payload;
 import simulation.network.entity.Validator;
 import simulation.util.Pair;
@@ -27,14 +27,13 @@ public class IBFTNode extends Validator<IBFTMessage> {
     private final Logger logger;
 
     // Simulation variables
-    private final double baseTimeLimit;
     private final int consensusLimit;
     private int N;
     private int F;
 
     // Helper attributes
-    private int timerExpiryCount; // Used to differentiate multiple timers in the same instance & round
     private final IBFTMessageHolder messageHolder;
+    private final double baseTimeLimit;
 
     private IBFTState state;
 
@@ -49,15 +48,14 @@ public class IBFTNode extends Validator<IBFTMessage> {
     private int inputValue_i; // value passed as input to instance
 
 
-    public IBFTNode(String name, int id, double baseTimeLimit, NodeTimerNotifier<IBFTMessage> timerNotifier,
+    public IBFTNode(String name, int id, double baseTimeLimit, TimerNotifier<IBFTMessage> timerNotifier,
             int N, int consensusLimit, RandomNumberGenerator serviceRateGenerator) {
         super(name, id, timerNotifier, serviceRateGenerator, Arrays.asList((Object[]) IBFTState.values()));
         logger = new Logger(name);
         this.state = IBFTState.NEW_ROUND;
+        this.baseTimeLimit = baseTimeLimit;
 
         this.p_i = id;
-        this.baseTimeLimit = baseTimeLimit;
-        this.timerExpiryCount = 0;
         this.N = N;
         this.F = (this.N - 1) / 3;
         this.consensusLimit = consensusLimit;
@@ -100,11 +98,6 @@ public class IBFTNode extends Validator<IBFTMessage> {
     }
 
     // Utility methods
-    private void startTimer() {
-        timerExpiryCount++; // Every time a timer starts, a unique one is set.
-        notifyAtTime(getTime() + timerFunction(r_i), createTimerNotificationMessage());
-    }
-
     private int getQuorumCount() {
         return Math.floorDiv((N + F), 2) + 1;
     }
@@ -118,24 +111,14 @@ public class IBFTNode extends Validator<IBFTMessage> {
     }
 
     // Timer expire handling
-    @Override
-    public List<Payload<IBFTMessage>> notifyTime(double time, IBFTMessage message) {
-        int round = message.getRound();
-        int lambda = message.getLambda();
-        int messageTimerExpiryCount = message.getValue();
-        if (timerExpiryCount == messageTimerExpiryCount && lambda == lambda_i && round == r_i) {
-            timerExpiryOperation();
-        }
-        return getProcessedPayloads();
+    private void startIbftTimer() {
+        startTimer(timerFunction(r_i));
     }
 
-    /**
-     * Returns a formatted timer notification message for the node itself.
-     *
-     * @return formatted timer notification message containing consensus instance and round.
-     */
-    private IBFTMessage createTimerNotificationMessage() {
-        return createSingleValueMessage(IBFTMessageType.TIMER_EXPIRY, timerExpiryCount);
+    @Override
+    protected List<Payload<IBFTMessage>> onTimerExpiry() {
+        timerExpiryOperation();
+        return getProcessedPayloads();
     }
 
     // Message util
@@ -157,7 +140,6 @@ public class IBFTNode extends Validator<IBFTMessage> {
 
     // Round start handling
     private void start(int lambda, int value) {
-        timerExpiryCount = 0;
         state = IBFTState.NEW_ROUND;
 
         lambda_i = lambda;
@@ -173,7 +155,7 @@ public class IBFTNode extends Validator<IBFTMessage> {
         if (getLeader(lambda_i, r_i, N) == p_i) {
             broadcastMessageToAll(createSingleValueMessage(IBFTMessageType.PREPREPARED, inputValue_i));
         }
-        startTimer();
+        startIbftTimer();
         prePrepareOperation();
     }
 
@@ -228,7 +210,7 @@ public class IBFTNode extends Validator<IBFTMessage> {
     private void timerExpiryOperation() {
         r_i++;
         state = IBFTState.ROUND_CHANGE;
-        startTimer();
+        startIbftTimer();
         if (pr_i == NULL_VALUE && pv_i == NULL_VALUE) {
             broadcastMessageToAll(createPreparedValuesMessage(IBFTMessageType.ROUND_CHANGE));
         } else {
@@ -241,7 +223,7 @@ public class IBFTNode extends Validator<IBFTMessage> {
     private void fPlusOneRoundChangeOperation() {
         if (messageHolder.hasMoreHigherRoundChangeMessagesThan(lambda_i, r_i)) {
             r_i = messageHolder.getNextGreaterRoundChangeMessage(lambda_i, r_i);
-            startTimer();
+            startIbftTimer();
             broadcastMessageToAll(createPreparedValuesMessage(IBFTMessageType.ROUND_CHANGE));
             state = IBFTState.ROUND_CHANGE;
             prePrepareOperation();
@@ -276,7 +258,7 @@ public class IBFTNode extends Validator<IBFTMessage> {
         for (IBFTMessage message : preprepareMessages) {
             int sender = message.getIdentifier();
             if (sender == getLeader(lambda_i, r_i, N) && justifyPrePrepare(message)) {
-                startTimer();
+                startIbftTimer();
                 state = IBFTState.PREPREPARED;
                 inputValue_i = message.getValue();
                 broadcastMessageToAll(createSingleValueMessage(IBFTMessageType.PREPARED, inputValue_i));

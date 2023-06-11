@@ -4,7 +4,7 @@ import simulation.event.Event;
 import simulation.event.InitializationEvent;
 import simulation.event.TimedEvent;
 import simulation.network.entity.Node;
-import simulation.network.entity.NodeTimerNotifier;
+import simulation.network.entity.timer.TimerNotifier;
 import simulation.network.entity.TimedNode;
 import simulation.network.entity.Validator;
 import simulation.network.router.Switch;
@@ -17,7 +17,7 @@ import java.util.Optional;
 import java.util.PriorityQueue;
 import java.util.stream.Collectors;
 
-public class SimulatorImpl<T> implements Simulator, NodeTimerNotifier<T> {
+public class SimulatorImpl<T> implements Simulator, TimerNotifier<T> {
 
     private static final int SNAPSHOT_INTERVAL = 1000000;
     private static final double TIME_CUTOFF = 10000000; // for safety
@@ -107,8 +107,8 @@ public class SimulatorImpl<T> implements Simulator, NodeTimerNotifier<T> {
     }
 
     @Override
-    public void notifyAtTime(TimedNode<T> node, double time, T message) {
-        eventQueue.add(new TimedEvent<T>(time, node, message));
+    public void notifyAtTime(TimedNode<T> node, double time, int timerCount) {
+        eventQueue.add(new TimedEvent<T>(time, node, timerCount));
     }
 
     @Override

@@ -8,18 +8,18 @@ import static simulation.event.EventUtil.convertPayloadsToQueueEvents;
 
 public class TimedEvent<T> extends Event {
 
-    private TimedNode<T> node;
-    private T message;
+    private final TimedNode<T> node;
+    private final int timerCount;
 
-    public TimedEvent(double time, TimedNode<T> node, T message) {
+    public TimedEvent(double time, TimedNode<T> node, int timerCount) {
         super(time);
         this.node = node;
-        this.message = message;
+        this.timerCount = timerCount;
     }
 
     @Override
     public List<Event> simulate() {
-        return convertPayloadsToQueueEvents(getTime(), node, node.notifyTime(getTime(), message));
+        return convertPayloadsToQueueEvents(getTime(), node, node.notifyTime(timerCount));
     }
 
     @Override
