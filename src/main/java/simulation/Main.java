@@ -1,11 +1,11 @@
 package simulation;
 
 import com.google.gson.Gson;
+import simulation.io.IoInterface;
+import simulation.io.NoIo;
 import simulation.json.IBFTResultsJson;
 import simulation.json.QueueResultsJson;
 import simulation.json.RunConfigJson;
-import simulation.io.FileIo;
-import simulation.io.IoInterface;
 import simulation.network.entity.EndpointNode;
 import simulation.network.entity.Node;
 import simulation.network.entity.ibft.IBFTMessage;
@@ -56,7 +56,8 @@ public class Main {
         int startingSeed = runConfigJson.getStartingSeed();
         double validatorServiceRate = runConfigJson.getNodeProcessingRate();
 
-        IoInterface io = new FileIo("output.txt");
+//        IoInterface io = new FileIo("output.txt");
+        IoInterface io = new NoIo();
         IBFTStatistics ibftStats = null;
         QueueStatistics validatorQueueStats = null;
         List<QueueStatistics> switchStatistics = new ArrayList<>();

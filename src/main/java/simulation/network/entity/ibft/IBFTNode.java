@@ -1,10 +1,8 @@
 package simulation.network.entity.ibft;
 
-import static simulation.network.entity.ibft.IBFTMessage.NULL_VALUE;
-
-import simulation.network.entity.TimedNode;
 import simulation.network.entity.NodeTimerNotifier;
 import simulation.network.entity.Payload;
+import simulation.network.entity.TimedNode;
 import simulation.util.Pair;
 import simulation.util.logging.Logger;
 import simulation.util.rng.RandomNumberGenerator;
@@ -15,6 +13,8 @@ import java.util.List;
 import java.util.Map;
 import java.util.Set;
 import java.util.stream.Collectors;
+
+import static simulation.network.entity.ibft.IBFTMessage.NULL_VALUE;
 
 public class IBFTNode extends TimedNode<IBFTMessage> {
 
@@ -57,6 +57,7 @@ public class IBFTNode extends TimedNode<IBFTMessage> {
     private Map<Integer, Integer> otherNodeHeights;
     private int inputValue_i; // value passed as input to instance
     private double previousRecordedTime;
+    private double timeoutTime;
 
 
     public IBFTNode(String name, int identifier, double baseTimeLimit, NodeTimerNotifier<IBFTMessage> timerNotifier,
@@ -80,6 +81,7 @@ public class IBFTNode extends TimedNode<IBFTMessage> {
         this.otherNodeHeights = new HashMap<>();
         this.statistics = new IBFTStatistics();
         this.previousRecordedTime = 0;
+        this.timeoutTime = baseTimeLimit;
     }
 
     public void setAllNodes(List<IBFTNode> allNodes) {
@@ -104,13 +106,27 @@ public class IBFTNode extends TimedNode<IBFTMessage> {
         double duration = rng.generateRandomNumber();
         double timePassed = time - previousRecordedTime;
         double newCurrentTime = time + duration;
+        boolean isTimedOut = false;
+        if (newCurrentTime > timeoutTime) {
+            newCurrentTime = timeoutTime;
+            duration = timeoutTime - time;
+            timerExpiryOperation();
+            isTimedOut = true;
+        }
         super.processPayload(newCurrentTime, payload);
-        statistics.addTime(state, duration + timePassed);
+
+        if (!isDone()) {
+            // avoid calculating processed messages after final consensus instance
+            statistics.addTime(state, duration + timePassed);
+        }
         previousRecordedTime = newCurrentTime;
-        IBFTMessage message = payload.getMessage();
-        processMessage(message);
+
+        if (!isTimedOut) {
+            IBFTMessage message = payload.getMessage();
+            processMessage(message);
+        }
 //        logger.log(String.format("%.3f-%.3f: %s processing %s\n%s\n%s", time, newCurrentTime,
-//                this, message, super.getQueueStatistics(), getIbftStatistics()));
+//                this, payload.getMessage(), super.getQueueStatistics(), getIbftStatistics()));
         return new Pair<>(duration, getProcessedPayloads());
     }
 
@@ -143,7 +159,8 @@ public class IBFTNode extends TimedNode<IBFTMessage> {
     // Utility methods
     private void startTimer() {
         timerExpiryCount++; // Every time a timer starts, a unique one is set.
-        notifyAtTime(getTime() + timerFunction(r_i), createTimerNotificationMessage());
+        timeoutTime = getTime() + timerFunction(r_i);
+        notifyAtTime(timeoutTime, createTimerNotificationMessage());
     }
 
     private void broadcastMessage(IBFTMessage message) {
@@ -165,6 +182,9 @@ public class IBFTNode extends TimedNode<IBFTMessage> {
     // Timer expire handling
     @Override
     public List<Payload<IBFTMessage>> notifyTime(double time, IBFTMessage message) {
+        if (isDone()) {
+            return List.of();
+        }
         int round = message.getRound();
         int lambda = message.getLambda();
         int messageTimerExpiryCount = message.getValue();
@@ -251,7 +271,9 @@ public class IBFTNode extends TimedNode<IBFTMessage> {
                     commitOperation();
                     break;
                 case SYNC:
-                    message.getPiggybackMessages().forEach(pbm -> messageHolder.addMessageToBacklog(pbm));
+                    message.getPiggybackMessages().forEach(messageHolder::addMessageToBacklog);
+                    commitOperation();
+                    break;
                 case ROUND_CHANGE:
                     int messageRound = message.getRound();
                     if (messageRound > r_i) {
