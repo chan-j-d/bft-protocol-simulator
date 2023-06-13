@@ -26,9 +26,4 @@ public class TimedEvent<T> extends NodeEvent<T> {
     public String toString() {
         return super.toString() + " (Timed): Notifying " + node + " at " + getTime();
     }
-
-    @Override
-    public boolean toDisplay() {
-        return !node.isDone();
-    }
 }

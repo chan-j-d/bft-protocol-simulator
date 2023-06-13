@@ -21,6 +21,7 @@ public class Simulator<T> implements TimerNotifier<T> {
     private int roundCount;
     private List<Node<T>> nodes;
     private double currentTime;
+    private List<Node<T>> unfinishedNodesTracker;
 
     public Simulator() {
     }
@@ -33,22 +34,27 @@ public class Simulator<T> implements TimerNotifier<T> {
 
         roundCount = 0;
         currentTime = 0;
+
+        unfinishedNodesTracker = new ArrayList<>(nodes);
     }
 
     public Optional<String> simulate() {
-        Event nextEvent = eventQueue.poll();
+        NodeEvent<T> nextEvent = eventQueue.poll();
         assert nextEvent != null; // isSimulationOver should be used to check before calling this function
         currentTime = nextEvent.getTime();
         if (currentTime > TIME_CUTOFF) {
             return Optional.empty();
         }
-        List<Event> resultingEvents = nextEvent.simulate();
+        List<NodeEvent<T>> resultingEvents = nextEvent.simulate();
+
+        Node<T> node = nextEvent.getNode();
+        if (!node.isStillRequiredToRun()) {
+            unfinishedNodesTracker.remove(node);
+        }
+
         eventQueue.addAll(resultingEvents);
         roundCount++;
 
-        if (!nextEvent.toDisplay()) {
-            return Optional.empty();
-        }
         String finalString = nextEvent.toString();
         if (roundCount % SNAPSHOT_INTERVAL == 0) {
             finalString = finalString + "\n\nSnapshot:\n" + getSnapshotOfNodes() + "\n" + eventQueue + "\n";
@@ -68,7 +74,7 @@ public class Simulator<T> implements TimerNotifier<T> {
     }
 
     public boolean isSimulationOver() {
-        return eventQueue.isEmpty() || getTime() > TIME_CUTOFF;
+        return unfinishedNodesTracker.isEmpty() || getTime() > TIME_CUTOFF;
     }
 
     @Override

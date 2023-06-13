@@ -59,19 +59,19 @@ public class IBFTNode extends TimedNode<IBFTMessage> {
     private double previousRecordedTime;
     private double timeoutTime;
 
-    public IBFTNode(String name, int identifier, double baseTimeLimit, TimerNotifier<IBFTMessage> timerNotifier,
-            int N, int consensusLimit, RandomNumberGenerator serviceRateGenerator) {
+    public IBFTNode(String name, int identifier, double baseTimeLimit, int consensusLimit,
+            TimerNotifier<IBFTMessage> timerNotifier, int N, RandomNumberGenerator serviceRateGenerator) {
         super(name, timerNotifier);
         logger = new Logger(name);
         this.state = IBFTState.NEW_ROUND;
 
         this.p_i = identifier;
         this.rng = serviceRateGenerator;
+        this.consensusLimit = consensusLimit;
         this.allNodes = new HashMap<>();
         this.baseTimeLimit = baseTimeLimit;
         this.N = N;
         this.F = (this.N - 1) / 3;
-        this.consensusLimit = consensusLimit;
         this.timeoutCount = 0;
 
         this.tempPayloadStore = new ArrayList<>();
@@ -114,10 +114,7 @@ public class IBFTNode extends TimedNode<IBFTMessage> {
         }
         super.processPayload(newCurrentTime, payload);
 
-        if (!isDone()) {
-            // avoid calculating processed messages after final consensus instance
-            statistics.addTime(state, duration + timePassed);
-        }
+        statistics.addTime(state, duration + timePassed);
         previousRecordedTime = newCurrentTime;
 
         if (!isTimedOut) {
@@ -135,13 +132,12 @@ public class IBFTNode extends TimedNode<IBFTMessage> {
         return getProcessedPayloads();
     }
 
-    // public facing query methods
-
     @Override
-    public boolean isDone() {
-        return lambda_i > consensusLimit;
+    public boolean isStillRequiredToRun() {
+        return lambda_i <= consensusLimit;
     }
 
+    // public facing query methods
     public IBFTStatistics getIbftStatistics() {
         return statistics;
     }
@@ -181,10 +177,6 @@ public class IBFTNode extends TimedNode<IBFTMessage> {
     // Timer expire handling
     @Override
     public List<Payload<IBFTMessage>> notifyTime(int timeoutCount) {
-        if (isDone()) {
-            return List.of();
-        }
-        System.out.println(this.timeoutCount + " " + timeoutCount + " " + (timeoutCount == this.timeoutCount));
         if (timeoutCount == this.timeoutCount) {
             timeoutOperation();
         }
@@ -218,10 +210,6 @@ public class IBFTNode extends TimedNode<IBFTMessage> {
         pv_i = NULL_VALUE;
         preparedMessageJustification = List.of();
         inputValue_i = value;
-        if (isDone()) {
-            timeoutCount = -1;
-            return;
-        }
         newRoundCleanup();
         if (getLeader(lambda_i, r_i, N) == p_i) {
             broadcastMessage(createSingleValueMessage(IBFTMessageType.PREPREPARED, inputValue_i));
