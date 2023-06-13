@@ -20,6 +20,7 @@ public abstract class TimedNode<T> extends EndpointNode<T> {
         this.rng = serviceTimeGenerator;
         this.previousRecordedTime = 0;
         this.timerCount = 0;
+        this.timeoutTime = -1; // negative implies not yet set
     }
 
     public double getTime() {
@@ -60,7 +61,7 @@ public abstract class TimedNode<T> extends EndpointNode<T> {
         double newCurrentTime = time + duration;
         boolean isTimedOut = false;
         List<Payload<T>> payloads;
-        if (newCurrentTime > timeoutTime) {
+        if (newCurrentTime > timeoutTime && timeoutTime > 0) {
             newCurrentTime = timeoutTime;
             duration = timeoutTime - time;
             isTimedOut = true;
@@ -71,11 +72,11 @@ public abstract class TimedNode<T> extends EndpointNode<T> {
         registerTimeElapsed(duration + timePassed);
 //        logger.log(String.format("%.3f-%.3f: %s processing %s\n%s\n%s", time, newCurrentTime,
 //                this, message, super.getQueueStatistics(), getIbftStatistics()));
-        if (!isTimedOut) {
+        if (isTimedOut) {
+            payloads = onTimerExpiry();
+        } else {
             T message = payload.getMessage();
             payloads = processMessage(message);
-        } else {
-            payloads = onTimerExpiry();
         }
         return new Pair<>(duration, payloads);
     }
