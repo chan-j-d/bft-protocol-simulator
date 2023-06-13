@@ -1,26 +1,27 @@
 package simulation.simulator;
 
-import simulation.event.Event;
 import simulation.event.InitializationEvent;
+import simulation.event.NodeEvent;
 import simulation.event.TimedEvent;
-import simulation.network.entity.TimedNode;
 import simulation.network.entity.Node;
-import simulation.network.entity.NodeTimerNotifier;
+import simulation.network.entity.TimedNode;
+import simulation.network.entity.TimerNotifier;
 
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Optional;
 import java.util.PriorityQueue;
 
-public class Simulator<T> implements NodeTimerNotifier<T> {
+public class Simulator<T> implements TimerNotifier<T> {
 
     private static final int SNAPSHOT_INTERVAL = 1000000;
     private static final double TIME_CUTOFF = 10000000; // for safety
 
-    private PriorityQueue<Event> eventQueue;
+    private PriorityQueue<NodeEvent<T>> eventQueue;
     private int roundCount;
     private List<Node<T>> nodes;
     private double currentTime;
+    private List<Node<T>> unfinishedNodesTracker;
 
     public Simulator() {
     }
@@ -33,22 +34,27 @@ public class Simulator<T> implements NodeTimerNotifier<T> {
 
         roundCount = 0;
         currentTime = 0;
+
+        unfinishedNodesTracker = new ArrayList<>(nodes);
     }
 
     public Optional<String> simulate() {
-        Event nextEvent = eventQueue.poll();
+        NodeEvent<T> nextEvent = eventQueue.poll();
         assert nextEvent != null; // isSimulationOver should be used to check before calling this function
         currentTime = nextEvent.getTime();
         if (currentTime > TIME_CUTOFF) {
             return Optional.empty();
         }
-        List<Event> resultingEvents = nextEvent.simulate();
+        List<NodeEvent<T>> resultingEvents = nextEvent.simulate();
+
+        Node<T> node = nextEvent.getNode();
+        if (!node.isStillRequiredToRun()) {
+            unfinishedNodesTracker.remove(node);
+        }
+
         eventQueue.addAll(resultingEvents);
         roundCount++;
 
-        if (!nextEvent.toDisplay()) {
-            return Optional.empty();
-        }
         String finalString = nextEvent.toString();
         if (roundCount % SNAPSHOT_INTERVAL == 0) {
             finalString = finalString + "\n\nSnapshot:\n" + getSnapshotOfNodes() + "\n" + eventQueue + "\n";
@@ -68,12 +74,12 @@ public class Simulator<T> implements NodeTimerNotifier<T> {
     }
 
     public boolean isSimulationOver() {
-        return eventQueue.isEmpty() || getTime() > TIME_CUTOFF;
+        return unfinishedNodesTracker.isEmpty() || getTime() > TIME_CUTOFF;
     }
 
     @Override
-    public void notifyAtTime(TimedNode<T> node, double time, T message) {
-        eventQueue.add(new TimedEvent<T>(time, node, message));
+    public void notifyAtTime(TimedNode<T> node, double time, int count) {
+        eventQueue.add(new TimedEvent<T>(time, node, count));
     }
 
     @Override

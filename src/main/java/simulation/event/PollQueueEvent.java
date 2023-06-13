@@ -5,18 +5,17 @@ import simulation.network.entity.Payload;
 
 import java.util.List;
 
-public class PollQueueEvent<T> extends Event {
+public class PollQueueEvent<T> extends NodeEvent<T> {
 
-    private Node<T> node;
     private Payload<T> payload;
 
     public PollQueueEvent(double time, Node<T> node) {
-        super(time);
-        this.node = node;
+        super(time, node);
     }
 
     @Override
-    public List<Event> simulate() {
+    public List<NodeEvent<T>> simulate() {
+        Node<T> node = getNode();
         if (!node.isEmpty() && !node.isOccupiedAtTime(getTime())) {
             payload = node.popFromQueue(getTime());
             return List.of(new ProcessPayloadEvent<>(getTime(), node, payload));
@@ -27,6 +26,6 @@ public class PollQueueEvent<T> extends Event {
 
     @Override
     public String toString() {
-        return super.toString() + " (PollQueueEvent): Polling from " + node + " (" + payload + ")";
+        return super.toString() + " (PollQueueEvent): Polling from " + getNode() + " (" + payload + ")";
     }
 }

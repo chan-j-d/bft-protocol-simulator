@@ -10,7 +10,6 @@ import simulation.util.rng.RandomNumberGenerator;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
-import java.util.Random;
 import java.util.stream.Collectors;
 
 public class Switch<T> extends Node<T> {
@@ -77,6 +76,11 @@ public class Switch<T> extends Node<T> {
         return nextHopNodeOptions.get(randomIndex);
     }
 
+    @Override
+    public boolean isStillRequiredToRun() {
+        return true;
+    }
+
     public List<Switch<T>> getSwitchNeighbors() {
         return switchNeighbors;
     }
@@ -91,11 +95,6 @@ public class Switch<T> extends Node<T> {
     @Override
     public List<Payload<T>> initializationPayloads() {
         return List.of();
-    }
-
-    @Override
-    public boolean isDone() {
-        return false;
     }
 
     @Override

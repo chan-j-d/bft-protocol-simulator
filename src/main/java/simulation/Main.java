@@ -66,7 +66,7 @@ public class Main {
             List<IBFTNode> nodes = new ArrayList<>();
             Simulator<IBFTMessage> simulator = new Simulator<>();
             for (int j = 0; j < numNodes; j++) {
-                nodes.add(new IBFTNode("IBFT-" + j, j, timeLimit, simulator, numNodes, consensusLimit,
+                nodes.add(new IBFTNode("IBFT-" + j, j, timeLimit, consensusLimit, simulator, numNodes,
                         new ExponentialDistribution(validatorServiceRate)));
             }
             simulator.setNodes(nodes);

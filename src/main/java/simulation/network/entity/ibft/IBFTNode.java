@@ -1,10 +1,8 @@
 package simulation.network.entity.ibft;
 
-import static simulation.network.entity.ibft.IBFTMessage.NULL_VALUE;
-
-import simulation.network.entity.TimedNode;
-import simulation.network.entity.NodeTimerNotifier;
+import simulation.network.entity.TimerNotifier;
 import simulation.network.entity.Payload;
+import simulation.network.entity.TimedNode;
 import simulation.util.Pair;
 import simulation.util.logging.Logger;
 import simulation.util.rng.RandomNumberGenerator;
@@ -15,6 +13,8 @@ import java.util.List;
 import java.util.Map;
 import java.util.Set;
 import java.util.stream.Collectors;
+
+import static simulation.network.entity.ibft.IBFTMessage.NULL_VALUE;
 
 public class IBFTNode extends TimedNode<IBFTMessage> {
 
@@ -36,7 +36,7 @@ public class IBFTNode extends TimedNode<IBFTMessage> {
     private Map<Integer, IBFTNode> allNodes;
 
     // Helper attributes
-    private int timerExpiryCount; // Used to differentiate multiple timers in the same instance & round
+    private int timeoutCount; // Used to differentiate multiple timers in the same instance & round
     private final IBFTMessageHolder messageHolder;
     private final IBFTStatistics statistics;
 
@@ -57,22 +57,22 @@ public class IBFTNode extends TimedNode<IBFTMessage> {
     private Map<Integer, Integer> otherNodeHeights;
     private int inputValue_i; // value passed as input to instance
     private double previousRecordedTime;
+    private double timeoutTime;
 
-
-    public IBFTNode(String name, int identifier, double baseTimeLimit, NodeTimerNotifier<IBFTMessage> timerNotifier,
-            int N, int consensusLimit, RandomNumberGenerator serviceRateGenerator) {
+    public IBFTNode(String name, int identifier, double baseTimeLimit, int consensusLimit,
+            TimerNotifier<IBFTMessage> timerNotifier, int N, RandomNumberGenerator serviceRateGenerator) {
         super(name, timerNotifier);
         logger = new Logger(name);
         this.state = IBFTState.NEW_ROUND;
 
         this.p_i = identifier;
         this.rng = serviceRateGenerator;
+        this.consensusLimit = consensusLimit;
         this.allNodes = new HashMap<>();
         this.baseTimeLimit = baseTimeLimit;
-        this.timerExpiryCount = 0;
         this.N = N;
         this.F = (this.N - 1) / 3;
-        this.consensusLimit = consensusLimit;
+        this.timeoutCount = 0;
 
         this.tempPayloadStore = new ArrayList<>();
         this.messageHolder = new IBFTMessageHolder(getQuorumCount(), FIRST_CONSENSUS_INSTANCE);
@@ -80,6 +80,7 @@ public class IBFTNode extends TimedNode<IBFTMessage> {
         this.otherNodeHeights = new HashMap<>();
         this.statistics = new IBFTStatistics();
         this.previousRecordedTime = 0;
+        this.timeoutTime = baseTimeLimit;
     }
 
     public void setAllNodes(List<IBFTNode> allNodes) {
@@ -104,13 +105,24 @@ public class IBFTNode extends TimedNode<IBFTMessage> {
         double duration = rng.generateRandomNumber();
         double timePassed = time - previousRecordedTime;
         double newCurrentTime = time + duration;
+        boolean isTimedOut = false;
+        if (newCurrentTime > timeoutTime) {
+            newCurrentTime = timeoutTime;
+            duration = timeoutTime - time;
+            timeoutOperation();
+            isTimedOut = true;
+        }
         super.processPayload(newCurrentTime, payload);
+
         statistics.addTime(state, duration + timePassed);
         previousRecordedTime = newCurrentTime;
-        IBFTMessage message = payload.getMessage();
-        processMessage(message);
+
+        if (!isTimedOut) {
+            IBFTMessage message = payload.getMessage();
+            processMessage(message);
+        }
 //        logger.log(String.format("%.3f-%.3f: %s processing %s\n%s\n%s", time, newCurrentTime,
-//                this, message, super.getQueueStatistics(), getIbftStatistics()));
+//                this, payload.getMessage(), super.getQueueStatistics(), getIbftStatistics()));
         return new Pair<>(duration, getProcessedPayloads());
     }
 
@@ -120,13 +132,12 @@ public class IBFTNode extends TimedNode<IBFTMessage> {
         return getProcessedPayloads();
     }
 
-    // public facing query methods
-
     @Override
-    public boolean isDone() {
-        return lambda_i > consensusLimit;
+    public boolean isStillRequiredToRun() {
+        return lambda_i <= consensusLimit;
     }
 
+    // public facing query methods
     public IBFTStatistics getIbftStatistics() {
         return statistics;
     }
@@ -142,8 +153,9 @@ public class IBFTNode extends TimedNode<IBFTMessage> {
 
     // Utility methods
     private void startTimer() {
-        timerExpiryCount++; // Every time a timer starts, a unique one is set.
-        notifyAtTime(getTime() + timerFunction(r_i), createTimerNotificationMessage());
+        timeoutTime = getTime() + timerFunction(r_i);
+        // Every time a timer starts, a unique one is set.
+        notifyAtTime(timeoutTime, ++timeoutCount);
     }
 
     private void broadcastMessage(IBFTMessage message) {
@@ -164,23 +176,11 @@ public class IBFTNode extends TimedNode<IBFTMessage> {
 
     // Timer expire handling
     @Override
-    public List<Payload<IBFTMessage>> notifyTime(double time, IBFTMessage message) {
-        int round = message.getRound();
-        int lambda = message.getLambda();
-        int messageTimerExpiryCount = message.getValue();
-        if (timerExpiryCount == messageTimerExpiryCount && lambda == lambda_i && round == r_i) {
-            timerExpiryOperation();
+    public List<Payload<IBFTMessage>> notifyTime(int timeoutCount) {
+        if (timeoutCount == this.timeoutCount) {
+            timeoutOperation();
         }
         return getProcessedPayloads();
-    }
-
-    /**
-     * Returns a formatted timer notification message for the node itself.
-     *
-     * @return formatted timer notification message containing consensus instance and round.
-     */
-    private IBFTMessage createTimerNotificationMessage() {
-        return createSingleValueMessage(IBFTMessageType.TIMER_EXPIRY, timerExpiryCount);
     }
 
     // Message util
@@ -202,7 +202,6 @@ public class IBFTNode extends TimedNode<IBFTMessage> {
 
     // Round start handling
     private void start(int lambda, int value) {
-        timerExpiryCount = 0;
         state = IBFTState.NEW_ROUND;
 
         lambda_i = lambda;
@@ -211,9 +210,6 @@ public class IBFTNode extends TimedNode<IBFTMessage> {
         pv_i = NULL_VALUE;
         preparedMessageJustification = List.of();
         inputValue_i = value;
-        if (isDone()) {
-            return;
-        }
         newRoundCleanup();
         if (getLeader(lambda_i, r_i, N) == p_i) {
             broadcastMessage(createSingleValueMessage(IBFTMessageType.PREPREPARED, inputValue_i));
@@ -251,7 +247,9 @@ public class IBFTNode extends TimedNode<IBFTMessage> {
                     commitOperation();
                     break;
                 case SYNC:
-                    message.getPiggybackMessages().forEach(pbm -> messageHolder.addMessageToBacklog(pbm));
+                    message.getPiggybackMessages().forEach(messageHolder::addMessageToBacklog);
+                    commitOperation();
+                    break;
                 case ROUND_CHANGE:
                     int messageRound = message.getRound();
                     if (messageRound > r_i) {
@@ -268,7 +266,7 @@ public class IBFTNode extends TimedNode<IBFTMessage> {
     }
 
     // Round change handling
-    private void timerExpiryOperation() {
+    private void timeoutOperation() {
         r_i++;
         state = IBFTState.ROUND_CHANGE;
         startTimer();
