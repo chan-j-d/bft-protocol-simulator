@@ -15,13 +15,15 @@ public abstract class Validator<T> extends TimedNode<T> implements ValidatorResu
     private final int id;
     private final Map<Integer, Validator<T>> allNodes;
     private final ConsensusStatistics statistics;
+    private final int consensusLimit;
 
-    public Validator(String name, int id, TimerNotifier<T> timerNotifier,
+    public Validator(String name, int id, int consensusLimit, TimerNotifier<T> timerNotifier,
             RandomNumberGenerator serviceTimeGenerator, Collection<Object> states) {
         super(name, timerNotifier, serviceTimeGenerator);
         this.allNodes = new HashMap<>();
         this.id = id;
         this.statistics = new ConsensusStatistics(states);
+        this.consensusLimit = consensusLimit;
     }
     public void setAllNodes(List<? extends Validator<T>> allNodes) {
         for (Validator<T> node : allNodes) {
@@ -52,6 +54,11 @@ public abstract class Validator<T> extends TimedNode<T> implements ValidatorResu
 
     public abstract int getConsensusCount();
     public abstract Object getState();
+
+    @Override
+    public boolean isStillRequiredToRun() {
+        return getConsensusCount() <= consensusLimit;
+    }
 
     @Override
     public void registerTimeElapsed(double time) {

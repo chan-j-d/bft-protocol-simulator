@@ -9,28 +9,24 @@ import java.util.List;
 
 import static simulation.event.EventUtil.convertPayloadsToQueueEvents;
 
-public class ProcessPayloadEvent<T> extends Event {
+public class ProcessPayloadEvent<T> extends NodeEvent<T> {
 
-    private Node<T> node;
-    private Payload<T> payload;
+    private final Payload<T> payload;
     private double processingEndTime;
 
     public ProcessPayloadEvent(double time, Node<T> node, Payload<T> payload) {
-        super(time);
-        this.node = node;
+        super(time, node);
         this.payload = payload;
         this.processingEndTime = 0;
     }
 
     @Override
-    public List<Event> simulate() {
+    public List<NodeEvent<T>> simulate() {
+        Node<T> node = getNode();
         Pair<Double, List<Payload<T>>> durationPayloadsPair = node.processPayload(getTime(), payload);
-        if (node.isDone()) {
-            return List.of();
-        }
         List<Payload<T>> processedPayloads = durationPayloadsPair.second();
         processingEndTime = getTime() + durationPayloadsPair.first();
-        List<Event> eventList =
+        List<NodeEvent<T>> eventList =
                 new ArrayList<>(convertPayloadsToQueueEvents(processingEndTime, node, processedPayloads));
         eventList.add(new PollQueueEvent<>(processingEndTime, node));
         return eventList;
@@ -39,6 +35,6 @@ public class ProcessPayloadEvent<T> extends Event {
     @Override
     public String toString() {
         return String.format("%s-%.3f (ProcessPayload): Processing payload at %s (%s)",
-                super.toString(), processingEndTime, node, payload);
+                super.toString(), processingEndTime, getNode(), payload);
     }
 }

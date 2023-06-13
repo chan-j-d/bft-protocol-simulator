@@ -28,9 +28,8 @@ public abstract class Node<T> implements QueueResults {
     }
 
     public abstract List<Payload<T>> initializationPayloads();
-    public abstract boolean isDone();
     public abstract Node<T> getNextNodeFor(Payload<T> payload);
-
+    public abstract boolean isStillRequiredToRun();
     public String getName() {
         return name;
     }

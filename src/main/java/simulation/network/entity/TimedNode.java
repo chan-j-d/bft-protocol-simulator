@@ -12,6 +12,7 @@ public abstract class TimedNode<T> extends EndpointNode<T> {
     private final RandomNumberGenerator rng;
     private double previousRecordedTime;
     private int timerCount; // Used to differentiate multiple timers in the same instance & round
+    private double timeoutTime;
 
     public TimedNode(String name, TimerNotifier<T> timerNotifier, RandomNumberGenerator serviceTimeGenerator) {
         super(name);
@@ -25,12 +26,13 @@ public abstract class TimedNode<T> extends EndpointNode<T> {
         return timerNotifier.getTime();
     }
 
-    public void notifyAtTime(double time, int timerCount) {
-        timerNotifier.notifyAtTime(this, time, timerCount);
+    public void notifyAtTime(double time, int id) {
+        timerNotifier.notifyAtTime(this, time, id);
     }
 
     protected void startTimer(double duration) {
-        notifyAtTime(getTime() + duration, timerCount++); // Every time a timer starts, a unique one is set.
+        timeoutTime = getTime() + duration;
+        notifyAtTime(timeoutTime, ++timerCount); // Every time a timer starts, a unique one is set.
     }
 
     /**
@@ -56,12 +58,25 @@ public abstract class TimedNode<T> extends EndpointNode<T> {
         double duration = rng.generateRandomNumber();
         double timePassed = time - previousRecordedTime;
         double newCurrentTime = time + duration;
+        boolean isTimedOut = false;
+        List<Payload<T>> payloads;
+        if (newCurrentTime > timeoutTime) {
+            newCurrentTime = timeoutTime;
+            duration = timeoutTime - time;
+            isTimedOut = true;
+        }
         super.processPayload(newCurrentTime, payload);
+
         previousRecordedTime = newCurrentTime;
-        T message = payload.getMessage();
         registerTimeElapsed(duration + timePassed);
 //        logger.log(String.format("%.3f-%.3f: %s processing %s\n%s\n%s", time, newCurrentTime,
 //                this, message, super.getQueueStatistics(), getIbftStatistics()));
-        return new Pair<>(duration, processMessage(message));
+        if (!isTimedOut) {
+            T message = payload.getMessage();
+            payloads = processMessage(message);
+        } else {
+            payloads = onTimerExpiry();
+        }
+        return new Pair<>(duration, payloads);
     }
 }

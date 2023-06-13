@@ -8,9 +8,9 @@ import java.util.List;
 
 public class EventUtil {
 
-    public static <T> List<Event> convertPayloadsToQueueEvents(double time, Node<T> currentNode,
+    public static <T> List<NodeEvent<T>> convertPayloadsToQueueEvents(double time, Node<T> currentNode,
             List<? extends Payload<T>> payloads) {
-        List<Event> events = new ArrayList<>();
+        List<NodeEvent<T>> events = new ArrayList<>();
         for (Payload<T> payload : payloads) {
             events.add(new QueueEvent<>(time, currentNode.getNextNodeFor(payload), payload));
         }

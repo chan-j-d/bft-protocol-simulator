@@ -1,12 +1,12 @@
 package simulation.simulator;
 
-import simulation.event.Event;
 import simulation.event.InitializationEvent;
+import simulation.event.NodeEvent;
 import simulation.event.TimedEvent;
 import simulation.network.entity.Node;
-import simulation.network.entity.timer.TimerNotifier;
 import simulation.network.entity.TimedNode;
 import simulation.network.entity.Validator;
+import simulation.network.entity.timer.TimerNotifier;
 import simulation.network.router.Switch;
 import simulation.statistics.ConsensusStatistics;
 import simulation.statistics.QueueStatistics;
@@ -22,24 +22,27 @@ public class SimulatorImpl<T> implements Simulator, TimerNotifier<T> {
     private static final int SNAPSHOT_INTERVAL = 1000000;
     private static final double TIME_CUTOFF = 10000000; // for safety
 
-    private PriorityQueue<Event> eventQueue;
+    private PriorityQueue<NodeEvent<T>> eventQueue;
     private int roundCount;
     private List<Validator<T>> nodes;
     private List<List<Switch<T>>> switches;
     private double currentTime;
+    private List<Validator<T>> unfinishedValidatorsTracker;
 
     public SimulatorImpl() {
     }
 
-    public void setNodes(List<? extends Validator<T>> nodes) {
-        this.nodes = new ArrayList<>(nodes);
+    public void setNodes(List<? extends Validator<T>> validators) {
+        this.nodes = new ArrayList<>(validators);
         eventQueue = new PriorityQueue<>();
-        for (Node<T> node : nodes) {
+        for (Node<T> node : validators) {
             eventQueue.add(new InitializationEvent<>(node));
         }
 
         roundCount = 0;
         currentTime = 0;
+
+        unfinishedValidatorsTracker = new ArrayList<>(validators);
     }
 
     public void setSwitches(List<List<Switch<T>>> switches) {
@@ -52,19 +55,22 @@ public class SimulatorImpl<T> implements Simulator, TimerNotifier<T> {
 
     @Override
     public Optional<String> simulate() {
-        Event nextEvent = eventQueue.poll();
+        NodeEvent<T> nextEvent = eventQueue.poll();
         assert nextEvent != null; // isSimulationOver should be used to check before calling this function
         currentTime = nextEvent.getTime();
         if (currentTime > TIME_CUTOFF) {
             return Optional.empty();
         }
-        List<Event> resultingEvents = nextEvent.simulate();
+        List<NodeEvent<T>> resultingEvents = nextEvent.simulate();
+
+        Node<T> node = nextEvent.getNode();
+        if (!node.isStillRequiredToRun()) {
+            unfinishedValidatorsTracker.remove(node);
+        }
+
         eventQueue.addAll(resultingEvents);
         roundCount++;
 
-        if (!nextEvent.toDisplay()) {
-            return Optional.empty();
-        }
         String finalString = nextEvent.toString();
         if (roundCount % SNAPSHOT_INTERVAL == 0) {
             finalString = finalString + "\n\nSnapshot:\n" + getSnapshotOfNodes() + "\n" + eventQueue + "\n";
@@ -86,7 +92,7 @@ public class SimulatorImpl<T> implements Simulator, TimerNotifier<T> {
 
     @Override
     public boolean isSimulationOver() {
-        return eventQueue.isEmpty() || getTime() > TIME_CUTOFF;
+        return unfinishedValidatorsTracker.isEmpty() || getTime() > TIME_CUTOFF;
     }
 
     @Override

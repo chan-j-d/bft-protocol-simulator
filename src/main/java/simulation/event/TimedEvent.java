@@ -6,29 +6,24 @@ import java.util.List;
 
 import static simulation.event.EventUtil.convertPayloadsToQueueEvents;
 
-public class TimedEvent<T> extends Event {
+public class TimedEvent<T> extends NodeEvent<T> {
 
     private final TimedNode<T> node;
-    private final int timerCount;
+    private final int id;
 
-    public TimedEvent(double time, TimedNode<T> node, int timerCount) {
-        super(time);
+    public TimedEvent(double time, TimedNode<T> node, int id) {
+        super(time, node);
         this.node = node;
-        this.timerCount = timerCount;
+        this.id = id;
     }
 
     @Override
-    public List<Event> simulate() {
-        return convertPayloadsToQueueEvents(getTime(), node, node.notifyTime(timerCount));
+    public List<NodeEvent<T>> simulate() {
+        return convertPayloadsToQueueEvents(getTime(), node, node.notifyTime(id));
     }
 
     @Override
     public String toString() {
         return super.toString() + " (Timed): Notifying " + node + " at " + getTime();
-    }
-
-    @Override
-    public boolean toDisplay() {
-        return !node.isDone();
     }
 }

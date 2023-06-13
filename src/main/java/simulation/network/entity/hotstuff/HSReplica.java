@@ -14,7 +14,6 @@ public class HSReplica extends Validator<HSMessage> {
     // TODO implement time limit (but not needed for testing)
 
     private int numConsensus;
-    private final int consensusLimit;
 
     private final int n;
     private final int f;
@@ -35,12 +34,12 @@ public class HSReplica extends Validator<HSMessage> {
 
     public HSReplica(String name, int id, double baseTimeLimit, TimerNotifier<HSMessage> timerNotifier, int n,
             int consensusLimit, RandomNumberGenerator serviceRateGenerator) {
-        super(name, id, timerNotifier, serviceRateGenerator, Arrays.asList((Object[]) HSMessageType.values()));
+        super(name, id, consensusLimit, timerNotifier, serviceRateGenerator,
+                Arrays.asList((Object[]) HSMessageType.values()));
         this.numConsensus = 0;
         this.id = id;
         this.n = n;
         this.f = (this.n - 1) / 3;
-        this.consensusLimit = consensusLimit;
         this.baseTimeLimit = baseTimeLimit;
         this.curView = 1;
         this.state = HSMessageType.PREPARE;
@@ -240,11 +239,6 @@ public class HSReplica extends Validator<HSMessage> {
         curView++;
         state = HSMessageType.PREPARE;
         prepareOperation();
-    }
-
-    @Override
-    public boolean isDone() {
-        return numConsensus > consensusLimit;
     }
 
     @Override

@@ -27,7 +27,6 @@ public class IBFTNode extends Validator<IBFTMessage> {
     private final Logger logger;
 
     // Simulation variables
-    private final int consensusLimit;
     private int N;
     private int F;
 
@@ -47,10 +46,10 @@ public class IBFTNode extends Validator<IBFTMessage> {
     private Map<Integer, Integer> otherNodeHeights;
     private int inputValue_i; // value passed as input to instance
 
-
     public IBFTNode(String name, int id, double baseTimeLimit, TimerNotifier<IBFTMessage> timerNotifier,
             int N, int consensusLimit, RandomNumberGenerator serviceRateGenerator) {
-        super(name, id, timerNotifier, serviceRateGenerator, Arrays.asList((Object[]) IBFTState.values()));
+        super(name, id, consensusLimit, timerNotifier, serviceRateGenerator,
+                Arrays.asList((Object[]) IBFTState.values()));
         logger = new Logger(name);
         this.state = IBFTState.NEW_ROUND;
         this.baseTimeLimit = baseTimeLimit;
@@ -58,7 +57,6 @@ public class IBFTNode extends Validator<IBFTMessage> {
         this.p_i = id;
         this.N = N;
         this.F = (this.N - 1) / 3;
-        this.consensusLimit = consensusLimit;
 
         this.messageHolder = new IBFTMessageHolder(getQuorumCount(), FIRST_CONSENSUS_INSTANCE);
         this.consensusQuorum = new HashMap<>();
@@ -69,13 +67,6 @@ public class IBFTNode extends Validator<IBFTMessage> {
     public List<Payload<IBFTMessage>> initializationPayloads() {
         start(FIRST_CONSENSUS_INSTANCE, DUMMY_VALUE);
         return getProcessedPayloads();
-    }
-
-    // public facing query methods
-
-    @Override
-    public boolean isDone() {
-        return lambda_i > consensusLimit;
     }
 
     @Override
@@ -117,7 +108,7 @@ public class IBFTNode extends Validator<IBFTMessage> {
 
     @Override
     protected List<Payload<IBFTMessage>> onTimerExpiry() {
-        timerExpiryOperation();
+        timeoutOperation();
         return getProcessedPayloads();
     }
 
@@ -148,9 +139,6 @@ public class IBFTNode extends Validator<IBFTMessage> {
         pv_i = NULL_VALUE;
         preparedMessageJustification = List.of();
         inputValue_i = value;
-        if (isDone()) {
-            return;
-        }
         newRoundCleanup();
         if (getLeader(lambda_i, r_i, N) == p_i) {
             broadcastMessageToAll(createSingleValueMessage(IBFTMessageType.PREPREPARED, inputValue_i));
@@ -190,6 +178,8 @@ public class IBFTNode extends Validator<IBFTMessage> {
                     break;
                 case SYNC:
                     message.getPiggybackMessages().forEach(messageHolder::addMessage);
+                    commitOperation();
+                    break;
                 case ROUND_CHANGE:
                     int messageRound = message.getRound();
                     if (messageRound > r_i) {
@@ -207,7 +197,7 @@ public class IBFTNode extends Validator<IBFTMessage> {
     }
 
     // Round change handling
-    private void timerExpiryOperation() {
+    private void timeoutOperation() {
         r_i++;
         state = IBFTState.ROUND_CHANGE;
         startIbftTimer();
