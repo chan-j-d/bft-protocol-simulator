@@ -1,22 +1,29 @@
 package simulation.event;
 
-import simulation.util.Printable;
+import simulation.network.entity.Node;
 
 import java.util.List;
 
-public abstract class Event implements Comparable<Event>, Printable {
-    private double time;
+public abstract class NodeEvent<T> implements Comparable<NodeEvent<T>> {
 
-    public Event(double time) {
+    private double time;
+    private Node<T> node;
+
+    public NodeEvent(double time, Node<T> node) {
         this.time = time;
+        this.node = node;
     }
 
     public double getTime() {
         return time;
     }
 
+    public Node<T> getNode() {
+        return node;
+    }
+
     @Override
-    public int compareTo(Event e) {
+    public int compareTo(NodeEvent<T> e) {
         if (this.time > e.time) {
             return 1;
         } else if (this.time == e.time) {
@@ -31,10 +38,5 @@ public abstract class Event implements Comparable<Event>, Printable {
         return String.format("%.3f", time);
     }
 
-    public abstract List<Event> simulate();
-
-    @Override
-    public boolean toDisplay() {
-        return true;
-    }
+    public abstract List<NodeEvent<T>> simulate();
 }

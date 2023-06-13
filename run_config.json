@@ -1,12 +1,12 @@
 {
   "numRuns": 1,
-  "numConsensus": 100,
+  "numConsensus": 200,
   "startingSeed": 0,
   "seedMultiplier": 100,
   "numNodes": 16,
   "nodeProcessingRate": 3,
   "switchProcessingRate": -1,
-  "baseTimeLimit": 8,
+  "baseTimeLimit": 6,
   "networkType": "Clique",
   "networkParameters": [5, 1, 0]
 }
