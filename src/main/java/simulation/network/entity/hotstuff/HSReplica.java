@@ -3,6 +3,7 @@ package simulation.network.entity.hotstuff;
 import simulation.network.entity.timer.TimerNotifier;
 import simulation.network.entity.Payload;
 import simulation.network.entity.Validator;
+import simulation.util.logging.Logger;
 import simulation.util.rng.RandomNumberGenerator;
 
 import java.util.Arrays;
@@ -10,8 +11,7 @@ import java.util.List;
 
 public class HSReplica extends Validator<HSMessage> {
 
-    // TODO consensus count (use node height?)
-    // TODO implement time limit (but not needed for testing)
+    private final Logger logger;
 
     private int numConsensus;
 
@@ -19,6 +19,7 @@ public class HSReplica extends Validator<HSMessage> {
     private final int f;
     private final int id;
     private final double baseTimeLimit;
+    private int numConsecutiveFailures;
 
     private int curView;
     private HSMessageType state;
@@ -32,10 +33,13 @@ public class HSReplica extends Validator<HSMessage> {
     private QuorumCertificate commitQc;
     private QuorumCertificate lockedQc;
 
+    private boolean hasReceivedLeaderMessageInDecidePhase;
+
     public HSReplica(String name, int id, double baseTimeLimit, TimerNotifier<HSMessage> timerNotifier, int n,
             int consensusLimit, RandomNumberGenerator serviceRateGenerator) {
         super(name, id, consensusLimit, timerNotifier, serviceRateGenerator,
                 Arrays.asList((Object[]) HSMessageType.values()));
+        this.logger = new Logger(name);
         this.numConsensus = 0;
         this.id = id;
         this.n = n;
@@ -44,6 +48,8 @@ public class HSReplica extends Validator<HSMessage> {
         this.curView = 1;
         this.state = HSMessageType.PREPARE;
         this.messageHolder = new HSMessageHolder();
+        this.numConsecutiveFailures = 0;
+        this.hasReceivedLeaderMessageInDecidePhase = false;
 
         this.lockedQc = null;
         this.prepareQc = null;
@@ -88,6 +94,14 @@ public class HSReplica extends Validator<HSMessage> {
         return messageHolder.getLeaderMessage(state, curView);
     }
 
+    private double timerFunction(int numConsecutiveFailures) {
+        return Math.pow(2, numConsecutiveFailures) * baseTimeLimit;
+    }
+
+    private void startHsTimer() {
+        startTimer(timerFunction(numConsecutiveFailures));
+    }
+
     // Algorithm 2: Basic HotStuff protocol (following HotStuff paper)
     @Override
     public List<Payload<HSMessage>> initializationPayloads() {
@@ -95,6 +109,7 @@ public class HSReplica extends Validator<HSMessage> {
             curProposal = createLeaf(null, new HSCommand(curView));
             broadcastMessageToAll(msg(HSMessageType.PREPARE, curProposal, highQc));
         }
+        startHsTimer();
         return getProcessedPayloads();
     }
 
@@ -107,6 +122,8 @@ public class HSReplica extends Validator<HSMessage> {
             return List.of();
         }
 
+//        logger.log(String.format("Time: %s, Name: %s, (PROCESSING) State: %s, Leader: %s, CurView: %s, Consensus: %s, Consecutive Failures: %s, Message: %s",
+//                getTime(), getName(), state, getLeader(curView), curView, numConsensus, numConsecutiveFailures, message));
         messageHolder.addMessage(message);
         switch (state) {
             case PREPARE:
@@ -122,12 +139,10 @@ public class HSReplica extends Validator<HSMessage> {
                 decideOperation();
                 break;
         }
-        return getProcessedPayloads();
-    }
-
-    @Override
-    protected List<Payload<HSMessage>> onTimerExpiry() {
-        return null;
+//        return getProcessedPayloads();
+        List<Payload<HSMessage>> payloads = getProcessedPayloads();
+//        logger.log("Processing payloads: " + payloads.toString());
+        return payloads;
     }
 
     private void prepareOperation() {
@@ -138,8 +153,9 @@ public class HSReplica extends Validator<HSMessage> {
 
                 highQc = getMaxViewNumberQc(newViewMessages);
                 // creates a generic command as the contents are not important
-                curProposal = createLeaf(highQc.getNode(), new HSCommand(curView));
+                curProposal = createLeaf(highQc != null ? highQc.getNode() : null, new HSCommand(curView));
                 broadcastMessageToAll(msg(HSMessageType.PREPARE, curProposal, highQc));
+                startHsTimer();
             }
         }
         if (hasLeaderMessage()) {
@@ -148,6 +164,7 @@ public class HSReplica extends Validator<HSMessage> {
                 if (m.getJustify() == null || (m.getNode().extendsFrom(m.getJustify().getNode()) &&
                         safeNode(m.getNode(), m.getJustify()))) {
                     sendMessage(voteMsg(HSMessageType.PREPARE, m.getNode(), null), getNode(leader));
+                    startHsTimer();
                     state = HSMessageType.PRE_COMMIT;
                     preCommitOperation();
                 }
@@ -156,15 +173,16 @@ public class HSReplica extends Validator<HSMessage> {
     }
 
     private QuorumCertificate getMaxViewNumberQc(List<HSMessage> messages) {
-        int viewNumber = messages.get(0).getViewNumber();
-        HSMessage maxViewNumberMessage = messages.get(0);
+        int viewNumber = -1;
+        QuorumCertificate highQc = null;
         for (HSMessage message : messages) {
-            if (viewNumber == -1 || message.getViewNumber() > viewNumber) {
-                maxViewNumberMessage = message;
-                viewNumber = message.getViewNumber();
+            QuorumCertificate messageJustify = message.getJustify();
+            if ((messageJustify != null) && (viewNumber == -1 || messageJustify.getViewNumber() > viewNumber)) {
+                highQc = messageJustify;
+                viewNumber = messageJustify.getViewNumber();
             }
         }
-        return maxViewNumberMessage.getJustify();
+        return highQc;
     }
 
     private void preCommitOperation() {
@@ -174,6 +192,7 @@ public class HSReplica extends Validator<HSMessage> {
                 List<HSMessage> prepareMessages = messageHolder.getVoteMessages(HSMessageType.PREPARE, curView);
                 prepareQc = new QuorumCertificate(prepareMessages);
                 broadcastMessageToAll(msg(HSMessageType.PRE_COMMIT, null, prepareQc));
+                startHsTimer();
             }
         }
         if (hasLeaderMessage()) {
@@ -182,6 +201,7 @@ public class HSReplica extends Validator<HSMessage> {
                 prepareQc = m.getJustify();
                 sendMessage(voteMsg(HSMessageType.PRE_COMMIT,
                         m.getJustify().getNode(), null), getNode(leader));
+                startHsTimer();
                 state = HSMessageType.COMMIT;
                 commitOperation();
             }
@@ -195,6 +215,7 @@ public class HSReplica extends Validator<HSMessage> {
                 List<HSMessage> preCommitMessages = messageHolder.getVoteMessages(HSMessageType.PRE_COMMIT, curView);
                 preCommitQc = new QuorumCertificate(preCommitMessages);
                 broadcastMessageToAll(msg(HSMessageType.COMMIT, null, preCommitQc));
+                startHsTimer();
             }
         }
         if (hasLeaderMessage()) {
@@ -202,6 +223,7 @@ public class HSReplica extends Validator<HSMessage> {
             if (m.getSender() == leader && matchingQc(m.getJustify(), HSMessageType.PRE_COMMIT, curView)) {
                 lockedQc = m.getJustify();
                 sendMessage(voteMsg(HSMessageType.COMMIT, m.getJustify().getNode(), null), getNode(leader));
+                startHsTimer();
                 state = HSMessageType.DECIDE;
                 decideOperation();
             }
@@ -215,11 +237,16 @@ public class HSReplica extends Validator<HSMessage> {
                 List<HSMessage> commitMessages = messageHolder.getVoteMessages(HSMessageType.COMMIT, curView);
                 commitQc = new QuorumCertificate(commitMessages);
                 broadcastMessageToAll(msg(HSMessageType.DECIDE, null, commitQc));
+                startHsTimer();
                 return;
             }
         }
 
         if (hasLeaderMessage()) {
+            if (!hasReceivedLeaderMessageInDecidePhase) {
+                hasReceivedLeaderMessageInDecidePhase = true;
+                startHsTimer();
+            }
             HSMessage m = getLeaderMessage();
             if (m.getSender() == leader && matchingQc(m.getJustify(), HSMessageType.COMMIT, curView)) {
                 numConsensus = m.getJustify().getNode().getHeight();
@@ -231,10 +258,24 @@ public class HSReplica extends Validator<HSMessage> {
 
     private void commit(int numConsensus) {
         // consensus achieved
+        numConsecutiveFailures = 0;
+    }
+
+    @Override
+    protected List<Payload<HSMessage>> onTimerExpiry() {
+        numConsecutiveFailures++;
+//        logger.log(String.format("Time: %s, Name: %s, (EXPIRY) State: %s, Leader: %s, CurView: %s, Consensus: %s, Consecutive Failures: %s",
+//                getTime(), getName(), state, getLeader(curView), curView, numConsensus, numConsecutiveFailures));
+        startNextView();
+        List<Payload<HSMessage>> payloads = getProcessedPayloads();
+//        logger.log("Expiry payloads: " + payloads.toString());
+        return payloads;
+//        return getProcessedPayloads();
     }
 
     private void startNextView() {
         sendMessage(voteMsg(HSMessageType.NEW_VIEW, null, prepareQc), getNode(getLeader(curView + 1)));
+        startHsTimer();
         messageHolder.advanceView(curView, curView + 1);
         curView++;
         state = HSMessageType.PREPARE;
