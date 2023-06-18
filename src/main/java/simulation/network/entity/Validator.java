@@ -25,6 +25,7 @@ public abstract class Validator<T> extends TimedNode<T> implements ValidatorResu
         this.statistics = new ConsensusStatistics(states);
         this.consensusLimit = consensusLimit;
     }
+
     public void setAllNodes(List<? extends Validator<T>> allNodes) {
         for (Validator<T> node : allNodes) {
             this.allNodes.put(node.getId(), node);
@@ -53,6 +54,7 @@ public abstract class Validator<T> extends TimedNode<T> implements ValidatorResu
     }
 
     public abstract int getConsensusCount();
+
     public abstract Object getState();
 
     @Override

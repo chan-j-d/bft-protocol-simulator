@@ -21,6 +21,7 @@ public class HSTreeNode {
     public static HSTreeNode createRootNode(HSCommand command) {
         return new HSTreeNode(null, command, 0);
     }
+
     public boolean extendsFrom(HSTreeNode node) {
         if (this.equals(node)) {
             return true;

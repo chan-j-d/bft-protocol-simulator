@@ -250,13 +250,13 @@ public class HSReplica extends Validator<HSMessage> {
             HSMessage m = getLeaderMessage();
             if (m.getSender() == leader && matchingQc(m.getJustify(), HSMessageType.COMMIT, curView)) {
                 numConsensus = m.getJustify().getNode().getHeight();
-                commit(numConsensus);
+                commit(m.getJustify().getNode());
                 startNextView();
             }
         }
     }
 
-    private void commit(int numConsensus) {
+    private void commit(HSTreeNode node) {
         // consensus achieved
         numConsecutiveFailures = 0;
     }

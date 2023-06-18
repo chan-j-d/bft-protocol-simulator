@@ -49,6 +49,7 @@ public abstract class TimedNode<T> extends EndpointNode<T> {
     protected abstract List<Payload<T>> processMessage(T message);
 
     protected abstract void registerTimeElapsed(double time);
+
     protected abstract List<Payload<T>> onTimerExpiry();
 
     @Override
@@ -60,8 +61,6 @@ public abstract class TimedNode<T> extends EndpointNode<T> {
 
         previousRecordedTime = newCurrentTime;
         registerTimeElapsed(duration + timePassed);
-//        logger.log(String.format("%.3f-%.3f: %s processing %s\n%s\n%s", time, newCurrentTime,
-//                this, message, super.getQueueStatistics(), getIbftStatistics()));
         T message = payload.getMessage();
         List<Payload<T>> payloads = processMessage(message);
         return new Pair<>(duration, payloads);

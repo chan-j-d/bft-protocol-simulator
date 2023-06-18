@@ -18,8 +18,7 @@ public class QuorumCertificate {
     }
 
     public HSSignature tCombine(HSMessageType type, int viewNumber, HSTreeNode node, List<HSMessage> messages) {
-        // TODO Update signature implementation
-        // not really necessary at the moment as this is for private/public key verification
+        // Not necessary at the moment as this is for private/public key verification which is assumed to be correct.
         return new HSSignature();
     }
 
