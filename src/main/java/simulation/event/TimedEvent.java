@@ -8,8 +8,8 @@ import static simulation.event.EventUtil.convertPayloadsToQueueEvents;
 
 public class TimedEvent<T> extends NodeEvent<T> {
 
-    private final int id;
     private final TimedNode<T> node;
+    private final int id;
 
     public TimedEvent(double time, TimedNode<T> node, int id) {
         super(time, node);

@@ -13,6 +13,7 @@ public class RunConfigJson {
     private double switchProcessingRate;
     private double baseTimeLimit;
     private String networkType;
+    private String validatorType;
     private List<Integer> networkParameters;
 
     public int getNumRuns() {
@@ -49,6 +50,10 @@ public class RunConfigJson {
 
     public String getNetworkType() {
         return networkType;
+    }
+
+    public String getValidatorType() {
+        return validatorType;
     }
 
     public List<Integer> getNetworkParameters() {

@@ -1,5 +1,6 @@
 package simulation.network.entity;
 
+import simulation.simulator.QueueResults;
 import simulation.statistics.QueueStatistics;
 import simulation.util.Pair;
 
@@ -8,7 +9,7 @@ import java.util.Collection;
 import java.util.LinkedList;
 import java.util.List;
 
-public abstract class Node<T> {
+public abstract class Node<T> implements QueueResults {
 
     private final String name;
     private final LinkedList<Payload<T>> queue;
@@ -47,16 +48,13 @@ public abstract class Node<T> {
     public void setCurrentTime(double time) {
         this.currentTime = time;
     }
-    public double getCurrentTime() {
-        return currentTime;
-    }
-    public Payload<T> sendMessage(T message, Node<T> node) {
+    public Payload<T> createPayloads(T message, Node<T> node) {
         return new Payload<>(message, node.getName());
     }
 
-    public List<Payload<T>> sendMessage(T message, Collection<? extends Node<T>> nodes) {
+    public List<Payload<T>> createPayloads(T message, Collection<? extends Node<? extends T>> nodes) {
         List<Payload<T>> payloads = new ArrayList<>();
-        for (Node<T> node : nodes) {
+        for (Node<? extends T> node : nodes) {
             payloads.add(new Payload<>(message, node.getName()));
         }
         return payloads;
@@ -98,6 +96,7 @@ public abstract class Node<T> {
         return queue.pop();
     }
 
+    @Override
     public QueueStatistics getQueueStatistics() {
         return queueStatistics;
     }

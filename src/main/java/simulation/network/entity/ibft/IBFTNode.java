@@ -1,13 +1,13 @@
 package simulation.network.entity.ibft;
 
-import simulation.network.entity.TimerNotifier;
+import simulation.network.entity.timer.TimerNotifier;
 import simulation.network.entity.Payload;
-import simulation.network.entity.TimedNode;
+import simulation.network.entity.Validator;
 import simulation.util.Pair;
 import simulation.util.logging.Logger;
 import simulation.util.rng.RandomNumberGenerator;
 
-import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -16,8 +16,7 @@ import java.util.stream.Collectors;
 
 import static simulation.network.entity.ibft.IBFTMessage.NULL_VALUE;
 
-public class IBFTNode extends TimedNode<IBFTMessage> {
-
+public class IBFTNode extends Validator<IBFTMessage> {
 
     /**
      * Dummy value to be passed around as part of the protocol.
@@ -28,23 +27,13 @@ public class IBFTNode extends TimedNode<IBFTMessage> {
     private final Logger logger;
 
     // Simulation variables
-    private final RandomNumberGenerator rng;
-    private final double baseTimeLimit;
-    private final int consensusLimit;
     private int N;
     private int F;
-    private Map<Integer, IBFTNode> allNodes;
 
     // Helper attributes
-    private int timeoutCount; // Used to differentiate multiple timers in the same instance & round
     private final IBFTMessageHolder messageHolder;
-    private final IBFTStatistics statistics;
+    private final double baseTimeLimit;
 
-    /**
-     * Stores payloads while node is processing a message.
-     * All payloads are retrieved and sent out after message processing.
-     */
-    private List<Payload<IBFTMessage>> tempPayloadStore;
     private IBFTState state;
 
     private final int p_i; // identifier
@@ -56,74 +45,22 @@ public class IBFTNode extends TimedNode<IBFTMessage> {
     private Map<Integer, List<IBFTMessage>> consensusQuorum;
     private Map<Integer, Integer> otherNodeHeights;
     private int inputValue_i; // value passed as input to instance
-    private double previousRecordedTime;
-    private double timeoutTime;
 
-    public IBFTNode(String name, int identifier, double baseTimeLimit, int consensusLimit,
-            TimerNotifier<IBFTMessage> timerNotifier, int N, RandomNumberGenerator serviceRateGenerator) {
-        super(name, timerNotifier);
+    public IBFTNode(String name, int id, double baseTimeLimit, TimerNotifier<IBFTMessage> timerNotifier,
+            int N, int consensusLimit, RandomNumberGenerator serviceRateGenerator) {
+        super(name, id, consensusLimit, timerNotifier, serviceRateGenerator,
+                Arrays.asList((Object[]) IBFTState.values()));
         logger = new Logger(name);
         this.state = IBFTState.NEW_ROUND;
-
-        this.p_i = identifier;
-        this.rng = serviceRateGenerator;
-        this.consensusLimit = consensusLimit;
-        this.allNodes = new HashMap<>();
         this.baseTimeLimit = baseTimeLimit;
+
+        this.p_i = id;
         this.N = N;
         this.F = (this.N - 1) / 3;
-        this.timeoutCount = 0;
 
-        this.tempPayloadStore = new ArrayList<>();
         this.messageHolder = new IBFTMessageHolder(getQuorumCount(), FIRST_CONSENSUS_INSTANCE);
         this.consensusQuorum = new HashMap<>();
         this.otherNodeHeights = new HashMap<>();
-        this.statistics = new IBFTStatistics();
-        this.previousRecordedTime = 0;
-        this.timeoutTime = baseTimeLimit;
-    }
-
-    public void setAllNodes(List<IBFTNode> allNodes) {
-        this.allNodes = allNodes.stream()
-                .collect(Collectors.toMap(node -> node.p_i, node -> node));
-    }
-
-    /**
-     * Retries and returns payloads generated from a processing step.
-     * Empties the payload list.
-     *
-     * @return List of payloads that were generated from a processing step.
-     */
-    private List<Payload<IBFTMessage>> getProcessedPayloads() {
-        List<Payload<IBFTMessage>> payloads = tempPayloadStore;
-        tempPayloadStore = new ArrayList<>();
-        return payloads;
-    }
-
-    @Override
-    public Pair<Double, List<Payload<IBFTMessage>>> processPayload(double time, Payload<IBFTMessage> payload) {
-        double duration = rng.generateRandomNumber();
-        double timePassed = time - previousRecordedTime;
-        double newCurrentTime = time + duration;
-        boolean isTimedOut = false;
-        if (newCurrentTime > timeoutTime) {
-            newCurrentTime = timeoutTime;
-            duration = timeoutTime - time;
-            timeoutOperation();
-            isTimedOut = true;
-        }
-        super.processPayload(newCurrentTime, payload);
-
-        statistics.addTime(state, duration + timePassed);
-        previousRecordedTime = newCurrentTime;
-
-        if (!isTimedOut) {
-            IBFTMessage message = payload.getMessage();
-            processMessage(message);
-        }
-//        logger.log(String.format("%.3f-%.3f: %s processing %s\n%s\n%s", time, newCurrentTime,
-//                this, payload.getMessage(), super.getQueueStatistics(), getIbftStatistics()));
-        return new Pair<>(duration, getProcessedPayloads());
     }
 
     @Override
@@ -133,13 +70,13 @@ public class IBFTNode extends TimedNode<IBFTMessage> {
     }
 
     @Override
-    public boolean isStillRequiredToRun() {
-        return lambda_i <= consensusLimit;
+    public int getConsensusCount() {
+        return lambda_i - 1;
     }
 
-    // public facing query methods
-    public IBFTStatistics getIbftStatistics() {
-        return statistics;
+    @Override
+    public Object getState() {
+        return state;
     }
 
     @Override
@@ -152,16 +89,6 @@ public class IBFTNode extends TimedNode<IBFTMessage> {
     }
 
     // Utility methods
-    private void startTimer() {
-        timeoutTime = getTime() + timerFunction(r_i);
-        // Every time a timer starts, a unique one is set.
-        notifyAtTime(timeoutTime, ++timeoutCount);
-    }
-
-    private void broadcastMessage(IBFTMessage message) {
-        tempPayloadStore.addAll(sendMessage(message, allNodes.values()));
-    }
-
     private int getQuorumCount() {
         return Math.floorDiv((N + F), 2) + 1;
     }
@@ -175,11 +102,13 @@ public class IBFTNode extends TimedNode<IBFTMessage> {
     }
 
     // Timer expire handling
+    private void startIbftTimer() {
+        startTimer(timerFunction(r_i));
+    }
+
     @Override
-    public List<Payload<IBFTMessage>> notifyTime(int timeoutCount) {
-        if (timeoutCount == this.timeoutCount) {
-            timeoutOperation();
-        }
+    protected List<Payload<IBFTMessage>> onTimerExpiry() {
+        timeoutOperation();
         return getProcessedPayloads();
     }
 
@@ -212,9 +141,9 @@ public class IBFTNode extends TimedNode<IBFTMessage> {
         inputValue_i = value;
         newRoundCleanup();
         if (getLeader(lambda_i, r_i, N) == p_i) {
-            broadcastMessage(createSingleValueMessage(IBFTMessageType.PREPREPARED, inputValue_i));
+            broadcastMessageToAll(createSingleValueMessage(IBFTMessageType.PREPREPARED, inputValue_i));
         }
-        startTimer();
+        startIbftTimer();
         prePrepareOperation();
     }
 
@@ -228,14 +157,15 @@ public class IBFTNode extends TimedNode<IBFTMessage> {
     }
 
     // Message parsing methods
-    private void processMessage(IBFTMessage message) {
+    @Override
+    protected List<Payload<IBFTMessage>> processMessage(IBFTMessage message) {
         IBFTMessageType messageType = message.getMessageType();
         int sender = message.getIdentifier();
         int lambda = message.getLambda();
         otherNodeHeights.compute(sender, (k, v) -> (v == null) ? lambda : Math.max(v, lambda));
 
         if (lambda >= lambda_i) {
-            messageHolder.addMessageToBacklog(message);
+            messageHolder.addMessage(message);
             switch (messageType) {
                 case PREPREPARED:
                     prePrepareOperation();
@@ -247,7 +177,7 @@ public class IBFTNode extends TimedNode<IBFTMessage> {
                     commitOperation();
                     break;
                 case SYNC:
-                    message.getPiggybackMessages().forEach(messageHolder::addMessageToBacklog);
+                    message.getPiggybackMessages().forEach(messageHolder::addMessage);
                     commitOperation();
                     break;
                 case ROUND_CHANGE:
@@ -260,20 +190,21 @@ public class IBFTNode extends TimedNode<IBFTMessage> {
                     break;
             }
         } else if (messageType == IBFTMessageType.ROUND_CHANGE) {
-            tempPayloadStore.add(sendMessage(createSingleValueMessage(IBFTMessageType.SYNC, NULL_VALUE,
-                    consensusQuorum.get(lambda)), allNodes.get(sender)));
+            sendMessage(createSingleValueMessage(IBFTMessageType.SYNC, NULL_VALUE,
+                    consensusQuorum.get(lambda)), getNode(sender));
         }
+        return getProcessedPayloads();
     }
 
     // Round change handling
     private void timeoutOperation() {
         r_i++;
         state = IBFTState.ROUND_CHANGE;
-        startTimer();
+        startIbftTimer();
         if (pr_i == NULL_VALUE && pv_i == NULL_VALUE) {
-            broadcastMessage(createPreparedValuesMessage(IBFTMessageType.ROUND_CHANGE));
+            broadcastMessageToAll(createPreparedValuesMessage(IBFTMessageType.ROUND_CHANGE));
         } else {
-            broadcastMessage(createPreparedValuesMessage(IBFTMessageType.ROUND_CHANGE, preparedMessageJustification));
+            broadcastMessageToAll(createPreparedValuesMessage(IBFTMessageType.ROUND_CHANGE, preparedMessageJustification));
         }
         prePrepareOperation();
         prepareOperation();
@@ -282,8 +213,8 @@ public class IBFTNode extends TimedNode<IBFTMessage> {
     private void fPlusOneRoundChangeOperation() {
         if (messageHolder.hasMoreHigherRoundChangeMessagesThan(lambda_i, r_i)) {
             r_i = messageHolder.getNextGreaterRoundChangeMessage(lambda_i, r_i);
-            startTimer();
-            broadcastMessage(createPreparedValuesMessage(IBFTMessageType.ROUND_CHANGE));
+            startIbftTimer();
+            broadcastMessageToAll(createPreparedValuesMessage(IBFTMessageType.ROUND_CHANGE));
             state = IBFTState.ROUND_CHANGE;
             prePrepareOperation();
             prepareOperation();
@@ -304,7 +235,7 @@ public class IBFTNode extends TimedNode<IBFTMessage> {
                         inputValue_i = pv;
                     }
                     state = IBFTState.NEW_ROUND;
-                    broadcastMessage(createSingleValueMessage(
+                    broadcastMessageToAll(createSingleValueMessage(
                             IBFTMessageType.PREPREPARED, inputValue_i, roundChangeMessages));
                 }
             }
@@ -317,10 +248,10 @@ public class IBFTNode extends TimedNode<IBFTMessage> {
         for (IBFTMessage message : preprepareMessages) {
             int sender = message.getIdentifier();
             if (sender == getLeader(lambda_i, r_i, N) && justifyPrePrepare(message)) {
-                startTimer();
+                startIbftTimer();
                 state = IBFTState.PREPREPARED;
                 inputValue_i = message.getValue();
-                broadcastMessage(createSingleValueMessage(IBFTMessageType.PREPARED, inputValue_i));
+                broadcastMessageToAll(createSingleValueMessage(IBFTMessageType.PREPARED, inputValue_i));
             }
         }
     }
@@ -334,7 +265,7 @@ public class IBFTNode extends TimedNode<IBFTMessage> {
             pr_i = r_i;
             pv_i = prepareMessages.get(0).getValue();
             preparedMessageJustification = prepareMessages;
-            broadcastMessage(createSingleValueMessage(IBFTMessageType.COMMIT, inputValue_i));
+            broadcastMessageToAll(createSingleValueMessage(IBFTMessageType.COMMIT, inputValue_i));
         }
     }
 
@@ -349,7 +280,6 @@ public class IBFTNode extends TimedNode<IBFTMessage> {
     }
 
     private void commit(int consensusInstance, int value, List<IBFTMessage> messages) {
-        statistics.incrementConsensusCount();
         consensusQuorum.put(consensusInstance, messages);
     }
 

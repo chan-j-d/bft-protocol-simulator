@@ -1,8 +1,9 @@
 package simulation.network.entity.ibft;
 
-import java.util.ArrayList;
 import java.util.List;
 import java.util.stream.Stream;
+
+import static simulation.util.StringUtil.MESSAGE_SEPARATOR;
 
 public class IBFTMessage {
 
@@ -10,8 +11,6 @@ public class IBFTMessage {
      * Null value placeholder for message components that are not used.
      */
     public static final int NULL_VALUE = -1;
-
-    private static final String SEPARATOR = ":";
 
     private int identifier;
     private IBFTMessageType messageType;
@@ -105,7 +104,7 @@ public class IBFTMessage {
         return Stream.of(identifier, messageType, lambda, round, value,
                         preparedRound, preparedValue, piggybackMessages.size())
                 .map(Object::toString)
-                .reduce((x, y) -> x + SEPARATOR + y)
+                .reduce((x, y) -> x + MESSAGE_SEPARATOR + y)
                 .get();
     }
 }

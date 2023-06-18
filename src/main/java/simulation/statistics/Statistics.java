@@ -3,6 +3,7 @@ package simulation.statistics;
 import java.util.Map;
 
 public abstract class Statistics {
+
     public abstract Map<String, Number> getSummaryStatistics();
 
     @Override
