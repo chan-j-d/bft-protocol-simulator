@@ -9,13 +9,31 @@ import java.util.Collection;
 import java.util.LinkedList;
 import java.util.List;
 
+/**
+ * Encapsulates a node in a network.
+ *
+ * @param <T> Message class carried by {@code Node}.
+ */
 public abstract class Node<T> implements QueueResults {
 
     private final String name;
+    /**
+     * Queue of payloads at the node to be processed.
+     */
     private final LinkedList<Payload<T>> queue;
+    /**
+     * Arrival times of messages.
+     * Use for tracking and calculating of queue statistics.
+     */
     private final LinkedList<Double> messageArrivalTimes;
+    /**
+     * Tracking of queue statistics in the node.
+     */
     private final QueueStatistics queueStatistics;
     private double currentTime;
+    /**
+     * Helper time variable used for tracking average number of messages in queue.
+     */
     private double previousQueueChangedTime;
 
     public Node(String name) {
@@ -33,6 +51,11 @@ public abstract class Node<T> implements QueueResults {
     public String getName() {
         return name;
     }
+
+    /**
+     * Returns the time taken to process payload and the list of resulting payloads from processing it.
+     * Updates the queue statistics due to a message being removed from queue.
+     */
     public Pair<Double, List<Payload<T>>> processPayload(double time, Payload<T> payload) {
         setCurrentTime(time);
         double timeElapsed = time - previousQueueChangedTime;
@@ -48,10 +71,13 @@ public abstract class Node<T> implements QueueResults {
     public void setCurrentTime(double time) {
         this.currentTime = time;
     }
-    public Payload<T> createPayloads(T message, Node<T> node) {
+    public Payload<T> createPayload(T message, Node<T> node) {
         return new Payload<>(message, node.getName());
     }
 
+    /**
+     * Returns a list of payloads for the {@code message} to all nodes specified in the collection of {@code nodes}.
+     */
     public List<Payload<T>> createPayloads(T message, Collection<? extends Node<? extends T>> nodes) {
         List<Payload<T>> payloads = new ArrayList<>();
         for (Node<? extends T> node : nodes) {
@@ -84,6 +110,9 @@ public abstract class Node<T> implements QueueResults {
         return queue.isEmpty();
     }
 
+    /**
+     * Adds {@code payload} to the queue for this {@code node} at {@code time}.
+     */
     public void addToQueue(double time, Payload<T> payload) {
         double timeElapsed = time - previousQueueChangedTime;
         previousQueueChangedTime = time;
@@ -92,7 +121,12 @@ public abstract class Node<T> implements QueueResults {
         queue.add(payload);
     }
 
-    public Payload<T> popFromQueue(double time) {
+    /**
+     * Pops first payload in queue.
+     * Queue statistics are not updated here as it is calculated only after the payload is processed.
+     * As such, it is assumed that the {@code processPayload} some time after this method.
+     */
+    public Payload<T> popFromQueue() {
         return queue.pop();
     }
 

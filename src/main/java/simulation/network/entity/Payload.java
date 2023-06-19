@@ -1,9 +1,14 @@
 package simulation.network.entity;
 
+/**
+ * Encapsulates a payload traveling through a computer network.
+ *
+ * @param <T> Message class contained in payload.
+ */
 public class Payload<T> {
 
-    private T message;
-    private String destination;
+    private final T message;
+    private final String destination;
 
     public Payload(T message, String destination) {
         this.message = message;
