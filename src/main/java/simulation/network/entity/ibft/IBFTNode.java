@@ -144,7 +144,18 @@ public class IBFTNode extends Validator<IBFTMessage> {
             broadcastMessageToAll(createSingleValueMessage(IBFTMessageType.PREPREPARED, inputValue_i));
         }
         startIbftTimer();
+        runBacklogProcessingOperation();
+    }
+
+    /**
+     * Runs all the 'upon' operations in the IBFT protocol on the start of a new consensus instance.
+     */
+    private void runBacklogProcessingOperation() {
         prePrepareOperation();
+        prepareOperation();
+        commitOperation();
+        fPlusOneRoundChangeOperation();
+        leaderRoundChangeOperation();
     }
 
     private void newRoundCleanup() {
