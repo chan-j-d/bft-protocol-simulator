@@ -1,11 +1,22 @@
 package simulation.network.entity.hotstuff;
 
+/**
+ * Tree data structure that HotStuff uses to maintain the chain of consensus decisions.
+ */
 public class HSTreeNode {
 
     private final HSTreeNode parent;
     private final HSCommand command;
     private final int height;
 
+    /**
+     * Constructs a tree node in the consensus chain with {@code parent} node and {@code command}.
+     * The {@code height} is defaulted to 1 if root or parent.height + 1 otherwise. It is identical to
+     * the number of consensus reached.
+     *
+     * @param parent Parent node for the new node. {@code null} if it is a root node.
+     * @param command {@code HSCommand} to be agreed upon in this node.
+     */
     public HSTreeNode(HSTreeNode parent, HSCommand command) {
         this.parent = parent;
         this.command = command;
@@ -18,10 +29,9 @@ public class HSTreeNode {
         this.height = height;
     }
 
-    public static HSTreeNode createRootNode(HSCommand command) {
-        return new HSTreeNode(null, command, 0);
-    }
-
+    /**
+     * Returns true if {@code node} and {@code this} are equal or if {@code this} is a descendant of {@code node}.
+     */
     public boolean extendsFrom(HSTreeNode node) {
         if (this.equals(node)) {
             return true;
