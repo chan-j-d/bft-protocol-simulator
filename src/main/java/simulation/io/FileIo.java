@@ -3,10 +3,16 @@ package simulation.io;
 import java.io.FileWriter;
 import java.io.IOException;
 
+/**
+ * {@code IoInterface} that outputs results to a filename specified by {@code filename}.
+ */
 public class FileIo implements IoInterface {
 
     private FileWriter fileWriter;
 
+    /**
+     * @param filename Name of file to save results.
+     */
     public FileIo(String filename) {
         try {
             fileWriter = new FileWriter(filename, false);

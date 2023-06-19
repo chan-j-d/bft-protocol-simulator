@@ -1,5 +1,8 @@
 package simulation.io;
 
+/**
+ * {@code IoInterface} that outputs results to the console.
+ */
 public class ConsoleIo implements IoInterface {
 
     @Override
