@@ -53,7 +53,7 @@ public class QueueStatistics extends Statistics {
         return map;
     }
 
-    public void addMessageArrived(double timeElapsed) {
+    public void addMessageArrivedTime(double timeElapsed) {
         totalQueueingTime += currentMessageCount * timeElapsed;
         if (currentMessageCount == 0) {
             totalTimeEmpty += timeElapsed;
@@ -63,7 +63,7 @@ public class QueueStatistics extends Statistics {
         totalTime += timeElapsed;
     }
 
-    public void addMessageQueueTime(double timeElapsed, double messageQueueTime) {
+    public void addMessageProcessedTime(double timeElapsed, double messageQueueTime) {
         totalQueueingTime += currentMessageCount * timeElapsed;
         totalMessageQueueTime += messageQueueTime;
         totalTime += timeElapsed;

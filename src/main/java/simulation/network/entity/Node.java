@@ -37,7 +37,7 @@ public abstract class Node<T> implements QueueResults {
         setCurrentTime(time);
         double timeElapsed = time - previousQueueChangedTime;
         previousQueueChangedTime = time;
-        queueStatistics.addMessageQueueTime(timeElapsed, time - messageArrivalTimes.pop());
+        queueStatistics.addMessageProcessedTime(timeElapsed, time - messageArrivalTimes.pop());
         return new Pair<>(0.0, List.of());
     }
 
@@ -87,7 +87,7 @@ public abstract class Node<T> implements QueueResults {
     public void addToQueue(double time, Payload<T> payload) {
         double timeElapsed = time - previousQueueChangedTime;
         previousQueueChangedTime = time;
-        queueStatistics.addMessageArrived(timeElapsed);
+        queueStatistics.addMessageArrivedTime(timeElapsed);
         messageArrivalTimes.add(time);
         queue.add(payload);
     }
