@@ -117,6 +117,10 @@ public class HSReplica extends Validator<HSMessage> {
     }
 
     // Other utilities
+    /**
+     * Returns the leader for the current {@code viewNumber}.
+     * A round-robin algorithm is used.
+     */
     private int getLeader(int viewNumber) {
         return viewNumber % n;
     }

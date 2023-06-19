@@ -1,5 +1,8 @@
 package simulation.network.entity.ibft;
 
+/**
+ * Enum for different states a IBFT validator can take.
+ */
 public enum IBFTState {
 
     NEW_ROUND("NEW_ROUND"),

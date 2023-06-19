@@ -7,7 +7,7 @@ import java.util.Map;
 import java.util.Optional;
 
 /**
- * Helper class that handles message storage and retrieval for a HotStuff validator.
+ * Helper class that handles message storage and retrieval for a HotStuff replica.
  */
 public class HSMessageHolder {
 

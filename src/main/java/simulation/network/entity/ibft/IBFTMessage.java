@@ -5,6 +5,9 @@ import java.util.stream.Stream;
 
 import static simulation.util.StringUtil.MESSAGE_SEPARATOR;
 
+/**
+ * Message sent between IBFT validators.
+ */
 public class IBFTMessage {
 
     /**
@@ -45,22 +48,34 @@ public class IBFTMessage {
         this.piggybackMessages = List.copyOf(piggybackMessages);
     }
 
-    public static IBFTMessage createValueMessage(int identifier, IBFTMessageType messageType,
+    /**
+     * Creates an IBFT message of the given {@code type} and specified {@code value}.
+     */
+    public static IBFTMessage createValueMessage(int identifier, IBFTMessageType type,
             int lambda, int round, int value) {
-        return new IBFTMessage(identifier, messageType, lambda, round, value, NULL_VALUE, NULL_VALUE);
+        return new IBFTMessage(identifier, type, lambda, round, value, NULL_VALUE, NULL_VALUE);
     }
 
-    public static IBFTMessage createValueMessage(int identifier, IBFTMessageType messageType,
+    /**
+     * Creates an IBFT message of the given {@code type} and specified {@code value} with {@code piggybackMessages}.
+     */
+    public static IBFTMessage createValueMessage(int identifier, IBFTMessageType type,
             int lambda, int round, int value, List<IBFTMessage> piggybackMessages) {
-        return new IBFTMessage(identifier, messageType, lambda, round, value,
+        return new IBFTMessage(identifier, type, lambda, round, value,
                 NULL_VALUE, NULL_VALUE, piggybackMessages);
     }
 
+    /**
+     * Creates an IBFT message with {@code preparedRound} and {@code preparedValue} specified.
+     */
     public static IBFTMessage createPreparedValuesMessage(int identifier, IBFTMessageType messageType,
             int lambda, int round, int preparedRound, int preparedValue) {
         return new IBFTMessage(identifier, messageType, lambda, round, NULL_VALUE, preparedRound, preparedValue);
     }
 
+    /**
+     * Creates an IBFT message with {@code preparedRound} and {@code preparedValue} with {@code piggybackMessages}.
+     */
     public static IBFTMessage createPreparedValuesMessage(int identifier, IBFTMessageType messageType,
             int lambda, int round, int preparedRound, int preparedValue, List<IBFTMessage> piggybackMessages) {
         return new IBFTMessage(identifier, messageType, lambda, round, NULL_VALUE,
