@@ -2,6 +2,9 @@ package simulation.json;
 
 import java.util.List;
 
+/**
+ * Encapsulates the setting configuration for a simulation run.
+ */
 public class RunConfigJson {
 
     private int numRuns;
