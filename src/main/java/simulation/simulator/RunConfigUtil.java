@@ -77,8 +77,7 @@ public class RunConfigUtil {
                 return NetworkTopology.arrangeButterflyStructure(nodes, networkParameters,
                         processingGeneratorFunction);
             case "Clique": case "c":
-                return NetworkTopology.arrangeCliqueStructure(nodes, networkParameters,
-                        processingGeneratorSupplier);
+                return NetworkTopology.arrangeCliqueStructure(nodes, processingGeneratorSupplier);
             case "Torus": case "t":
                 return NetworkTopology.arrangeTorusStructure(nodes, networkParameters,
                         processingGeneratorSupplier);
