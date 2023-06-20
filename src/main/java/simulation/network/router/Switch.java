@@ -12,6 +12,11 @@ import java.util.List;
 import java.util.Map;
 import java.util.stream.Collectors;
 
+/**
+ * Represents a switch in a computer network.
+ *
+ * @param <T> Message class carried by {@code Switch} and other nodes in the network.
+ */
 public class Switch<T> extends Node<T> {
 
     private final RandomNumberGenerator rng;
@@ -21,6 +26,12 @@ public class Switch<T> extends Node<T> {
     private List<Switch<T>> switchNeighbors;
     private RoutingTable<Node<T>> table;
 
+    /**
+     * @param name Name of switch.
+     * @param allEndpoints Endpoints in the network.
+     * @param directlyConnectedEndpoints Nodes directly connected to this switch.
+     * @param rng Random number generator for service rate of switch.
+     */
     public Switch(String name, List<? extends Node<T>> allEndpoints,
             List<? extends Node<T>> directlyConnectedEndpoints, RandomNumberGenerator rng) {
         super(name);
@@ -33,16 +44,27 @@ public class Switch<T> extends Node<T> {
         this.table = new RoutingTable<>(endpoints, directlyConnectedEndpoints, switchNeighbors);
     }
 
+    /**
+     * Sets the switch neighbors of this switch.
+     * Used for calculating route tables for the switch.
+     */
     public void setSwitchNeighbors(List<? extends Switch<T>> switchNeighbors) {
         this.switchNeighbors = new ArrayList<>(switchNeighbors);
         this.table = new RoutingTable<>(endpoints, directlyConnectedEndpoints, switchNeighbors);
     }
 
+    /**
+     * Sets directly connected endpoints of this switch.
+     * Used for calculating route tables for the switch.
+     */
     public void setDirectlyConnectedEndpoints(List<? extends EndpointNode<T>> endpoints) {
         this.directlyConnectedEndpoints = new ArrayList<>(endpoints);
         this.table = new RoutingTable<>(endpoints, directlyConnectedEndpoints, switchNeighbors);
     }
 
+    /**
+     * Updates the switch table of this switch with {@code newNeighbors}.
+     */
     public void updateSwitchNeighbors(List<? extends Switch<T>> newNeighbors) {
         this.switchNeighbors.addAll(newNeighbors);
         this.table = new RoutingTable<>(endpoints, directlyConnectedEndpoints, switchNeighbors);
@@ -51,6 +73,11 @@ public class Switch<T> extends Node<T> {
     public RoutingTable<Node<T>> getRoutingTable() {
         return table;
     }
+
+    /**
+     * Updates the routing table of this switch using the routing tables of neighboring switches.
+     * Used to establish a route from this switch to all endpoints in the network.
+     */
     public boolean update() {
         boolean isUpdated = false;
         for (var neighbor : switchNeighbors) {
@@ -62,6 +89,10 @@ public class Switch<T> extends Node<T> {
         return isUpdated;
     }
 
+    /**
+     * Returns the next hop node for a payload moving to its destination.
+     * A random shortest hop count routing protocol is used.
+     */
     public Node<T> getNextNodeFor(Payload<T> payload) {
         String destinationString = payload.getDestination();
         Node<T> endpoint = stringToNodeMap.get(destinationString);
