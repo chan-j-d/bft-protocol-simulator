@@ -1,5 +1,8 @@
 package simulation.util.rng;
 
+/**
+ * Class representing a random variable following an exponential distribution.
+ */
 public class ExponentialDistribution implements RandomNumberGenerator {
 
     private double lambda;

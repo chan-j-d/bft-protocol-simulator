@@ -1,5 +1,8 @@
 package simulation.util;
 
+/**
+ * Utility methods to calculate various mathematical quantities.
+ */
 public class MathUtil {
 
     public static int ceilDiv(int a, int b) {

@@ -1,5 +1,8 @@
 package simulation.util;
 
+/**
+ * Generic pair class for convenience.
+ */
 public class Pair<T, U> {
 
     private final T first;
