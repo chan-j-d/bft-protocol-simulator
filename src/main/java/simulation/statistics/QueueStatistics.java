@@ -3,6 +3,9 @@ package simulation.statistics;
 import java.util.LinkedHashMap;
 import java.util.Map;
 
+/**
+ * Queue statistics.
+ */
 public class QueueStatistics extends Statistics {
 
     public static final String KEY_NUM_MESSAGES_IN_QUEUE = "Average number of messages in queue";
@@ -53,6 +56,9 @@ public class QueueStatistics extends Statistics {
         return map;
     }
 
+    /**
+     * Records changes in queue statistics after {@code timeElapsed} passes and a new message added at the end of it.
+     */
     public void addMessageArrivedTime(double timeElapsed) {
         totalQueueingTime += currentMessageCount * timeElapsed;
         if (currentMessageCount == 0) {
@@ -63,6 +69,9 @@ public class QueueStatistics extends Statistics {
         totalTime += timeElapsed;
     }
 
+    /**
+     * Records changes in queue statistics after {@code timeElapsed} passes and a message is removed at the end of it.
+     */
     public void addMessageProcessedTime(double timeElapsed, double messageQueueTime) {
         totalQueueingTime += currentMessageCount * timeElapsed;
         totalMessageQueueTime += messageQueueTime;
