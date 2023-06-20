@@ -5,6 +5,9 @@ import java.util.stream.Stream;
 
 import static simulation.util.StringUtil.MESSAGE_SEPARATOR;
 
+/**
+ * Message sent between HotStuff replicas.
+ */
 public class HSMessage {
 
     private final HSMessageType type;

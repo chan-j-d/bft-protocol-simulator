@@ -7,6 +7,10 @@ import java.util.List;
 import java.util.stream.Collectors;
 import java.util.stream.IntStream;
 
+/**
+ * Encapsulates the results of a BFT protocol simulation run.
+ * Contains queue statistics of switches and validators and consensus statistics.
+ */
 public class RunResults {
 
     private final ConsensusStatistics validatorStatistics;
@@ -32,6 +36,9 @@ public class RunResults {
         return switchStatistics;
     }
 
+    /**
+     * Returns a new {@code RunResults} that merges {@code this} and {@code other} together.
+     */
     public RunResults mergeRunResults(RunResults other) {
         ConsensusStatistics newConsensusStatistics =
                 validatorStatistics.combineStatistics(other.getValidatorStatistics());

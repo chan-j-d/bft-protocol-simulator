@@ -13,6 +13,9 @@ import java.util.stream.Collectors;
 import static simulation.network.entity.ibft.IBFTMessage.NULL_VALUE;
 import static simulation.network.entity.ibft.IBFTMessageType.MESSAGE_TYPES;
 
+/**
+ * Helper class that handles message storage and retrieval for an IBFT validator.
+ */
 public class IBFTMessageHolder {
 
     private final Map<IBFTMessageType, Map<Integer, Map<Integer, Map<Integer, List<IBFTMessage>>>>> messageStorage;
@@ -29,6 +32,10 @@ public class IBFTMessageHolder {
         this.currentConsensusInstance = lambda;
     }
 
+    /**
+     * Adds the given {@code message} to the backlog.
+     * If the message is from a previous consensus instance, it is dropped.
+     */
     public void addMessage(IBFTMessage message) {
         IBFTMessageType type = message.getMessageType();
         int consensusInstance = message.getLambda();
@@ -51,6 +58,9 @@ public class IBFTMessageHolder {
         processMessageMetadata(message, messageGroup);
     }
 
+    /**
+     * Processes metadata of messages of type {@code ROUND_CHANGE} and {@code COMMIT} to improve speed of queries.
+     */
     private void processMessageMetadata(IBFTMessage message, List<IBFTMessage> messageGroup) {
         IBFTMessageType type = message.getMessageType();
         if (type == IBFTMessageType.ROUND_CHANGE) {
@@ -65,6 +75,12 @@ public class IBFTMessageHolder {
         }
     }
 
+    /**
+     * Returns true if the backlog contains more than {@code threshold} of round change messages.
+     *
+     * @param consensusInstance Consensus instance (lambda) being queried.
+     * @param round Round being queried.
+     */
     public boolean hasMoreHigherRoundChangeMessagesThan(int consensusInstance, int round) {
         int totalCountForConsensusInstance = roundChangeMessageCounts.computeIfAbsent(consensusInstance, k -> 0);
         int currentRoundChangeCount = filterTypeLambdaRound(IBFTMessageType.ROUND_CHANGE, round, threshold)
@@ -75,21 +91,34 @@ public class IBFTMessageHolder {
         return totalCountForConsensusInstance - currentRoundChangeCount >= threshold;
     }
 
+    /**
+     * Filters message backlog by {@code type} and {@code lambda}.
+     */
     private Optional<Map<Integer, Map<Integer, List<IBFTMessage>>>> filterTypeLambda(IBFTMessageType type, int lambda) {
         return Optional.of(messageStorage)
                 .map(store -> store.get(type))
                 .map(lambdaMap -> lambdaMap.get(lambda));
     }
+
+    /**
+     * Filters message backlog by {@code type}, {@code lambda} and {@code round}.
+     */
     private Optional<Map<Integer, List<IBFTMessage>>> filterTypeLambdaRound(IBFTMessageType type,
             int lambda, int round) {
         return filterTypeLambda(type, lambda).map(roundMap -> roundMap.get(round));
     }
 
+    /**
+     * Returns the round of the next greater round change message above {@code round} for the {@code consensusInstance}.
+     */
     public int getNextGreaterRoundChangeMessage(int consensusInstance, int round) {
         return messageStorage.get(IBFTMessageType.ROUND_CHANGE).get(consensusInstance)
                 .keySet().stream().mapToInt(x -> x).filter(roundKey -> roundKey > round).min().orElse(NULL_VALUE);
     }
 
+    /**
+     * Returns true if backlog contains a quorum of IBFTMessages with the same value.
+     */
     public boolean hasQuorumOfSameValuedMessages(IBFTMessageType type, int consensusInstance, int round) {
         return filterTypeLambdaRound(type, consensusInstance, round)
                 .stream()
@@ -97,6 +126,9 @@ public class IBFTMessageHolder {
                 .anyMatch(list -> list.size() >= threshold);
     }
 
+    /**
+     * Returns list of same-valued messages of the designated {@code type}, {@code consensusInstance}, {@code round}.
+     */
     public List<IBFTMessage> getQuorumOfSameValuedMessages(IBFTMessageType type, int consensusInstance,
             int round) {
         return filterTypeLambdaRound(type, consensusInstance, round)
@@ -107,6 +139,10 @@ public class IBFTMessageHolder {
                 .orElseThrow(); // this method should be called after hasQuorumOfMessages
     }
 
+    /**
+     * Returns true if backlog contains a quorum of messages of {@code type}, {@code consensusInstance}, {@code round}.
+     * The messages can have differing values.
+     */
     public boolean hasQuorumOfAnyValuedMessages(IBFTMessageType type, int consensusInstance, int round) {
         return filterTypeLambdaRound(type, consensusInstance, round)
                 .stream()
@@ -115,6 +151,10 @@ public class IBFTMessageHolder {
                 .sum() >= threshold;
     }
 
+    /**
+     * Returns list of quorum of messages of {@code type}, {@code consensusInstance}, {@code round}.
+     * The messages can have differing values.
+     */
     public List<IBFTMessage> getQuorumOfAnyValuedMessages(IBFTMessageType type, int consensusInstance, int round) {
         return filterTypeLambdaRound(type, consensusInstance, round)
                 .stream()
@@ -123,6 +163,9 @@ public class IBFTMessageHolder {
                 .collect(Collectors.toList());
     }
 
+    /**
+     * Get messages belonging to {@code type}, {@code consensusInstance}, {@code round}.
+     */
     public List<IBFTMessage> getMessages(IBFTMessageType type, int consensusInstance, int round) {
         return filterTypeLambdaRound(type, consensusInstance, round)
                 .stream()
@@ -131,10 +174,16 @@ public class IBFTMessageHolder {
                 .collect(Collectors.toList());
     }
 
+    /**
+     * Returns true if backlog contains a quorum of commit messages for {@code consensusInstance}.
+     */
     public boolean hasCommitQuorumOfMessages(int consensusInstance) {
         return toCommitRoundValueMap.containsKey(consensusInstance);
     }
 
+    /**
+     * Returns the round where a quorum of commit messages was attained together with the messages.
+     */
     public Pair<Integer, List<IBFTMessage>> getRoundValueToCommit(int consensusInstance) {
         return toCommitRoundValueMap.get(consensusInstance);
     }
@@ -153,5 +202,4 @@ public class IBFTMessageHolder {
         }
         currentConsensusInstance = newLambda;
     }
-
 }

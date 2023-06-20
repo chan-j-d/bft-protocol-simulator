@@ -3,6 +3,9 @@ package simulation.network.entity.ibft;
 import java.util.List;
 import java.util.Map;
 
+/**
+ * Enum for different message types the IBFT validator requires.
+ */
 public enum IBFTMessageType {
 
     PREPREPARED("PREPREPARED"),

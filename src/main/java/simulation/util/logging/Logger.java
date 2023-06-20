@@ -8,6 +8,9 @@ import java.util.Arrays;
 import java.util.logging.FileHandler;
 import java.util.logging.Level;
 
+/**
+ * Logging wrapper class of Java's Logger class.
+ */
 public class Logger {
 
     public static final String DEFAULT_DIRECTORY = "logs";

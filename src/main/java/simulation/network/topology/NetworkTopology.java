@@ -15,9 +15,23 @@ import java.util.function.Supplier;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
+/**
+ * Contains methods that construct various common network topologies.
+ */
 public class NetworkTopology {
+
+    /**
+     * Constructs a clique topology with the given {@code nodes}.
+     * For ease of coding, for each node there is a proxy switch used that is connected to every other proxy switch.
+     * The node is then connected to only its proxy switch.
+     * To remove the effect of switch processing time for the switch, set the switch processing rate to -1.
+     *
+     * @param nodes Nodes to be connected in a clique topology.
+     * @param rngSupplier Switch processing time generator.
+     * @return Returns a list of a single list of proxy switches for each node.
+     * @param <T> Message class being carried by switches.
+     */
     public static <T> List<List<Switch<T>>> arrangeCliqueStructure(List<? extends EndpointNode<T>> nodes,
-            List<Integer> networkParameters,
             Supplier<RandomNumberGenerator> rngSupplier) {
         List<Switch<T>> switches = new ArrayList<>();
         for (EndpointNode<T> node : nodes) {
@@ -35,6 +49,16 @@ public class NetworkTopology {
         return List.of(switches);
     }
 
+    /**
+     * Constructs a mesh topology with the given {@code nodes}.
+     * A 2D mesh is constructed with one side length specified.
+     *
+     * @param nodes Nodes to be connected in a mesh topology.
+     * @param networkParameters Side length of the 2D mesh topology.
+     * @param rngSupplier Switch processing time generator.
+     * @return Returns a list of a single list of proxy switches for each node.
+     * @param <T> Message class being carried by switches.
+     */
     public static <T> List<List<Switch<T>>> arrangeMeshStructure(List<? extends EndpointNode<T>> nodes,
             List<Integer> networkParameters,
             Supplier<RandomNumberGenerator> rngSupplier) {
@@ -70,6 +94,19 @@ public class NetworkTopology {
         return List.of(switches);
     }
 
+    /**
+     * Creates an n x m array of switches where each switch is directly connected to a unique node.
+     * Connections are not established in this method.
+     *
+     * @param nodes Nodes to be connected in a 2D array topology.
+     * @param n One side length of the 2D array.
+     * @param m The other side length of the 2D array.
+     * @param nameFormat Name format for switches.
+     *                   Requires a string format argument that takes in its 2D index on the array.
+     * @param rngSupplier Switch processing time generator.
+     * @return List of a single list of switches that form the 2D array.
+     * @param <T> Message class being carried by switches.
+     */
     private static <T> List<List<Switch<T>>> createSwitchArray(List<? extends EndpointNode<T>> nodes,
             int n, int m, String nameFormat, Supplier<RandomNumberGenerator> rngSupplier) {
         List<List<Switch<T>>> switchArray = new ArrayList<>();
@@ -87,6 +124,16 @@ public class NetworkTopology {
         return switchArray;
     }
 
+    /**
+     * Constructs a Torus topology with the given {@code nodes}.
+     * A 2D Torus is constructed with one side length specified.
+     *
+     * @param nodes Nodes to be connected in a Torus topology.
+     * @param networkParameters Side length of the 2D Torus topology.
+     * @param rngSupplier Switch processing time generator.
+     * @return Returns a list of a single list of proxy switches for each node.
+     * @param <T> Message class being carried by switches.
+     */
     public static <T> List<List<Switch<T>>> arrangeTorusStructure(List<? extends EndpointNode<T>> nodes,
             List<Integer> networkParameters,
             Supplier<RandomNumberGenerator> rngSupplier) {
@@ -122,6 +169,20 @@ public class NetworkTopology {
         return List.of(switches);
     }
 
+    /**
+     * Constructs a butterfly topology with the given nodes.
+     *
+     * @param nodes Nodes to be arranged in a butterfly topology.
+     * @param networkParameters Network parameters for {radix, connection type, front/back concentrated}.
+     *                          radix - positive integer >= 2, number of in/out connections per switch.
+     *                          connection type - 0 or 1. 0 for a flushed type connection and 1 for spread.
+     *                          front/back concentrated - 0 or 1. 0 for concentrating connections to the front,
+     *                          0 for back.
+     * @param levelRngFunction Function that returns an RNG based on the level of the node in the butterfly network.
+     *                         Can be used to vary the processing power of switches at different levels.
+     * @return Returns a list of list of switches separated by level in the butterfly network.
+     * @param <T> Message class being carried by switches.
+     */
     public static <T> List<List<Switch<T>>> arrangeButterflyStructure(List<? extends EndpointNode<T>> nodes,
             List<Integer> networkParameters,
             Function<Integer, RandomNumberGenerator> levelRngFunction) {
@@ -148,11 +209,20 @@ public class NetworkTopology {
         return String.format("(Level: %d, Group: %d, Index: %d)", level, group, index);
     }
 
+    /**
+     * Updates the routing tables of the grouped switches.
+     */
     private static <T> void flattenAndUpdateRoutes(List<List<Switch<T>>> groupedSwitches) {
         List<Switch<T>> allSwitches = groupedSwitches.stream().flatMap(Collection::stream).collect(Collectors.toList());
         RoutingUtil.updateRoutingTables(allSwitches);
     }
 
+    /**
+     * Arranges a foldedClos network topology.
+     * It is largely identical to a butterfly topology except that upon reaching the last level of switches,
+     * the message travels back down to find its destination node. All connections among switches are two-way.
+     * As such, the radix argument becomes a half-radix argument as the actual radix count is doubled.
+     */
     public static <T> List<List<Switch<T>>> arrangeFoldedClosStructure(List<? extends EndpointNode<T>> nodes,
             List<Integer> networkParameters,
             Function<Integer, RandomNumberGenerator> levelRngFunction) {
@@ -161,6 +231,13 @@ public class NetworkTopology {
         flattenAndUpdateRoutes(groupedSwitches);
         return groupedSwitches;
     }
+
+    /**
+     * Creates new switches to be arranged in a butterfly topology.
+     * Used for both butterfly and foldedClos topologies.
+     *
+     * @param isBackwardConnecting true if switch connections are two directional.
+     */
     private static <T> List<List<Switch<T>>> arrangeButterflyArrangement(List<? extends EndpointNode<T>> nodes,
             List<Integer> networkParameters,
             Function<Integer, RandomNumberGenerator> levelRngFunction,

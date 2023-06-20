@@ -1,5 +1,7 @@
 package simulation.network.router;
 
+import simulation.network.entity.Node;
+
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.HashMap;
@@ -7,12 +9,23 @@ import java.util.List;
 import java.util.Map;
 import java.util.stream.Collectors;
 
-public class RoutingTable<T> {
+/**
+ * Routing table for switches to map routing paths to different nodes.
+ * @param <T> Network node subclass, usually an endpoint node.
+ */
+public class RoutingTable<T extends Node<?>> {
 
     private final Map<T, List<T>> nodeNextNodeMap;
     private final Map<T, Integer> nodeDistanceMap;
     private final List<T> neighbors;
 
+    /**
+     * Initializes a routing table with the default state of only being able to reach all neighboring nodes in 1 hop.
+     *
+     * @param endPoints All endpoint nodes to be reachable by the routing table.
+     * @param connectedEndpoints Connected endpoints that are directly reachable.
+     * @param neighbors Neighboring nodes to facilitate routing which are 1 hop away.
+     */
     public RoutingTable(List<? extends T> endPoints, List<? extends T> connectedEndpoints,
             List<? extends T> neighbors) {
         nodeNextNodeMap = endPoints.stream()
@@ -42,6 +55,9 @@ public class RoutingTable<T> {
         return nodeNextNodeMap.get(endpoint);
     }
 
+    /**
+     * Combines the information of two routing tables to reach nodes 1 hop further.
+     */
     public RoutingTable<T> addOtherRoutingTableInfo(T otherNodeName, RoutingTable<T> other) {
         Collection<T> nodeNames = nodeNextNodeMap.keySet();
         Map<T, List<T>> newNodeNextNodeMap = new HashMap<>(nodeNextNodeMap);

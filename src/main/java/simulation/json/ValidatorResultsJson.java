@@ -6,8 +6,14 @@ import simulation.statistics.QueueStatistics;
 import java.util.LinkedHashMap;
 import java.util.Map;
 
+/**
+ * Encapsulates the results of a validator in an unspecified BFT protocol.
+ */
 public class ValidatorResultsJson {
 
+    /**
+     * Map of time spent in each state, as specified in the {@code ConsensusStatistics} provided to it.
+     */
     private Map<String, Double> stateTimeMap;
     private double t_total;
     private double L;

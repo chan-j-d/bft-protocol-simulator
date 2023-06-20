@@ -19,8 +19,14 @@ import java.util.function.Supplier;
 import java.util.stream.Collectors;
 import java.util.stream.IntStream;
 
+/**
+ * Contains utility methods for reading a run configuration.
+ */
 public class RunConfigUtil {
 
+    /**
+     * Creates a {@code Simulator} from the given run configuration {@code json}.
+     */
     public static Simulator createSimulator(RunConfigJson json) {
         String validatorNodeType = json.getValidatorType();
         int numNodes = json.getNumNodes();
@@ -49,6 +55,9 @@ public class RunConfigUtil {
         }
     }
 
+    /**
+     * Fixes the arrangement of the nodes in {@code simulator} according to the given run configuration {@code json}.
+     */
     private static <T> void fixNetworkConnections(RunConfigJson json, SimulatorImpl<T> simulator) {
         List<Validator<T>> nodes = simulator.getNodes();
         for (Validator<T> node : nodes) {
@@ -58,6 +67,9 @@ public class RunConfigUtil {
         simulator.setSwitches(switches);
     }
 
+    /**
+     * Identifies the network topology specified in the json file and arranges the {@code nodes} according to it.
+     */
     public static <T> List<List<Switch<T>>> arrangeNodesInTopology(RunConfigJson json,
             List<? extends EndpointNode<T>> nodes) {
         double switchServiceRate = json.getSwitchProcessingRate();
@@ -77,8 +89,7 @@ public class RunConfigUtil {
                 return NetworkTopology.arrangeButterflyStructure(nodes, networkParameters,
                         processingGeneratorFunction);
             case "Clique": case "c":
-                return NetworkTopology.arrangeCliqueStructure(nodes, networkParameters,
-                        processingGeneratorSupplier);
+                return NetworkTopology.arrangeCliqueStructure(nodes, processingGeneratorSupplier);
             case "Torus": case "t":
                 return NetworkTopology.arrangeTorusStructure(nodes, networkParameters,
                         processingGeneratorSupplier);

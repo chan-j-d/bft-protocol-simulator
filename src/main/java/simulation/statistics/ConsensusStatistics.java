@@ -4,6 +4,9 @@ import java.util.Collection;
 import java.util.LinkedHashMap;
 import java.util.Map;
 
+/**
+ * Records consensus related statistics in a simulation.
+ */
 public class ConsensusStatistics extends Statistics {
 
     private static final String KEY_NODE_COUNT = "Total node count";
@@ -17,6 +20,9 @@ public class ConsensusStatistics extends Statistics {
     private final int nodeCount;
     private final Map<String, Double> stateTimeMap;
 
+    /**
+     * @param states Various states the validator can take during a simulation.
+     */
     public ConsensusStatistics(Collection<Object> states) {
         nodeCount = 1;
         consensusCount = 0;
@@ -43,10 +49,16 @@ public class ConsensusStatistics extends Statistics {
         return stateTimeMap.keySet();
     }
 
+    /**
+     * Records additional {@code time} spent in {@code state}.
+     */
     public void addTime(Object state, double time) {
         addTime(state.toString(), time);
     }
 
+    /**
+     * Records additional {@code time} spent in {@code state}.
+     */
     public void addTime(String state, double time) {
         stateTimeMap.compute(state, (k, v) -> (v != null) ? v + time : time);
         totalTime += time;

@@ -17,6 +17,11 @@ import java.util.Optional;
 import java.util.PriorityQueue;
 import java.util.stream.Collectors;
 
+/**
+ * Implementation of the Simulator interface that also serves as a {@code TimerNotifier} for the nodes in simulation.
+ *
+ * @param <T> Message class used by nodes in the simulation.
+ */
 public class SimulatorImpl<T> implements Simulator, TimerNotifier<T> {
 
     private static final int SNAPSHOT_INTERVAL = 1000000;
@@ -32,6 +37,9 @@ public class SimulatorImpl<T> implements Simulator, TimerNotifier<T> {
     public SimulatorImpl() {
     }
 
+    /**
+     * Sets the validator nodes for the current simulation.
+     */
     public void setNodes(List<? extends Validator<T>> validators) {
         this.nodes = new ArrayList<>(validators);
         eventQueue = new PriorityQueue<>();
@@ -45,6 +53,9 @@ public class SimulatorImpl<T> implements Simulator, TimerNotifier<T> {
         unfinishedValidatorsTracker = new ArrayList<>(validators);
     }
 
+    /**
+     * Sets the switches for the current simulation.
+     */
     public void setSwitches(List<List<Switch<T>>> switches) {
         this.switches = switches;
     }
@@ -53,6 +64,12 @@ public class SimulatorImpl<T> implements Simulator, TimerNotifier<T> {
         return nodes;
     }
 
+    /**
+     * Simulates a singular event in the event queue and outputs the contents of the event.
+     * Each event involves a node and some possible action caused by the node.
+     * Once a node is no longer required to run, it is removed from the unfinished list.
+     * The simulation is considered 'over' once no more nodes are unfinished.
+     */
     @Override
     public Optional<String> simulate() {
         NodeEvent<T> nextEvent = eventQueue.poll();

@@ -25,14 +25,30 @@ import java.util.logging.LogManager;
 
 import static simulation.simulator.RunConfigUtil.createSimulator;
 
-public class Main {
+/**
+ * Main driver class for simulations.
+ */
+public class BFTSimulation {
 
+    /**
+     * Default JSON directory.
+     */
     private static final Path JSON_DIRECTORY = Paths.get("json");
+    /**
+     * JSON results path.
+     */
     private static final String RESULTS_JSON_FILEPATH =
             JSON_DIRECTORY.resolve("validator_results.json").toString();
+    /**
+     * Switch statistics JSON path.
+     */
     private static final String SWITCH_GROUP_STATISTICS =
             JSON_DIRECTORY.resolve("switch_group_%d.json").toString();
     private static final Gson GSON = new Gson();
+
+    /**
+     * Reads a runConfigJson file from {@code args} and runs a simulation based on it.
+     */
     public static void main(String[] args) {
         setup();
 
@@ -79,6 +95,9 @@ public class Main {
         cleanup();
     }
 
+    /**
+     * Runs a singular simulation run with {@code seed} and outputs results via {@code io}.
+     */
     private static RunResults runSimulation(long seed, IoInterface io, RunConfigJson configJson) {
         RNGUtil.setSeed(seed);
         Simulator simulator = createSimulator(configJson);
@@ -88,6 +107,9 @@ public class Main {
         return simulator.getRunResults();
     }
 
+    /**
+     * Reads {@code filename} into an object of class {@code clazz}.
+     */
     public static <T> T readFromJson(String filename, Class<T> clazz) {
         try (FileReader fr = new FileReader(filename)) {
             return GSON.fromJson(fr, clazz);
@@ -97,6 +119,9 @@ public class Main {
         }
     }
 
+    /**
+     * Writes {@code object} to {@code filename}.
+     */
     public static void writeObjectToJson(Object object, String filename) {
         try (FileWriter fw = new FileWriter(filename)) {
             GSON.toJson(object, fw);
@@ -105,12 +130,19 @@ public class Main {
         }
     }
 
+    /**
+     * Setup operation.
+     * Run before running any simulations.
+     */
     private static void setup() {
         deleteFilesInDirectory(Logger.DEFAULT_DIRECTORY);
         deleteFilesInDirectory(JSON_DIRECTORY.toString());
         Logger.setup();
     }
 
+    /**
+     * Deletes files in directory specified by {@code path}.
+     */
     private static void deleteFilesInDirectory(String path) {
         try {
             File directory = new File(path);
@@ -125,6 +157,9 @@ public class Main {
         }
     }
 
+    /**
+     * Cleanup operation after running all simulations.
+     */
     private static void cleanup() {
         LogManager.getLogManager().reset();
     }

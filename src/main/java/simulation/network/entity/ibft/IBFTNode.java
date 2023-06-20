@@ -16,10 +16,13 @@ import java.util.stream.Collectors;
 
 import static simulation.network.entity.ibft.IBFTMessage.NULL_VALUE;
 
+/**
+ * Validator running the IBFT protocol.
+ */
 public class IBFTNode extends Validator<IBFTMessage> {
 
     /**
-     * Dummy value to be passed around as part of the protocol.
+     * Dummy value to be proposed and passed around as part of the protocol.
      */
     private static final int DUMMY_VALUE = 1;
     public static final int FIRST_CONSENSUS_INSTANCE = 1;
@@ -46,6 +49,15 @@ public class IBFTNode extends Validator<IBFTMessage> {
     private Map<Integer, Integer> otherNodeHeights;
     private int inputValue_i; // value passed as input to instance
 
+    /**
+     * @param name Name of IBFT validator.
+     * @param id Unique integer identifier for IBFT validator.
+     * @param baseTimeLimit Base time limit for timeouts.
+     * @param timerNotifier TimerNotifier used to get time and set timeouts.
+     * @param N Number of nodes in the simulation.
+     * @param consensusLimit Consensus limit in simulation.
+     * @param serviceRateGenerator Rate at processing messages, assuming an exponentially distributed service time.
+     */
     public IBFTNode(String name, int id, double baseTimeLimit, TimerNotifier<IBFTMessage> timerNotifier,
             int N, int consensusLimit, RandomNumberGenerator serviceRateGenerator) {
         super(name, id, consensusLimit, timerNotifier, serviceRateGenerator,
@@ -63,6 +75,9 @@ public class IBFTNode extends Validator<IBFTMessage> {
         this.otherNodeHeights = new HashMap<>();
     }
 
+    /**
+     * Starts up the protocol and sends out initial messages.
+     */
     @Override
     public List<Payload<IBFTMessage>> initializationPayloads() {
         start(FIRST_CONSENSUS_INSTANCE, DUMMY_VALUE);
@@ -97,6 +112,10 @@ public class IBFTNode extends Validator<IBFTMessage> {
         return Math.pow(2, round - 1) * baseTimeLimit;
     }
 
+    /**
+     * Returns the leader for the current {@code consensusInstance} and {@code roundNumber}.
+     * A round-robin algorithm is used so the number of nodes {@code N} needs to be specified.
+     */
     private static int getLeader(int consensusInstance, int roundNumber, int N) {
         return (consensusInstance + roundNumber) % N;
     }
@@ -130,6 +149,12 @@ public class IBFTNode extends Validator<IBFTMessage> {
     }
 
     // Round start handling
+
+    /**
+     * Starts a new consensus instance {@code lambda} with the proposed value {@code value}.
+     * The leader broadcasts a PREPREPARED message while all other validators will set up without sending a message.
+     * Part of Algorithm 1 in IBFT paper.
+     */
     private void start(int lambda, int value) {
         state = IBFTState.NEW_ROUND;
 
@@ -158,6 +183,10 @@ public class IBFTNode extends Validator<IBFTMessage> {
         leaderRoundChangeOperation();
     }
 
+    /**
+     * Removes consensus message quorums from outdated consensus instances.
+     * Meta-method required for maintaining memory usage during simulations.
+     */
     private void newRoundCleanup() {
         int minBlockHeight = otherNodeHeights.values().stream().mapToInt(x -> x).min().orElse(0);
         Set<Integer> toRemoveKeySet = List.copyOf(consensusQuorum.keySet()).stream().filter(x -> x < minBlockHeight)
@@ -207,7 +236,12 @@ public class IBFTNode extends Validator<IBFTMessage> {
         return getProcessedPayloads();
     }
 
-    // Round change handling
+    // Algorithm 3 in IBFT Paper - Round change handling
+
+    /**
+     * Handles timer expiry during an IBFT round.
+     * This corresponds to the first code block in Algorithm 3.
+     */
     private void timeoutOperation() {
         r_i++;
         state = IBFTState.ROUND_CHANGE;
@@ -215,12 +249,17 @@ public class IBFTNode extends Validator<IBFTMessage> {
         if (pr_i == NULL_VALUE && pv_i == NULL_VALUE) {
             broadcastMessageToAll(createPreparedValuesMessage(IBFTMessageType.ROUND_CHANGE));
         } else {
-            broadcastMessageToAll(createPreparedValuesMessage(IBFTMessageType.ROUND_CHANGE, preparedMessageJustification));
+            broadcastMessageToAll(createPreparedValuesMessage(IBFTMessageType.ROUND_CHANGE,
+                    preparedMessageJustification));
         }
         prePrepareOperation();
         prepareOperation();
     }
 
+    /**
+     * Handles round increment after receiving f + 1 or more round change messages of round greater than current round.
+     * This corresponds to the second code block in Algorithm 3.
+     */
     private void fPlusOneRoundChangeOperation() {
         if (messageHolder.hasMoreHigherRoundChangeMessagesThan(lambda_i, r_i)) {
             r_i = messageHolder.getNextGreaterRoundChangeMessage(lambda_i, r_i);
@@ -232,6 +271,10 @@ public class IBFTNode extends Validator<IBFTMessage> {
         }
     }
 
+    /**
+     * Handles round change upon receiving quorum of round change messages where {@code this} is the leader.
+     * This corresponds to the third code block in Algorithm 3.
+     */
     private void leaderRoundChangeOperation() {
         if (p_i == getLeader(lambda_i, r_i, N)) {
             if (messageHolder.hasQuorumOfAnyValuedMessages(IBFTMessageType.ROUND_CHANGE, lambda_i, r_i)) {
@@ -253,7 +296,12 @@ public class IBFTNode extends Validator<IBFTMessage> {
         }
     }
 
-    // Message processing
+    // Algorithm 2 in IBFT Paper - Normal case operation
+
+    /**
+     * Handles received PRE-PREPARE messages.
+     * This corresponds to the first code block in Algorithm 2.
+     */
     private void prePrepareOperation() {
         List<IBFTMessage> preprepareMessages = messageHolder.getMessages(IBFTMessageType.PREPREPARED, lambda_i, r_i);
         for (IBFTMessage message : preprepareMessages) {
@@ -267,6 +315,10 @@ public class IBFTNode extends Validator<IBFTMessage> {
         }
     }
 
+    /**
+     * Handles received PREPARE messages.
+     * This corresponds to the second code block in Algorithm 2.
+     */
     private void prepareOperation() {
         if (messageHolder.hasQuorumOfSameValuedMessages(IBFTMessageType.PREPARED, lambda_i, r_i)
                 && state == IBFTState.PREPREPARED) {
@@ -280,6 +332,10 @@ public class IBFTNode extends Validator<IBFTMessage> {
         }
     }
 
+    /**
+     * Handles received COMMIT messages.
+     * This corresponds to the third code block in Algorithm 2.
+     */
     private void commitOperation() {
         if (messageHolder.hasCommitQuorumOfMessages(lambda_i)) {
             Pair<Integer, List<IBFTMessage>> valueMessagesPair = messageHolder.getRoundValueToCommit(lambda_i);
@@ -290,7 +346,11 @@ public class IBFTNode extends Validator<IBFTMessage> {
         }
     }
 
+    /**
+     * Commits {@code value} for {@code consensusInstance} with the quorum of {@code messages} for justification.
+     */
     private void commit(int consensusInstance, int value, List<IBFTMessage> messages) {
+        // Actual value being committed is not important.
         consensusQuorum.put(consensusInstance, messages);
     }
 
@@ -310,12 +370,21 @@ public class IBFTNode extends Validator<IBFTMessage> {
                 j2Justification(roundChangeMessageQuorum, lambda_i, highestPr, highestPv);
     }
 
+    /**
+     * Returns true if messages in the list have prepared round and prepared value equal to {@code NULL_VALUE}.
+     * J1 justification name comes from the proof under 4.4 of the IBFT paper.
+     */
     private boolean j1Justification(List<IBFTMessage> messages) {
         return messages.stream().filter(message ->
                 message.getPreparedRound() == NULL_VALUE && message.getPreparedValue() == NULL_VALUE).count() >=
                 getQuorumCount();
     }
 
+    /**
+     * Returns true if the round change messages have a quorum of valid PREPARE messages to justify the prepared
+     * round and value.
+     * J2 justification name comes from the proof under 4.4 of the IBFT paper.
+     */
     private boolean j2Justification(List<IBFTMessage> messages, int lambda_i, int highestPr, int highestPv) {
         return messages.size() >= getQuorumCount() &&
                 messages.stream().anyMatch(message -> message.getPiggybackMessages().stream().filter(pbm ->

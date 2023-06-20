@@ -2,6 +2,9 @@ package simulation.network.entity.hotstuff;
 
 import java.util.List;
 
+/**
+ * Quorum of HotStuff messages used to justify a decision made by the leader of the current view.
+ */
 public class QuorumCertificate {
 
     private final HSMessageType type;
@@ -17,6 +20,9 @@ public class QuorumCertificate {
         this.signature = tCombine(type, viewNumber, node, messages);
     }
 
+    /**
+     * Combines the {@code type}, {@code viewNumber}, {@code node} and {@code messages} into a unique signature.
+     */
     public HSSignature tCombine(HSMessageType type, int viewNumber, HSTreeNode node, List<HSMessage> messages) {
         // Not necessary at the moment as this is for private/public key verification which is assumed to be correct.
         return new HSSignature();

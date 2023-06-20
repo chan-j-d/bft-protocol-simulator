@@ -24,4 +24,4 @@ compileJava {
     options.compilerArgs << "-Xlint:unchecked"
 }
 
-mainClassName = 'simulation.Main'
+mainClassName = 'simulation.BFTSimulation'
