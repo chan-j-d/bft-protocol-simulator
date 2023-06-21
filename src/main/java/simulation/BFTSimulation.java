@@ -1,8 +1,8 @@
 package simulation;
 
 import com.google.gson.Gson;
-import simulation.io.FileIo;
 import simulation.io.IoInterface;
+import simulation.io.NoIo;
 import simulation.json.QueueResultsJson;
 import simulation.json.RunConfigJson;
 import simulation.json.ValidatorResultsJson;
@@ -58,7 +58,8 @@ public class BFTSimulation {
         int seedMultiplier = runConfigJson.getSeedMultiplier();
         int startingSeed = runConfigJson.getStartingSeed();
 
-        IoInterface io = new FileIo("output.txt");
+//        IoInterface io = new FileIo("output.txt");
+        IoInterface io = new NoIo();
         RunResults runResults = null;
         int numGroups = -1;
         for (int i = 0; i < numTrials; i++) {

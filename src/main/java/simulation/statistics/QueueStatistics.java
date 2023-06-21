@@ -20,7 +20,7 @@ public class QueueStatistics extends Statistics {
     private double totalMessageQueueTime;
     private double totalTimeEmpty;
 
-    private double totalTime;
+    private double lastRecordedTime;
     private double totalQueueingTime;
     private int numNodes;
 
@@ -29,7 +29,7 @@ public class QueueStatistics extends Statistics {
         currentMessageCount = 0;
         totalMessageQueueTime = 0;
         totalTimeEmpty = 0;
-        totalTime = 0;
+        lastRecordedTime = 0;
         totalQueueingTime = 0;
         numNodes = 1;
     }
@@ -40,7 +40,7 @@ public class QueueStatistics extends Statistics {
         this.currentMessageCount = currentMessageCount;
         this.totalMessageQueueTime = totalMessageQueueTime;
         this.totalTimeEmpty = totalTimeEmpty;
-        this.totalTime = totalTime;
+        this.lastRecordedTime = totalTime;
         this.totalQueueingTime = totalQueueingTime;
         this.numNodes = numNodes;
     }
@@ -52,39 +52,41 @@ public class QueueStatistics extends Statistics {
         map.put(KEY_WAITING_TIME, getAverageMessageWaitingTime());
         map.put(KEY_PRODUCT_ARRIVAL_WAITING_TIME, getMessageArrivalRate() * getAverageMessageWaitingTime());
         map.put(KEY_TOTAL_TIME_EMPTY, totalTimeEmpty / numNodes);
-        map.put(KEY_TOTAL_TIME, totalTime / numNodes);
+        map.put(KEY_TOTAL_TIME, lastRecordedTime / numNodes);
         return map;
     }
 
     /**
-     * Records changes in queue statistics after {@code timeElapsed} passes and a new message added at the end of it.
+     * Records changes in queue statistics at {@code currentTime} and a new message added at the end of it.
      */
-    public void addMessageArrivedTime(double timeElapsed) {
+    public void addMessageArrivedTime(double currentTime) {
+        double timeElapsed = currentTime - lastRecordedTime;
+        lastRecordedTime = currentTime;
         totalQueueingTime += currentMessageCount * timeElapsed;
         if (currentMessageCount == 0) {
             totalTimeEmpty += timeElapsed;
         }
         totalMessageCount += 1;
         currentMessageCount += 1;
-        totalTime += timeElapsed;
     }
 
     /**
-     * Records changes in queue statistics after {@code timeElapsed} passes and a message is removed at the end of it.
+     * Records changes in queue statistics at {@code currentTime} and a message is removed at the end of it.
      */
-    public void addMessageProcessedTime(double timeElapsed, double messageQueueTime) {
+    public void addMessageProcessedTime(double currentTime, double messageQueueTime) {
+        double timeElapsed = currentTime - lastRecordedTime;
+        lastRecordedTime = currentTime;
         totalQueueingTime += currentMessageCount * timeElapsed;
         totalMessageQueueTime += messageQueueTime;
-        totalTime += timeElapsed;
         currentMessageCount -= 1;
     }
 
     public double getAverageNumMessagesInQueue() {
-        return totalQueueingTime / totalTime;
+        return totalQueueingTime / lastRecordedTime;
     }
 
     public double getMessageArrivalRate() {
-        return totalMessageCount / totalTime;
+        return totalMessageCount / lastRecordedTime;
     }
 
     public double getAverageMessageWaitingTime() {
@@ -93,7 +95,7 @@ public class QueueStatistics extends Statistics {
 
     public String getValues() {
         return String.format("Total message count: %d\nCurrent message count: %d\nTotal message queue time: %.3f\nTotal time: %.3f\nTotal queueing time: %.3f",
-                totalMessageCount, currentMessageCount, totalMessageQueueTime, totalTime, totalQueueingTime);
+                totalMessageCount, currentMessageCount, totalMessageQueueTime, lastRecordedTime, totalQueueingTime);
     }
 
     public QueueStatistics combineStatistics(QueueStatistics other) {
@@ -102,7 +104,7 @@ public class QueueStatistics extends Statistics {
                 this.currentMessageCount + other.currentMessageCount,
                 this.totalMessageQueueTime + other.totalMessageQueueTime,
                 this.totalTimeEmpty + other.totalTimeEmpty,
-                this.totalTime + other.totalTime,
+                this.lastRecordedTime + other.lastRecordedTime,
                 this.totalQueueingTime + other.totalQueueingTime,
                 this.numNodes + other.numNodes);
     }

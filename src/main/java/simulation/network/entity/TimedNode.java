@@ -93,10 +93,7 @@ public abstract class TimedNode<T> extends EndpointNode<T> {
     public Pair<Double, List<Payload<T>>> processPayload(double time, Payload<T> payload) {
         double duration = rng.generateRandomNumber();
         double timePassed = time - previousRecordedTime;
-        double newCurrentTime = time + duration;
-        super.processPayload(newCurrentTime, payload);
-
-        previousRecordedTime = newCurrentTime;
+        previousRecordedTime = time + duration;
         registerTimeElapsed(duration + timePassed);
         T message = payload.getMessage();
         List<Payload<T>> payloads = processMessage(message);

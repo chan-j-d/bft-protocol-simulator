@@ -119,7 +119,6 @@ public class Switch<T> extends Node<T> {
     @Override
     public Pair<Double, List<Payload<T>>> processPayload(double time, Payload<T> payload) {
         double duration = rng.generateRandomNumber();
-        super.processPayload(time + duration, payload);
         return new Pair<>(duration, List.of(payload));
     }
 
