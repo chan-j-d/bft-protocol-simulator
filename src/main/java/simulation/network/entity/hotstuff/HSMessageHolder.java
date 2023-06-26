@@ -27,7 +27,7 @@ public class HSMessageHolder {
      * Adds {@code message} to its backlog.
      */
     public void addMessage(HSMessage message) {
-        HSMessageType type = message.getType();
+        HSMessageType type = message.getMessageType();
         int view = message.getViewNumber();
         boolean isVote = message.isVote();
         if (isVote) {

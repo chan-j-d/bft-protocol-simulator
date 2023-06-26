@@ -22,6 +22,7 @@ public class ConsensusStatistics extends Statistics {
     private final int nodeCount;
     private final Map<String, Double> stateTimeMap;
     private final Map<Integer, Map<String, Double>> roundStateTimeMap;
+    private final Map<String, Integer> messageCountMap;
 
     /**
      * @param states Various states the validator can take during a simulation.
@@ -35,15 +36,18 @@ public class ConsensusStatistics extends Statistics {
             stateTimeMap.put(state.toString(), 0.0);
         }
         roundStateTimeMap = new LinkedHashMap<>();
+        messageCountMap = new LinkedHashMap<>();
     }
 
     private ConsensusStatistics(int nodeCount, int consensusCount, double totalTime,
-            Map<String, Double> stateTimeMap, Map<Integer, Map<String, Double>> roundStateTimeMap) {
+            Map<String, Double> stateTimeMap, Map<Integer, Map<String, Double>> roundStateTimeMap,
+            Map<String, Integer> messageCountMap) {
         this.nodeCount = nodeCount;
         this.consensusCount = consensusCount;
         this.totalTime = totalTime;
         this.stateTimeMap = stateTimeMap;
         this.roundStateTimeMap = roundStateTimeMap;
+        this.messageCountMap = messageCountMap;
     }
 
     public void setConsensusCount(int consensusCount) {
@@ -52,6 +56,22 @@ public class ConsensusStatistics extends Statistics {
 
     public Collection<String> getStates() {
         return stateTimeMap.keySet();
+    }
+
+    public void addMessageCount(String state) {
+        messageCountMap.compute(state, (k, v) -> v == null ? 1 : v + 1);
+    }
+
+    public void addMessageCount(Object state) {
+        addMessageCount(state.toString());
+    }
+
+    public double getNormalizedMessageCountForState(String type) {
+        return normalizeValue(messageCountMap.get(type).doubleValue());
+    }
+
+    public double getNormalizedMessageCountForState(Object type) {
+        return getNormalizedMessageCountForState(type.toString());
     }
 
     /**
@@ -112,8 +132,13 @@ public class ConsensusStatistics extends Statistics {
             totalRoundStateTimeMap.put(round, mergeTwoMaps(roundStateTimeMap.get(round),
                     otherStatistics.roundStateTimeMap.get(round)));
         }
+        Map<String, Integer> newMessageCountMap = new LinkedHashMap<>();
+        for (String state : messageCountMap.keySet()) {
+            newMessageCountMap.put(state, messageCountMap.getOrDefault(state, 0) +
+                    otherStatistics.messageCountMap.getOrDefault(state, 0));
+        }
         return new ConsensusStatistics(totalNodeCount, newConsensusCount, totalTime,
-                totalStateTimeMap, totalRoundStateTimeMap);
+                totalStateTimeMap, totalRoundStateTimeMap, newMessageCountMap);
     }
 
     /**
@@ -200,5 +225,13 @@ public class ConsensusStatistics extends Statistics {
             normalizedMap.put(round, newMap);
         }
         return normalizedMap;
+    }
+
+    public Map<String, Double> getNormalizedMessageCountMap() {
+        Map<String, Double> newMap = new LinkedHashMap<>();
+        for (String state : messageCountMap.keySet()) {
+            newMap.put(state, getNormalizedMessageCountForState(state));
+        }
+        return newMap;
     }
 }

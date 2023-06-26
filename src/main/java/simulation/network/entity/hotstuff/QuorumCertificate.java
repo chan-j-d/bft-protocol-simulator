@@ -14,7 +14,7 @@ public class QuorumCertificate {
 
     public QuorumCertificate(List<HSMessage> messages) {
         HSMessage m = messages.get(0);
-        this.type = m.getType();
+        this.type = m.getMessageType();
         this.viewNumber = m.getViewNumber();
         this.node = m.getNode();
         this.signature = tCombine(type, viewNumber, node, messages);

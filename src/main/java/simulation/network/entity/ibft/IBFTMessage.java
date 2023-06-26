@@ -1,5 +1,7 @@
 package simulation.network.entity.ibft;
 
+import simulation.network.entity.BFTMessage;
+
 import java.util.List;
 import java.util.stream.Stream;
 
@@ -8,7 +10,7 @@ import static simulation.util.StringUtil.MESSAGE_SEPARATOR;
 /**
  * Message sent between IBFT validators.
  */
-public class IBFTMessage {
+public class IBFTMessage extends BFTMessage {
 
     /**
      * Null value placeholder for message components that are not used.
@@ -121,5 +123,10 @@ public class IBFTMessage {
                 .map(Object::toString)
                 .reduce((x, y) -> x + MESSAGE_SEPARATOR + y)
                 .get();
+    }
+
+    @Override
+    public String getType() {
+        return getMessageType().toString();
     }
 }

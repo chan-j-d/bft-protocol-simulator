@@ -14,6 +14,7 @@ public class ValidatorResultsJson {
      * Map of time spent in each state, as specified in the {@code ConsensusStatistics} provided to it.
      */
     private final Map<String, Double> stateTimeMap;
+    private final Map<String, Double> messageCountMap;
     private final Map<Integer, Map<String, Double>> roundStateTimeMap;
     private final double t_total;
     private final double L;
@@ -27,6 +28,7 @@ public class ValidatorResultsJson {
         W = queueStatistics.getAverageMessageWaitingTime();
         stateTimeMap = consensusStatistics.getNormalizedStateTimeMap();
         roundStateTimeMap = consensusStatistics.getNormalizedRoundStateTimeMap();
+        messageCountMap = consensusStatistics.getNormalizedMessageCountMap();
     }
 
     @Override

@@ -3,6 +3,7 @@ package simulation.simulator;
 import simulation.event.InitializationEvent;
 import simulation.event.NodeEvent;
 import simulation.event.TimedEvent;
+import simulation.network.entity.BFTMessage;
 import simulation.network.entity.Node;
 import simulation.network.entity.TimedNode;
 import simulation.network.entity.Validator;
@@ -22,7 +23,7 @@ import java.util.stream.Collectors;
  *
  * @param <T> Message class used by nodes in the simulation.
  */
-public class SimulatorImpl<T> implements Simulator, TimerNotifier<T> {
+public class SimulatorImpl<T extends BFTMessage> implements Simulator, TimerNotifier<T> {
 
     private static final int SNAPSHOT_INTERVAL = 1000000;
     private static final double TIME_CUTOFF = 10000000; // for safety

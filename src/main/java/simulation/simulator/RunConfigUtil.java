@@ -1,6 +1,7 @@
 package simulation.simulator;
 
 import simulation.json.RunConfigJson;
+import simulation.network.entity.BFTMessage;
 import simulation.network.entity.EndpointNode;
 import simulation.network.entity.Validator;
 import simulation.network.entity.hotstuff.HSMessage;
@@ -58,7 +59,7 @@ public class RunConfigUtil {
     /**
      * Fixes the arrangement of the nodes in {@code simulator} according to the given run configuration {@code json}.
      */
-    private static <T> void fixNetworkConnections(RunConfigJson json, SimulatorImpl<T> simulator) {
+    private static <T extends BFTMessage> void fixNetworkConnections(RunConfigJson json, SimulatorImpl<T> simulator) {
         List<Validator<T>> nodes = simulator.getNodes();
         for (Validator<T> node : nodes) {
             node.setAllNodes(nodes);

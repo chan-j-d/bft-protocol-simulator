@@ -95,7 +95,7 @@ public class HSReplica extends Validator<HSMessage> {
      * Returns true if the given message {@code m} is of {@code type} and {@code viewNumber}.
      */
     private boolean matchingMessage(HSMessage m, HSMessageType type, int viewNumber) {
-        return m.getType().equals(type) && viewNumber == m.getViewNumber();
+        return m.getMessageType().equals(type) && viewNumber == m.getViewNumber();
     }
 
     /**
@@ -161,7 +161,7 @@ public class HSReplica extends Validator<HSMessage> {
     @Override
     protected List<Payload<HSMessage>> processMessage(HSMessage message) {
         int messageView = message.getViewNumber();
-        HSMessageType type = message.getType();
+        HSMessageType type = message.getMessageType();
         if (messageView < curView - 1 || (type != HSMessageType.NEW_VIEW && messageView == curView - 1)) {
             // If the view of the message is lower than expected, ignore the message.
             return List.of();
