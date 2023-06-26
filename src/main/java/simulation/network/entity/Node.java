@@ -30,6 +30,7 @@ public abstract class Node<T> implements QueueResults {
      * Tracking of queue statistics in the node.
      */
     private final QueueStatistics queueStatistics;
+    private boolean isOccupied;
     private double currentTime;
     /**
      * Helper time variable used for tracking average number of messages in queue.
@@ -43,6 +44,7 @@ public abstract class Node<T> implements QueueResults {
         this.queueStatistics = new QueueStatistics();
         this.messageArrivalTimes = new LinkedList<>();
         this.previousQueueChangedTime = 0;
+        this.isOccupied = false;
     }
 
     public abstract List<Payload<T>> initializationPayloads();
@@ -54,18 +56,22 @@ public abstract class Node<T> implements QueueResults {
 
     /**
      * Returns the time taken to process payload and the list of resulting payloads from processing it.
-     * Updates the queue statistics due to a message being removed from queue.
      */
-    public Pair<Double, List<Payload<T>>> processPayload(double time, Payload<T> payload) {
-        setCurrentTime(time);
-        double timeElapsed = time - previousQueueChangedTime;
-        previousQueueChangedTime = time;
-        queueStatistics.addMessageProcessedTime(timeElapsed, time - messageArrivalTimes.pop());
-        return new Pair<>(0.0, List.of());
+    public abstract Pair<Double, List<Payload<T>>> processPayload(double time, Payload<T> payload);
+
+    public boolean isOccupied() {
+        return isOccupied;
     }
 
-    public boolean isOccupiedAtTime(double time) {
-        return currentTime > time;
+    public void setOccupied() {
+        isOccupied = true;
+    }
+
+    public void setIdle(double time) {
+        isOccupied = false;
+        setCurrentTime(time);
+        previousQueueChangedTime = time;
+        queueStatistics.addMessageProcessedTime(time, time - messageArrivalTimes.pop());
     }
 
     public void setCurrentTime(double time) {
@@ -114,9 +120,8 @@ public abstract class Node<T> implements QueueResults {
      * Adds {@code payload} to the queue for this {@code node} at {@code time}.
      */
     public void addToQueue(double time, Payload<T> payload) {
-        double timeElapsed = time - previousQueueChangedTime;
         previousQueueChangedTime = time;
-        queueStatistics.addMessageArrivedTime(timeElapsed);
+        queueStatistics.addMessageArrivedTime(time);
         messageArrivalTimes.add(time);
         queue.add(payload);
     }

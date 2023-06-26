@@ -78,9 +78,9 @@ public class SimulatorImpl<T> implements Simulator, TimerNotifier<T> {
         if (currentTime > TIME_CUTOFF) {
             return Optional.empty();
         }
+        Node<T> node = nextEvent.getNode();
         List<NodeEvent<T>> resultingEvents = nextEvent.simulate();
 
-        Node<T> node = nextEvent.getNode();
         if (!node.isStillRequiredToRun()) {
             unfinishedValidatorsTracker.remove(node);
         }
