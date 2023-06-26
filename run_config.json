@@ -1,9 +1,9 @@
 {
-  "numRuns": 1,
+  "numRuns": 2,
   "numConsensus": 500,
   "startingSeed": 0,
   "seedMultiplier": 100,
-  "numNodes": 16,
+  "numNodes": 8,
   "nodeProcessingRate": 3,
   "switchProcessingRate": -1,
   "baseTimeLimit": 10000,
