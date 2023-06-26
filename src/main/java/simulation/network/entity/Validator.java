@@ -68,6 +68,8 @@ public abstract class Validator<T> extends TimedNode<T> implements ValidatorResu
 
     public abstract int getConsensusCount();
 
+    public abstract int getNumConsecutiveFailure();
+
     public abstract Object getState();
 
     @Override
@@ -81,6 +83,7 @@ public abstract class Validator<T> extends TimedNode<T> implements ValidatorResu
     @Override
     public void registerTimeElapsed(double time) {
         statistics.addTime(getState(), time);
+        statistics.addRoundTime((getNumConsecutiveFailure() + 1), getState(), time);
         statistics.setConsensusCount(getConsensusCount());
     }
 }

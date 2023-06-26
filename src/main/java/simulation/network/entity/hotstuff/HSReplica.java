@@ -370,6 +370,11 @@ public class HSReplica extends Validator<HSMessage> {
     }
 
     @Override
+    public int getNumConsecutiveFailure() {
+        return numConsecutiveFailures;
+    }
+
+    @Override
     public Object getState() {
         return state;
     }

@@ -94,6 +94,11 @@ public class IBFTNode extends Validator<IBFTMessage> {
     }
 
     @Override
+    public int getNumConsecutiveFailure() {
+        return r_i - 1;
+    }
+
+    @Override
     public Object getState() {
         return state;
     }
