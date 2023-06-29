@@ -74,12 +74,15 @@ public class BFTSimulation {
         io.output(runResults.toString());
         io.close();
 
-        ConsensusStatistics consensusStatistics = runResults.getFastestValidatorStatistics();
-        QueueStatistics validatorQueueStats = runResults.getFastestValidatorQueueStatistics();
+        ConsensusStatistics fastestValidatorStatistics = runResults.getFastestValidatorStatistics();
+        ConsensusStatistics remainderValidatorStatistics = runResults.getRemainderValidatorStatistics();
+        QueueStatistics fastestValidatorQueueStats = runResults.getFastestValidatorQueueStatistics();
+        QueueStatistics remainderValidatorQueueStats = runResults.getRemainderValidatorQueueStatistics();
         List<QueueStatistics> switchStatistics = runResults.getSwitchStatistics();
         numGroups = switchStatistics.size();
 
-        ValidatorResultsJson resultsJson = new ValidatorResultsJson(consensusStatistics, validatorQueueStats);
+        ValidatorResultsJson resultsJson = new ValidatorResultsJson(fastestValidatorStatistics,
+                remainderValidatorStatistics, fastestValidatorQueueStats, remainderValidatorQueueStats);
         writeObjectToJson(resultsJson, RESULTS_JSON_FILEPATH);
 
         for (int i = 0; i < numGroups; i++) {
@@ -89,9 +92,9 @@ public class BFTSimulation {
             writeObjectToJson(queueResultsJson, String.format(SWITCH_GROUP_STATISTICS, i));
         }
 
-        System.out.println(consensusStatistics);
+        System.out.println(fastestValidatorStatistics);
         System.out.println("\nAverage queue stats");
-        System.out.println(validatorQueueStats);
+        System.out.println(fastestValidatorQueueStats);
 
         cleanup();
     }

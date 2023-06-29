@@ -162,24 +162,12 @@ public class ConsensusStatistics extends Statistics {
         return newMap;
     }
 
-    private boolean containsKey(String state) {
-        return stateTimeMap.containsKey(state);
-    }
-
-    private double getTimeForState(String state) {
-        return stateTimeMap.get(state);
-    }
-
     private double getTotalTime() {
         return totalTime;
     }
 
     private int getConsensusCount() {
         return consensusCount;
-    }
-
-    public double getTimeInState(String state) {
-        return getNormalizedTimeForState(state);
     }
 
     public double getAverageConsensusTime() {

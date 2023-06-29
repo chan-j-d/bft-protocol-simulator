@@ -3,6 +3,7 @@ package simulation.json;
 import simulation.statistics.ConsensusStatistics;
 import simulation.statistics.QueueStatistics;
 
+import java.util.List;
 import java.util.Map;
 
 /**
@@ -13,26 +14,53 @@ public class ValidatorResultsJson {
     /**
      * Map of time spent in each state, as specified in the {@code ConsensusStatistics} provided to it.
      */
-    private final Map<String, Double> stateTimeMap;
-    private final Map<String, Double> messageCountMap;
-    private final Map<Integer, Map<String, Double>> roundStateTimeMap;
-    private final double t_total;
-    private final double L;
-    private final double lambda;
-    private final double W;
+    private final Map<String, Double> fastestStateTimeMap;
+    private final Map<String, Double> remainderStateTimeMap;
 
-    public ValidatorResultsJson(ConsensusStatistics consensusStatistics, QueueStatistics queueStatistics) {
-        t_total = consensusStatistics.getAverageConsensusTime();
-        L = queueStatistics.getAverageNumMessagesInQueue();
-        lambda = queueStatistics.getMessageArrivalRate();
-        W = queueStatistics.getAverageMessageWaitingTime();
-        stateTimeMap = consensusStatistics.getNormalizedStateTimeMap();
-        roundStateTimeMap = consensusStatistics.getNormalizedRoundStateTimeMap();
-        messageCountMap = consensusStatistics.getNormalizedMessageCountMap();
+    private final Map<String, Double> fastestMessageCountMap;
+    private final Map<String, Double> remainderMessageCountMap;
+
+    private final Map<Integer, Map<String, Double>> fastestRoundStateTimeMap;
+    private final Map<Integer, Map<String, Double>> remainderRoundStateTimeMap;
+
+    private final double t_total_fastest;
+    private final double t_total_remainder;
+
+    private final double L_fastest;
+    private final double L_remainder;
+
+    private final double W_fastest;
+    private final double W_remainder;
+
+    private final double lambda_fastest;
+    private final double lambda_remainder;
+
+    private final List<Map<String, Object>> nodeStatistics;
+
+    public ValidatorResultsJson(ConsensusStatistics fastestConsensusStats,
+            ConsensusStatistics remainderConsensusStats,
+            QueueStatistics fastestQueueStats, QueueStatistics remainderQueueStats) {
+        t_total_fastest = fastestConsensusStats.getAverageConsensusTime();
+        L_fastest = fastestQueueStats.getAverageNumMessagesInQueue();
+        W_fastest = fastestQueueStats.getAverageMessageWaitingTime();
+        lambda_fastest = fastestQueueStats.getMessageArrivalRate();
+
+        fastestStateTimeMap = fastestConsensusStats.getNormalizedStateTimeMap();
+        fastestRoundStateTimeMap = fastestConsensusStats.getNormalizedRoundStateTimeMap();
+        fastestMessageCountMap = fastestConsensusStats.getNormalizedMessageCountMap();
+
+        t_total_remainder = remainderConsensusStats.getAverageConsensusTime();
+        L_remainder = remainderQueueStats.getAverageNumMessagesInQueue();
+        W_remainder = remainderQueueStats.getAverageMessageWaitingTime();
+        lambda_remainder = remainderQueueStats.getMessageArrivalRate();
+
+        remainderStateTimeMap = remainderConsensusStats.getNormalizedStateTimeMap();
+        remainderRoundStateTimeMap = remainderConsensusStats.getNormalizedRoundStateTimeMap();
+        remainderMessageCountMap = remainderConsensusStats.getNormalizedMessageCountMap();
     }
 
     @Override
     public String toString() {
-        return String.format("%s\n%s", stateTimeMap, t_total);
+        return String.format("%s\n%s", remainderStateTimeMap, t_total_fastest);
     }
 }
