@@ -10,9 +10,11 @@ import simulation.network.entity.Validator;
 import simulation.network.entity.timer.TimerNotifier;
 import simulation.network.router.Switch;
 import simulation.statistics.ConsensusStatistics;
+import simulation.statistics.ConsensusTimeComparator;
 import simulation.statistics.QueueStatistics;
 
 import java.util.ArrayList;
+import java.util.Comparator;
 import java.util.List;
 import java.util.Optional;
 import java.util.PriorityQueue;
@@ -34,6 +36,8 @@ public class SimulatorImpl<T extends BFTMessage> implements Simulator, TimerNoti
     private List<List<Switch<T>>> switches;
     private double currentTime;
     private List<Validator<T>> unfinishedValidatorsTracker;
+    private int n;
+    private int f;
 
     public SimulatorImpl() {
     }
@@ -43,6 +47,8 @@ public class SimulatorImpl<T extends BFTMessage> implements Simulator, TimerNoti
      */
     public void setNodes(List<? extends Validator<T>> validators) {
         this.nodes = new ArrayList<>(validators);
+        this.n = validators.size();
+        this.f = (n - 1) / 3;
         eventQueue = new PriorityQueue<>();
         for (Node<T> node : validators) {
             eventQueue.add(new InitializationEvent<>(node));
@@ -115,19 +121,36 @@ public class SimulatorImpl<T extends BFTMessage> implements Simulator, TimerNoti
 
     @Override
     public RunResults getRunResults() {
-        ConsensusStatistics runConsensusStats = nodes.stream()
+        ConsensusStatistics fastestRunConsensusStats = nodes.stream()
                 .map(Validator::getConsensusStatistics)
+                .sorted(new ConsensusTimeComparator())
+                .limit(n - f)
+                .reduce(ConsensusStatistics::combineStatistics).orElseThrow();
+        ConsensusStatistics remainderRunConsensusStats = nodes.stream()
+                .map(Validator::getConsensusStatistics)
+                .sorted(new ConsensusTimeComparator().reversed())
+                .limit(f)
                 .reduce(ConsensusStatistics::combineStatistics).orElseThrow();
 
-        QueueStatistics runValidatorQueueStats = nodes.stream()
+        Comparator<Validator<T>> consensusTimeComparatorForQueue = (n1, n2) ->
+                new ConsensusTimeComparator().compare(n1.getConsensusStatistics(), n2.getConsensusStatistics());
+        QueueStatistics fastestRunValidatorQueueStats = nodes.stream()
+                .sorted(consensusTimeComparatorForQueue)
                 .map(Node::getQueueStatistics)
+                .limit(n - f)
+                .reduce(QueueStatistics::combineStatistics).orElseThrow();
+        QueueStatistics remainderRunValidatorQueueStats = nodes.stream()
+                .sorted(consensusTimeComparatorForQueue.reversed())
+                .map(Node::getQueueStatistics)
+                .limit(f)
                 .reduce(QueueStatistics::combineStatistics).orElseThrow();
 
         List<QueueStatistics> switchStatistics = switches.stream()
                 .map(group -> group.stream().map(Node::getQueueStatistics)
                         .reduce(QueueStatistics::combineStatistics).orElseThrow())
                 .collect(Collectors.toList());
-        return new RunResults(runConsensusStats, runValidatorQueueStats, switchStatistics);
+        return new RunResults(fastestRunConsensusStats, remainderRunConsensusStats,
+                fastestRunValidatorQueueStats, remainderRunValidatorQueueStats, switchStatistics);
     }
 
     @Override

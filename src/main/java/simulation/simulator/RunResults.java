@@ -13,23 +13,36 @@ import java.util.stream.IntStream;
  */
 public class RunResults {
 
-    private final ConsensusStatistics validatorStatistics;
-    private final QueueStatistics validatorQueueStatistics;
+    private final ConsensusStatistics fastestValidatorStatistics;
+    private final ConsensusStatistics remainderValidatorStatistics;
+    private final QueueStatistics fastestValidatorQueueStatistics;
+    private final QueueStatistics remainderValidatorQueueStatistics;
     private final List<QueueStatistics> switchStatistics;
 
-    public RunResults(ConsensusStatistics validatorStatistics, QueueStatistics validatorQueueStatistics,
+    public RunResults(ConsensusStatistics fastestValidatorStatistics, ConsensusStatistics remainderValidatorStatistics,
+            QueueStatistics fastestValidatorQueueStatistics, QueueStatistics remainderValidatorQueueStatistics,
             List<QueueStatistics> switchStatistics) {
-        this.validatorStatistics = validatorStatistics;
-        this.validatorQueueStatistics = validatorQueueStatistics;
+        this.fastestValidatorStatistics = fastestValidatorStatistics;
+        this.remainderValidatorStatistics = remainderValidatorStatistics;
+        this.fastestValidatorQueueStatistics = fastestValidatorQueueStatistics;
+        this.remainderValidatorQueueStatistics = remainderValidatorQueueStatistics;
         this.switchStatistics = switchStatistics;
     }
 
-    public ConsensusStatistics getValidatorStatistics() {
-        return validatorStatistics;
+    public ConsensusStatistics getFastestValidatorStatistics() {
+        return fastestValidatorStatistics;
     }
 
-    public QueueStatistics getValidatorQueueStatistics() {
-        return validatorQueueStatistics;
+    public ConsensusStatistics getRemainderValidatorStatistics() {
+        return remainderValidatorStatistics;
+    }
+
+    public QueueStatistics getFastestValidatorQueueStatistics() {
+        return fastestValidatorQueueStatistics;
+    }
+
+    public QueueStatistics getRemainderValidatorQueueStatistics() {
+        return remainderValidatorQueueStatistics;
     }
 
     public List<QueueStatistics> getSwitchStatistics() {
@@ -40,24 +53,29 @@ public class RunResults {
      * Returns a new {@code RunResults} that merges {@code this} and {@code other} together.
      */
     public RunResults mergeRunResults(RunResults other) {
-        ConsensusStatistics newConsensusStatistics =
-                validatorStatistics.combineStatistics(other.getValidatorStatistics());
+        ConsensusStatistics newFastestConsensusStatistics =
+                fastestValidatorStatistics.combineStatistics(other.getFastestValidatorStatistics());
+        ConsensusStatistics newRemainderConsensusStatistics = remainderValidatorStatistics
+                .combineStatistics(other.getRemainderValidatorStatistics());
 
-        QueueStatistics newQueueStatistics =
-                validatorQueueStatistics.combineStatistics(other.getValidatorQueueStatistics());
+        QueueStatistics newFastestQueueStatistics =
+                fastestValidatorQueueStatistics.combineStatistics(other.getFastestValidatorQueueStatistics());
+        QueueStatistics newRemainderQueueStatistics =
+                remainderValidatorQueueStatistics.combineStatistics(other.getRemainderValidatorQueueStatistics());
 
         List<QueueStatistics> newSwitchStatistics =
                 IntStream.iterate(0, i -> i < switchStatistics.size(), i -> i + 1)
                         .mapToObj(i -> switchStatistics.get(i).combineStatistics(other.getSwitchStatistics().get(i)))
                         .collect(Collectors.toList());
-        return new RunResults(newConsensusStatistics, newQueueStatistics, newSwitchStatistics);
+        return new RunResults(newFastestConsensusStatistics, newRemainderConsensusStatistics,
+                newFastestQueueStatistics, newRemainderQueueStatistics, newSwitchStatistics);
     }
 
     @Override
     public String toString() {
         return String.format("Validator Stats:\n%s\nValidator Queue Stats:\n%s\nSwitch Stats%s",
-                validatorStatistics,
-                validatorQueueStatistics,
+                fastestValidatorStatistics,
+                fastestValidatorQueueStatistics,
                 switchStatistics);
     }
 }

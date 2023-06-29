@@ -73,8 +73,8 @@ public class BFTSimulation {
         io.output(runResults.toString());
         io.close();
 
-        ConsensusStatistics consensusStatistics = runResults.getValidatorStatistics();
-        QueueStatistics validatorQueueStats = runResults.getValidatorQueueStatistics();
+        ConsensusStatistics consensusStatistics = runResults.getFastestValidatorStatistics();
+        QueueStatistics validatorQueueStats = runResults.getFastestValidatorQueueStatistics();
         List<QueueStatistics> switchStatistics = runResults.getSwitchStatistics();
         numGroups = switchStatistics.size();
 
