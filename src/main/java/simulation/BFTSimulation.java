@@ -1,6 +1,7 @@
 package simulation;
 
 import com.google.gson.Gson;
+import com.google.gson.GsonBuilder;
 import simulation.io.FileIo;
 import simulation.io.IoInterface;
 import simulation.json.QueueResultsJson;
@@ -44,7 +45,7 @@ public class BFTSimulation {
      */
     private static final String SWITCH_GROUP_STATISTICS =
             JSON_DIRECTORY.resolve("switch_group_%d.json").toString();
-    private static final Gson GSON = new Gson();
+    private static final Gson GSON = new GsonBuilder().setPrettyPrinting().create();
 
     /**
      * Reads a runConfigJson file from {@code args} and runs a simulation based on it.
