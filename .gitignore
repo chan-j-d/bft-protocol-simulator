@@ -3,7 +3,7 @@
 .*
 *.txt
 logs/*
-json/*
+json*
 
 /py/*.json
 /py/*.csv
