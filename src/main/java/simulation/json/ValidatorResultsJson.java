@@ -58,6 +58,6 @@ public class ValidatorResultsJson {
 
     @Override
     public String toString() {
-        return String.format("%s\n%s", remainderStateTimeMap, t_total_fastest);
+        return String.format("%s\n%s", fastestStateTimeMap, t_total_fastest);
     }
 }
