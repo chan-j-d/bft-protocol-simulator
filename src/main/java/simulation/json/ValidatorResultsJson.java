@@ -3,7 +3,6 @@ package simulation.json;
 import simulation.statistics.ConsensusStatistics;
 import simulation.statistics.QueueStatistics;
 
-import java.util.List;
 import java.util.Map;
 
 /**
@@ -34,8 +33,6 @@ public class ValidatorResultsJson {
 
     private final double lambda_fastest;
     private final double lambda_remainder;
-
-    private final List<Map<String, Object>> nodeStatistics;
 
     public ValidatorResultsJson(ConsensusStatistics fastestConsensusStats,
             ConsensusStatistics remainderConsensusStats,
