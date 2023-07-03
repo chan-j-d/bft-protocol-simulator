@@ -76,7 +76,7 @@ public abstract class Validator<T extends BFTMessage> extends TimedNode<T>
 
     @Override
     public boolean isStillRequiredToRun() {
-        return getConsensusCount() <= consensusLimit;
+        return getConsensusCount() < consensusLimit;
     }
 
     @Override
