@@ -27,7 +27,7 @@ import java.util.stream.Collectors;
  */
 public class SimulatorImpl<T extends BFTMessage> implements Simulator, TimerNotifier<T> {
 
-    private static final int SNAPSHOT_INTERVAL = 1000000;
+    private static final int SNAPSHOT_INTERVAL = 50;
     private static final double TIME_CUTOFF = 10000000; // for safety
 
     private PriorityQueue<NodeEvent<T>> eventQueue;
@@ -97,7 +97,7 @@ public class SimulatorImpl<T extends BFTMessage> implements Simulator, TimerNoti
 
         String finalString = nextEvent.toString();
         if (roundCount % SNAPSHOT_INTERVAL == 0) {
-            finalString = finalString + "\n\nSnapshot:\n" + getSnapshotOfNodes() + "\n" + eventQueue + "\n";
+            finalString = finalString + "\n\nSnapshot:\n" + getSnapshotOfNodes() + "\n";
         }
         return Optional.of(finalString);
     }

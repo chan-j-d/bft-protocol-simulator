@@ -222,4 +222,8 @@ public class ConsensusStatistics extends Statistics {
         }
         return newMap;
     }
+
+    public Map<String, Integer> getMessageCountMap() {
+        return messageCountMap;
+    }
 }
