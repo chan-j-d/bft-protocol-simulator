@@ -105,11 +105,12 @@ public class IBFTNode extends Validator<IBFTMessage> {
 
     @Override
     public String toString() {
-        return String.format("%s (%s, %d, %d)",
+        return String.format("%s (%s, %d, %d) (timeout at %.3f)",
                 super.toString(),
                 state,
                 lambda_i,
-                r_i);
+                r_i,
+                getTimeoutTime());
     }
 
     // Utility methods
