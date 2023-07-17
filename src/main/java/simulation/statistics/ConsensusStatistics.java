@@ -23,6 +23,7 @@ public class ConsensusStatistics extends Statistics {
     private final Map<String, Double> stateTimeMap;
     private final Map<Integer, Map<String, Double>> roundStateTimeMap;
     private final Map<String, Integer> messageCountMap;
+    private final Map<String, Integer> roundChangeStateCountMap;
 
     /**
      * @param states Various states the validator can take during a simulation.
@@ -37,17 +38,19 @@ public class ConsensusStatistics extends Statistics {
         }
         roundStateTimeMap = new LinkedHashMap<>();
         messageCountMap = new LinkedHashMap<>();
+        roundChangeStateCountMap = new LinkedHashMap<>();
     }
 
     private ConsensusStatistics(int nodeCount, int consensusCount, double totalTime,
             Map<String, Double> stateTimeMap, Map<Integer, Map<String, Double>> roundStateTimeMap,
-            Map<String, Integer> messageCountMap) {
+            Map<String, Integer> messageCountMap, Map<String, Integer> roundChangeStateCountMap) {
         this.nodeCount = nodeCount;
         this.consensusCount = consensusCount;
         this.totalTime = totalTime;
         this.stateTimeMap = stateTimeMap;
         this.roundStateTimeMap = roundStateTimeMap;
         this.messageCountMap = messageCountMap;
+        this.roundChangeStateCountMap = roundChangeStateCountMap;
     }
 
     public void setConsensusCount(int consensusCount) {
@@ -62,16 +65,20 @@ public class ConsensusStatistics extends Statistics {
         messageCountMap.compute(state, (k, v) -> v == null ? 1 : v + 1);
     }
 
-    public void addMessageCount(Object state) {
-        addMessageCount(state.toString());
+    public void addRoundChangeStateCount(String state) {
+        roundChangeStateCountMap.compute(state, (k, v) -> v == null ? 1 : v + 1);
+    }
+
+    public void addRoundChangeStateCount(Object state) {
+        addRoundChangeStateCount(state.toString());
     }
 
     public double getNormalizedMessageCountForState(String type) {
         return normalizeValue(messageCountMap.get(type).doubleValue());
     }
 
-    public double getNormalizedMessageCountForState(Object type) {
-        return getNormalizedMessageCountForState(type.toString());
+    public double getNormalizedRoundChangeStateCount(String state) {
+        return normalizeValue(roundChangeStateCountMap.get(state).doubleValue());
     }
 
     /**
@@ -137,8 +144,13 @@ public class ConsensusStatistics extends Statistics {
             newMessageCountMap.put(state, messageCountMap.getOrDefault(state, 0) +
                     otherStatistics.messageCountMap.getOrDefault(state, 0));
         }
+        Map<String, Integer> newRoundChangeStateCountMap = new LinkedHashMap<>();
+        for (String state : roundChangeStateCountMap.keySet()) {
+            newRoundChangeStateCountMap.put(state, roundChangeStateCountMap.getOrDefault(state, 0) +
+                    otherStatistics.roundChangeStateCountMap.getOrDefault(state, 0));
+        }
         return new ConsensusStatistics(totalNodeCount, newConsensusCount, totalTime,
-                totalStateTimeMap, totalRoundStateTimeMap, newMessageCountMap);
+                totalStateTimeMap, totalRoundStateTimeMap, newMessageCountMap, newRoundChangeStateCountMap);
     }
 
     /**
@@ -219,6 +231,14 @@ public class ConsensusStatistics extends Statistics {
         Map<String, Double> newMap = new LinkedHashMap<>();
         for (String state : messageCountMap.keySet()) {
             newMap.put(state, getNormalizedMessageCountForState(state));
+        }
+        return newMap;
+    }
+
+    public Map<String, Double> getNormalizedRoundChangeStateCountMap() {
+        Map<String, Double> newMap = new LinkedHashMap<>();
+        for (String state : roundChangeStateCountMap.keySet()) {
+            newMap.put(state, getNormalizedRoundChangeStateCount(state));
         }
         return newMap;
     }

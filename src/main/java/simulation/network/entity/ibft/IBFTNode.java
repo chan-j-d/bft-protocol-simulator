@@ -137,6 +137,7 @@ public class IBFTNode extends Validator<IBFTMessage> {
 
     @Override
     protected List<Payload<IBFTMessage>> onTimerExpiry() {
+        getConsensusStatistics().addRoundChangeStateCount(state);
         timeoutOperation();
         return getProcessedPayloads();
     }
