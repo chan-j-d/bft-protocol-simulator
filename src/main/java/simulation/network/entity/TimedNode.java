@@ -17,6 +17,7 @@ public abstract class TimedNode<T> extends EndpointNode<T> {
     private final RandomNumberGenerator rng;
     private double previousRecordedTime;
     private int timerCount; // Used to differentiate multiple timers in the same instance & round
+    private double timeoutTime;
 
     /**
      * @param name Name of node.
@@ -47,7 +48,12 @@ public abstract class TimedNode<T> extends EndpointNode<T> {
      * @param duration Starts a timer for a given duration starting at the current time.
      */
     protected void startTimer(double duration) {
-        notifyAtTime(getTime() + duration, ++timerCount); // Every time a timer starts, a unique one is set.
+        timeoutTime = getTime() + duration;
+        notifyAtTime(timeoutTime, ++timerCount); // Every time a timer starts, a unique one is set.
+    }
+
+    protected double getTimeoutTime() {
+        return timeoutTime;
     }
 
     /**

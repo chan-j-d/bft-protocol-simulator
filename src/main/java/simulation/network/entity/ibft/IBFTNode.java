@@ -49,6 +49,10 @@ public class IBFTNode extends Validator<IBFTMessage> {
     private Map<Integer, Integer> otherNodeHeights;
     private int inputValue_i; // value passed as input to instance
 
+    private boolean hasPrePrepared;
+    private boolean hasPrepared;
+    private boolean hasRoundChangeLeaderPrePrepared;
+
     /**
      * @param name Name of IBFT validator.
      * @param id Unique integer identifier for IBFT validator.
@@ -90,17 +94,23 @@ public class IBFTNode extends Validator<IBFTMessage> {
     }
 
     @Override
+    public int getNumConsecutiveFailure() {
+        return r_i - 1;
+    }
+
+    @Override
     public Object getState() {
         return state;
     }
 
     @Override
     public String toString() {
-        return String.format("%s (%s, %d, %d)",
+        return String.format("%s (%s, %d, %d) (timeout at %.3f)",
                 super.toString(),
                 state,
                 lambda_i,
-                r_i);
+                r_i,
+                getTimeoutTime());
     }
 
     // Utility methods
@@ -127,6 +137,7 @@ public class IBFTNode extends Validator<IBFTMessage> {
 
     @Override
     protected List<Payload<IBFTMessage>> onTimerExpiry() {
+        getConsensusStatistics().addRoundChangeStateCount(state);
         timeoutOperation();
         return getProcessedPayloads();
     }
@@ -156,6 +167,7 @@ public class IBFTNode extends Validator<IBFTMessage> {
      * Part of Algorithm 1 in IBFT paper.
      */
     private void start(int lambda, int value) {
+        resetRoundBooleans();
         state = IBFTState.NEW_ROUND;
 
         lambda_i = lambda;
@@ -243,6 +255,8 @@ public class IBFTNode extends Validator<IBFTMessage> {
      * This corresponds to the first code block in Algorithm 3.
      */
     private void timeoutOperation() {
+        resetRoundBooleans();
+
         r_i++;
         state = IBFTState.ROUND_CHANGE;
         startIbftTimer();
@@ -262,6 +276,7 @@ public class IBFTNode extends Validator<IBFTMessage> {
      */
     private void fPlusOneRoundChangeOperation() {
         if (messageHolder.hasMoreHigherRoundChangeMessagesThan(lambda_i, r_i)) {
+            resetRoundBooleans();
             r_i = messageHolder.getNextGreaterRoundChangeMessage(lambda_i, r_i);
             startIbftTimer();
             broadcastMessageToAll(createPreparedValuesMessage(IBFTMessageType.ROUND_CHANGE));
@@ -281,14 +296,14 @@ public class IBFTNode extends Validator<IBFTMessage> {
                 List<IBFTMessage> roundChangeMessages =
                         messageHolder.getQuorumOfAnyValuedMessages(IBFTMessageType.ROUND_CHANGE,
                                 lambda_i, r_i);
-                if (justifyRoundChange(roundChangeMessages) && state == IBFTState.ROUND_CHANGE) {
+                if (justifyRoundChange(roundChangeMessages) && !hasRoundChangeLeaderPrePrepared) {
+                    hasRoundChangeLeaderPrePrepared = true;
                     Pair<Integer, Integer> prPvPair = highestPrepared(roundChangeMessages);
                     int pr = prPvPair.first();
                     int pv = prPvPair.second();
                     if (pr != NULL_VALUE && pv != NULL_VALUE) {
                         inputValue_i = pv;
                     }
-                    state = IBFTState.NEW_ROUND;
                     broadcastMessageToAll(createSingleValueMessage(
                             IBFTMessageType.PREPREPARED, inputValue_i, roundChangeMessages));
                 }
@@ -306,7 +321,9 @@ public class IBFTNode extends Validator<IBFTMessage> {
         List<IBFTMessage> preprepareMessages = messageHolder.getMessages(IBFTMessageType.PREPREPARED, lambda_i, r_i);
         for (IBFTMessage message : preprepareMessages) {
             int sender = message.getIdentifier();
-            if (sender == getLeader(lambda_i, r_i, N) && justifyPrePrepare(message)) {
+            if (sender == getLeader(lambda_i, r_i, N) && justifyPrePrepare(message) && !hasPrePrepared) {
+                hasPrePrepared = true;
+
                 startIbftTimer();
                 state = IBFTState.PREPREPARED;
                 inputValue_i = message.getValue();
@@ -321,7 +338,9 @@ public class IBFTNode extends Validator<IBFTMessage> {
      */
     private void prepareOperation() {
         if (messageHolder.hasQuorumOfSameValuedMessages(IBFTMessageType.PREPARED, lambda_i, r_i)
-                && state == IBFTState.PREPREPARED) {
+                && !hasPrepared) {
+            hasPrepared = true;
+
             List<IBFTMessage> prepareMessages =
                     messageHolder.getQuorumOfSameValuedMessages(IBFTMessageType.PREPARED, lambda_i, r_i);
             state = IBFTState.PREPARED;
@@ -434,5 +453,16 @@ public class IBFTNode extends Validator<IBFTMessage> {
             }  // else don't update
         }
         return new Pair<>(pr, pv);
+    }
+
+    /**
+     * Resets boolean tracking each upon operation.
+     * The commit and f+1 round change operations can only occur once per round and consensus instance since
+     * they change one of those values.
+     */
+    private void resetRoundBooleans() {
+        hasPrePrepared = false;
+        hasPrepared = false;
+        hasRoundChangeLeaderPrePrepared = false;
     }
 }

@@ -1,6 +1,7 @@
 package simulation;
 
 import com.google.gson.Gson;
+import com.google.gson.GsonBuilder;
 import simulation.io.FileIo;
 import simulation.io.IoInterface;
 import simulation.json.QueueResultsJson;
@@ -44,7 +45,7 @@ public class BFTSimulation {
      */
     private static final String SWITCH_GROUP_STATISTICS =
             JSON_DIRECTORY.resolve("switch_group_%d.json").toString();
-    private static final Gson GSON = new Gson();
+    private static final Gson GSON = new GsonBuilder().setPrettyPrinting().create();
 
     /**
      * Reads a runConfigJson file from {@code args} and runs a simulation based on it.
@@ -73,12 +74,15 @@ public class BFTSimulation {
         io.output(runResults.toString());
         io.close();
 
-        ConsensusStatistics consensusStatistics = runResults.getValidatorStatistics();
-        QueueStatistics validatorQueueStats = runResults.getValidatorQueueStatistics();
+        ConsensusStatistics fastestValidatorStatistics = runResults.getFastestValidatorStatistics();
+        ConsensusStatistics remainderValidatorStatistics = runResults.getRemainderValidatorStatistics();
+        QueueStatistics fastestValidatorQueueStats = runResults.getFastestValidatorQueueStatistics();
+        QueueStatistics remainderValidatorQueueStats = runResults.getRemainderValidatorQueueStatistics();
         List<QueueStatistics> switchStatistics = runResults.getSwitchStatistics();
         numGroups = switchStatistics.size();
 
-        ValidatorResultsJson resultsJson = new ValidatorResultsJson(consensusStatistics, validatorQueueStats);
+        ValidatorResultsJson resultsJson = new ValidatorResultsJson(fastestValidatorStatistics,
+                remainderValidatorStatistics, fastestValidatorQueueStats, remainderValidatorQueueStats);
         writeObjectToJson(resultsJson, RESULTS_JSON_FILEPATH);
 
         for (int i = 0; i < numGroups; i++) {
@@ -88,9 +92,9 @@ public class BFTSimulation {
             writeObjectToJson(queueResultsJson, String.format(SWITCH_GROUP_STATISTICS, i));
         }
 
-        System.out.println(consensusStatistics);
+        System.out.println(fastestValidatorStatistics);
         System.out.println("\nAverage queue stats");
-        System.out.println(validatorQueueStats);
+        System.out.println(fastestValidatorQueueStats);
 
         cleanup();
     }

@@ -1,5 +1,7 @@
 package simulation.network.entity.hotstuff;
 
+import simulation.network.entity.BFTMessage;
+
 import java.util.Objects;
 import java.util.stream.Stream;
 
@@ -8,7 +10,7 @@ import static simulation.util.StringUtil.MESSAGE_SEPARATOR;
 /**
  * Message sent between HotStuff replicas.
  */
-public class HSMessage {
+public class HSMessage extends BFTMessage {
 
     private final HSMessageType type;
     private final int viewNumber;
@@ -27,8 +29,13 @@ public class HSMessage {
         this.isVote = isVote;
     }
 
-    public HSMessageType getType() {
+    public HSMessageType getMessageType() {
         return type;
+    }
+
+    @Override
+    public String getType() {
+        return type.toString();
     }
 
     public int getViewNumber() {
