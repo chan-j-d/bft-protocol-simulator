@@ -2,11 +2,12 @@ package simulation;
 
 import com.google.gson.Gson;
 import com.google.gson.GsonBuilder;
-import simulation.io.FileIo;
 import simulation.io.IoInterface;
+import simulation.io.NoIo;
 import simulation.json.QueueResultsJson;
 import simulation.json.RunConfigJson;
 import simulation.json.ValidatorResultsJson;
+import simulation.simulator.RunConfigUtil;
 import simulation.simulator.RunResults;
 import simulation.simulator.Simulator;
 import simulation.statistics.ConsensusStatistics;
@@ -23,8 +24,6 @@ import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.util.List;
 import java.util.logging.LogManager;
-
-import static simulation.simulator.RunConfigUtil.createSimulator;
 
 /**
  * Main driver class for simulations.
@@ -59,7 +58,8 @@ public class BFTSimulation {
         int seedMultiplier = runConfigJson.getSeedMultiplier();
         int startingSeed = runConfigJson.getStartingSeed();
 
-        IoInterface io = new FileIo("output.txt");
+//        IoInterface io = new FileIo("output.txt");
+        IoInterface io = new NoIo();
         RunResults runResults = null;
         int numGroups = -1;
         for (int i = 0; i < numTrials; i++) {
@@ -104,7 +104,7 @@ public class BFTSimulation {
      */
     private static RunResults runSimulation(long seed, IoInterface io, RunConfigJson configJson) {
         RNGUtil.setSeed(seed);
-        Simulator simulator = createSimulator(configJson);
+        Simulator simulator = RunConfigUtil.createSimulator(configJson);
         while (!simulator.isSimulationOver()) {
             simulator.simulate().ifPresent(io::output);
         }

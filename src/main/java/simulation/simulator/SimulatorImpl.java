@@ -28,7 +28,7 @@ import java.util.stream.Collectors;
 public class SimulatorImpl<T extends BFTMessage> implements Simulator, TimerNotifier<T> {
 
     private static final int SNAPSHOT_INTERVAL = 50;
-    private static final double TIME_CUTOFF = 10000000; // for safety
+    private static final double TIME_CUTOFF = 1000000000; // for safety
 
     private PriorityQueue<NodeEvent<T>> eventQueue;
     private int roundCount;

@@ -29,7 +29,7 @@ public abstract class Validator<T extends BFTMessage> extends TimedNode<T>
      * @param id Unique integer identifier for validator.
      * @param consensusLimit Consensus count limit.
      * @param timerNotifier TimerNotifier to check time and set timers.
-     * @param serviceTimeGenerator Service rate of messages assuming an exponential distribution for processing time.
+     * @param serviceTimeGenerator RNG for service time.
      * @param states States for the BFT protocol. Used for tracking statistics.
      */
     public Validator(String name, int id, int consensusLimit, TimerNotifier<T> timerNotifier,
