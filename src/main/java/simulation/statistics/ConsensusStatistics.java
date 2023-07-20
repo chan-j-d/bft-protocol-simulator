@@ -73,10 +73,16 @@ public class ConsensusStatistics extends Statistics {
         addRoundChangeStateCount(state.toString());
     }
 
+    /**
+     * Returns number of messages of {@code type} encountered per consensus instance.
+     */
     public double getNormalizedMessageCountForState(String type) {
         return normalizeValue(messageCountMap.get(type).doubleValue());
     }
 
+    /**
+     * Returns the number of times a round change occurs at {@code state} per consensus instance.
+     */
     public double getNormalizedRoundChangeStateCount(String state) {
         return normalizeValue(roundChangeStateCountMap.get(state).doubleValue());
     }
@@ -186,10 +192,16 @@ public class ConsensusStatistics extends Statistics {
         return getTotalTime() / getNodeCount() / getConsensusCount();
     }
 
+    /**
+     * Returns the amount of time spent in {@code state} per consensus instance.
+     */
     private double getNormalizedTimeForState(String state) {
         return normalizeValue(stateTimeMap.get(state));
     }
 
+    /**
+     * Returns the value per consensus instance (per node if it has been combined prior).
+     */
     private double normalizeValue(double value) {
         return value / getNodeCount() / getConsensusCount();
     }
@@ -207,6 +219,9 @@ public class ConsensusStatistics extends Statistics {
         return results;
     }
 
+    /**
+     * Returns a map of time spent at each state per consensus instance.
+     */
     public Map<String, Double> getNormalizedStateTimeMap() {
         Map<String, Double> normalizedMap = new LinkedHashMap<>(stateTimeMap);
         for (String state : stateTimeMap.keySet()) {
@@ -215,6 +230,9 @@ public class ConsensusStatistics extends Statistics {
         return normalizedMap;
     }
 
+    /**
+     * Returns a map of the map of time spent at each state in a round.
+     */
     public Map<Integer, Map<String, Double>> getNormalizedRoundStateTimeMap() {
         Map<Integer, Map<String, Double>> normalizedMap = new LinkedHashMap<>();
         for (int round : roundStateTimeMap.keySet()) {
@@ -227,6 +245,9 @@ public class ConsensusStatistics extends Statistics {
         return normalizedMap;
     }
 
+    /**
+     * Returns a map of the number of messages of each type encountered per consensus instance.
+     */
     public Map<String, Double> getNormalizedMessageCountMap() {
         Map<String, Double> newMap = new LinkedHashMap<>();
         for (String state : messageCountMap.keySet()) {
@@ -235,15 +256,14 @@ public class ConsensusStatistics extends Statistics {
         return newMap;
     }
 
+    /**
+     * Returns a map of the number of times a round change occurs at each state.
+     */
     public Map<String, Double> getNormalizedRoundChangeStateCountMap() {
         Map<String, Double> newMap = new LinkedHashMap<>();
         for (String state : roundChangeStateCountMap.keySet()) {
             newMap.put(state, getNormalizedRoundChangeStateCount(state));
         }
         return newMap;
-    }
-
-    public Map<String, Integer> getMessageCountMap() {
-        return messageCountMap;
     }
 }
