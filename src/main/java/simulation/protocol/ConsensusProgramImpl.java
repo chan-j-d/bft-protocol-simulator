@@ -10,6 +10,10 @@ import java.util.Collection;
 import java.util.List;
 import java.util.Map;
 
+/**
+ * Partial implementation of a consensus program that fulfills general responsibilities.
+ * Provides implementation for timer and consensus statistics responsibilities.
+ */
 public abstract class ConsensusProgramImpl<T extends BFTMessage> implements ConsensusProgram<T> {
 
     /**
@@ -24,6 +28,10 @@ public abstract class ConsensusProgramImpl<T extends BFTMessage> implements Cons
     private int timerCount; // Used to differentiate multiple timers in the same instance & round
     private double timeoutTime;
 
+    /**
+     * @param idNodeNameMap Map of id to node names.
+     * @param timerNotifier For tracking time and setting timers.
+     */
     public ConsensusProgramImpl(Map<Integer, String> idNodeNameMap, TimerNotifier<ConsensusProgram<T>> timerNotifier) {
         this.idNodeNameMap = idNodeNameMap;
         this.tempPayloadStore = new ArrayList<>();
@@ -31,6 +39,10 @@ public abstract class ConsensusProgramImpl<T extends BFTMessage> implements Cons
         this.timeoutTime = 0;
         this.timerCount = 0;
         this.statistics = new ConsensusStatistics(getStates());
+    }
+
+    protected String getNameFromId(int id) {
+        return idNodeNameMap.get(id);
     }
 
     /**
@@ -41,6 +53,14 @@ public abstract class ConsensusProgramImpl<T extends BFTMessage> implements Cons
         statistics.addRoundTime((getNumConsecutiveFailure() + 1), getState(), time);
         statistics.setConsensusCount(getConsensusCount());
     }
+
+    @Override
+    public void registerMessageProcessed(double timeTaken) {
+        registerTimeElapsed(timeTaken);
+        statistics.addMessageCountForState(getState());
+    }
+
+    // Payload handling responsibilities during processing
 
     /**
      * Returns payloads generated from a processing step.
@@ -68,21 +88,12 @@ public abstract class ConsensusProgramImpl<T extends BFTMessage> implements Cons
         tempPayloadStore.addAll(createPayloads(message, nodeNames));
     }
 
-    protected String getNameFromId(int id) {
-        return idNodeNameMap.get(id);
-    }
-
     protected void broadcastMessageToAll(T message) {
         broadcastMessage(message, idNodeNameMap.values());
     }
 
     public Payload<T> createPayload(T message, String nodeName) {
         return new Payload<>(message, nodeName);
-    }
-
-    public void registerMessageProcessed(double timeTaken, String state) {
-        registerTimeElapsed(timeTaken);
-        statistics.addMessageCountForState(state);
     }
 
     /**
@@ -95,6 +106,8 @@ public abstract class ConsensusProgramImpl<T extends BFTMessage> implements Cons
         }
         return payloads;
     }
+
+    // Timer utilities
 
     public double getTime() {
         return timerNotifier.getTime();
