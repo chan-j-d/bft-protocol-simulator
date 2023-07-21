@@ -1,7 +1,6 @@
 package simulation.network.entity;
 
 import java.util.ArrayList;
-import java.util.Collection;
 import java.util.List;
 import java.util.Random;
 
@@ -16,11 +15,6 @@ public abstract class EndpointNode<T> extends Node<T> {
      * Nodes (usually switches) directly connected to {@code this} for message sending.
      */
     private List<Node<T>> outflowNodes;
-    /**
-     * Stores payloads while node is processing a message.
-     * All payloads are retrieved and sent out after message processing.
-     */
-    private List<Payload<T>> tempPayloadStore;
 
     /**
      * @param name Name of node.
@@ -28,7 +22,6 @@ public abstract class EndpointNode<T> extends Node<T> {
     public EndpointNode(String name) {
         super(name);
         this.outflowNodes = new ArrayList<>();
-        this.tempPayloadStore = new ArrayList<>();
     }
 
     public void setOutflowNodes(List<Node<T>> outflowNodes) {
@@ -37,32 +30,6 @@ public abstract class EndpointNode<T> extends Node<T> {
 
     public List<Node<T>> getOutflowNodes() {
         return outflowNodes;
-    }
-
-    /**
-     * Returns payloads generated from a processing step.
-     * Empties the payload list.
-     *
-     * @return List of payloads that were generated from a processing step.
-     */
-    protected List<Payload<T>> getProcessedPayloads() {
-        List<Payload<T>> payloads = tempPayloadStore;
-        tempPayloadStore = new ArrayList<>();
-        return payloads;
-    }
-
-    /**
-     * Sends {@code message} to destination {@code node}.
-     */
-    protected void sendMessage(T message, EndpointNode<T> node) {
-        tempPayloadStore.add(createPayload(message, node));
-    }
-
-    /**
-     * Sends {@code message} to all nodes in the collection of {@code nodes}.
-     */
-    protected void broadcastMessage(T message, Collection<? extends EndpointNode<? extends T>> nodes) {
-        tempPayloadStore.addAll(createPayloads(message, nodes));
     }
 
     /**
