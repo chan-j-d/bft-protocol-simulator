@@ -28,13 +28,13 @@ public class ConsensusStatistics extends Statistics {
     /**
      * @param states Various states the validator can take during a simulation.
      */
-    public ConsensusStatistics(Collection<Object> states) {
+    public ConsensusStatistics(Collection<String> states) {
         nodeCount = 1;
         consensusCount = 0;
         totalTime = 0;
         stateTimeMap = new LinkedHashMap<>();
-        for (Object state : states) {
-            stateTimeMap.put(state.toString(), 0.0);
+        for (String state : states) {
+            stateTimeMap.put(state, 0.0);
         }
         roundStateTimeMap = new LinkedHashMap<>();
         messageCountMap = new LinkedHashMap<>();
@@ -61,7 +61,7 @@ public class ConsensusStatistics extends Statistics {
         return stateTimeMap.keySet();
     }
 
-    public void addMessageCount(String state) {
+    public void addMessageCountForState(String state) {
         messageCountMap.compute(state, (k, v) -> v == null ? 1 : v + 1);
     }
 
