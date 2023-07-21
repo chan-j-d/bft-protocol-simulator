@@ -4,8 +4,6 @@ import simulation.simulator.QueueResults;
 import simulation.statistics.QueueStatistics;
 import simulation.util.Pair;
 
-import java.util.ArrayList;
-import java.util.Collection;
 import java.util.LinkedList;
 import java.util.List;
 
@@ -76,20 +74,6 @@ public abstract class Node<T> implements QueueResults {
 
     public void setCurrentTime(double time) {
         this.currentTime = time;
-    }
-    public Payload<T> createPayload(T message, Node<T> node) {
-        return new Payload<>(message, node.getName());
-    }
-
-    /**
-     * Returns a list of payloads for the {@code message} to all nodes specified in the collection of {@code nodes}.
-     */
-    public List<Payload<T>> createPayloads(T message, Collection<? extends Node<? extends T>> nodes) {
-        List<Payload<T>> payloads = new ArrayList<>();
-        for (Node<? extends T> node : nodes) {
-            payloads.add(new Payload<>(message, node.getName()));
-        }
-        return payloads;
     }
 
     @Override
