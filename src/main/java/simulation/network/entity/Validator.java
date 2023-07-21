@@ -2,6 +2,7 @@ package simulation.network.entity;
 
 import simulation.network.entity.timer.TimerNotifier;
 import simulation.protocol.ConsensusProgram;
+import simulation.protocol.NoProgram;
 import simulation.simulator.ValidatorResults;
 import simulation.statistics.ConsensusStatistics;
 import simulation.util.Pair;
@@ -21,10 +22,10 @@ public class Validator<T extends BFTMessage> extends EndpointNode<T>
 
     private final Map<Integer, Validator<T>> allNodes;
     private final int consensusLimit;
-    private final ConsensusProgram<T> consensusProgram;
     private final TimerNotifier<Validator<T>> timerNotifier;
-
     private final RandomNumberGenerator rng;
+
+    private ConsensusProgram<T> consensusProgram;
     private double previousRecordedTime;
 
     /**
@@ -32,15 +33,18 @@ public class Validator<T extends BFTMessage> extends EndpointNode<T>
      * @param consensusLimit Consensus count limit.
      * @param timerNotifier TimerNotifier to check time and set timers.
      * @param serviceTimeGenerator RNG for service time.
-     * @param consensusProgram Program of consensus protocol being run.
      */
     public Validator(String name, int consensusLimit, TimerNotifier<Validator<T>> timerNotifier,
-            RandomNumberGenerator serviceTimeGenerator, ConsensusProgram<T> consensusProgram) {
+            RandomNumberGenerator serviceTimeGenerator) {
         super(name);
         this.timerNotifier = timerNotifier;
         this.rng = serviceTimeGenerator;
         this.allNodes = new HashMap<>();
         this.consensusLimit = consensusLimit;
+        this.consensusProgram = new NoProgram<T>();
+    }
+
+    public void setConsensusProgram(ConsensusProgram<T> consensusProgram) {
         this.consensusProgram = consensusProgram;
     }
 
@@ -79,7 +83,7 @@ public class Validator<T extends BFTMessage> extends EndpointNode<T>
         double duration = rng.generateRandomNumber();
         double timePassed = time - previousRecordedTime;
         previousRecordedTime = time + duration;
-        consensusProgram.registerMessageProcessed(duration + timePassed, payload.getMessage().getType());
+        consensusProgram.registerMessageProcessed(duration + timePassed);
         T message = payload.getMessage();
         List<Payload<T>> payloads = consensusProgram.processMessage(message);
         return new Pair<>(duration, payloads);
