@@ -3,8 +3,8 @@
 .*
 *.txt
 logs/*
-json*
-
+/json*
+/py/results
 /py/*.json
 /py/*.csv
 /py/.ipynb_checkpoints
