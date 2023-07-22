@@ -45,7 +45,6 @@ public class RunConfigUtil {
         int consensusLimit = validatorSettings.getNumConsensus();
         double validatorServiceRate = validatorSettings.getNodeProcessingRate();
         FaultConfigJson faultSettings = validatorSettings.getFaultSettings();
-        int numFaults = faultSettings.getNumNodes();
 
         switch (consensusProtocol) {
         case "hs": case "hotstuff":
@@ -104,7 +103,7 @@ public class RunConfigUtil {
             FaultConfigJson faultSettings) {
         List<Validator<T>> nodes = new ArrayList<>();
         Map<Integer, String> idNameMap = new HashMap<>();
-        int numFaults = faultSettings.getNumNodes();
+        int numFaults = faultSettings.getNumFaults();
         String faultType = faultSettings.getFaultType();
         for (int i = 0; i < numNodes; i++) {
             String nodeName = "HS-" + i;
