@@ -1,4 +1,4 @@
-package simulation.network.entity.ibft;
+package simulation.protocol.ibft;
 
 import simulation.util.Pair;
 
@@ -10,8 +10,8 @@ import java.util.Map;
 import java.util.Optional;
 import java.util.stream.Collectors;
 
-import static simulation.network.entity.ibft.IBFTMessage.NULL_VALUE;
-import static simulation.network.entity.ibft.IBFTMessageType.MESSAGE_TYPES;
+import static simulation.protocol.ibft.IBFTMessage.NULL_VALUE;
+import static simulation.protocol.ibft.IBFTMessageType.MESSAGE_TYPES;
 
 /**
  * Helper class that handles message storage and retrieval for an IBFT validator.

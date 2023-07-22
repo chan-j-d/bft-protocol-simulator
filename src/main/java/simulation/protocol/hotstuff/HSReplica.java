@@ -1,18 +1,21 @@
-package simulation.network.entity.hotstuff;
+package simulation.protocol.hotstuff;
 
-import simulation.network.entity.timer.TimerNotifier;
 import simulation.network.entity.Payload;
-import simulation.network.entity.Validator;
+import simulation.network.entity.timer.TimerNotifier;
+import simulation.protocol.ConsensusProgram;
+import simulation.protocol.ConsensusProgramImpl;
 import simulation.util.logging.Logger;
-import simulation.util.rng.RandomNumberGenerator;
 
 import java.util.Arrays;
+import java.util.Collection;
 import java.util.List;
+import java.util.Map;
+import java.util.stream.Collectors;
 
 /**
  * Replica running the HotStuff protocol.
  */
-public class HSReplica extends Validator<HSMessage> {
+public class HSReplica extends ConsensusProgramImpl<HSMessage> {
 
     private final Logger logger;
 
@@ -27,7 +30,7 @@ public class HSReplica extends Validator<HSMessage> {
     private int curView;
     private HSMessageType state;
 
-    private HSMessageHolder messageHolder;
+    private final HSMessageHolder messageHolder;
     private HSTreeNode curProposal;
 
     private QuorumCertificate highQc;
@@ -44,13 +47,13 @@ public class HSReplica extends Validator<HSMessage> {
      * @param baseTimeLimit Base time limit for timeouts.
      * @param timerNotifier TimerNotifier used to get time and set timeouts.
      * @param n Number of nodes in the simulation.
-     * @param consensusLimit Consensus limit in simulation.
-     * @param serviceRateGenerator Rate at processing messages, assuming an exponentially distributed service time.
+     * @param idNodeNameMap Map of node ids to their names in the network.
+     * @param timerNotifier Time notifier to be used for setting timers.
      */
-    public HSReplica(String name, int id, double baseTimeLimit, TimerNotifier<HSMessage> timerNotifier, int n,
-            int consensusLimit, RandomNumberGenerator serviceRateGenerator) {
-        super(name, id, consensusLimit, timerNotifier, serviceRateGenerator,
-                Arrays.asList((Object[]) HSMessageType.values()));
+    public HSReplica(String name, int id, double baseTimeLimit, int n,
+            Map<Integer, String> idNodeNameMap,
+            TimerNotifier<ConsensusProgram<HSMessage>> timerNotifier) {
+        super(idNodeNameMap, timerNotifier);
         this.logger = new Logger(name);
         this.numConsensus = 0;
         this.id = id;
@@ -159,7 +162,7 @@ public class HSReplica extends Validator<HSMessage> {
     }
 
     @Override
-    protected List<Payload<HSMessage>> processMessage(HSMessage message) {
+    public List<Payload<HSMessage>> processMessage(HSMessage message) {
         int messageView = message.getViewNumber();
         HSMessageType type = message.getMessageType();
         if (messageView < curView - 1 || (type != HSMessageType.NEW_VIEW && messageView == curView - 1)) {
@@ -184,10 +187,7 @@ public class HSReplica extends Validator<HSMessage> {
                 decideOperation();
                 break;
         }
-//        return getProcessedPayloads();
-        List<Payload<HSMessage>> payloads = getProcessedPayloads();
-//        logger.log("Processing payloads: " + payloads.toString());
-        return payloads;
+        return getProcessedPayloads();
     }
 
     /**
@@ -211,7 +211,7 @@ public class HSReplica extends Validator<HSMessage> {
             if (m.getSender() == leader && matchingMessage(m, HSMessageType.PREPARE, curView)) {
                 if (m.getJustify() == null || (m.getNode().extendsFrom(m.getJustify().getNode()) &&
                         safeNode(m.getNode(), m.getJustify()))) {
-                    sendMessage(voteMsg(HSMessageType.PREPARE, m.getNode(), null), getNode(leader));
+                    sendMessage(voteMsg(HSMessageType.PREPARE, m.getNode(), null), getNameFromId(leader));
                     state = HSMessageType.PRE_COMMIT;
                     preCommitOperation();
                 }
@@ -254,7 +254,7 @@ public class HSReplica extends Validator<HSMessage> {
             if (m.getSender() == leader && matchingQc(m.getJustify(), HSMessageType.PREPARE, curView)) {
                 prepareQc = m.getJustify();
                 sendMessage(voteMsg(HSMessageType.PRE_COMMIT,
-                        m.getJustify().getNode(), null), getNode(leader));
+                        m.getJustify().getNode(), null), getNameFromId(leader));
                 state = HSMessageType.COMMIT;
                 commitOperation();
             }
@@ -278,7 +278,7 @@ public class HSReplica extends Validator<HSMessage> {
             HSMessage m = getLeaderMessage();
             if (m.getSender() == leader && matchingQc(m.getJustify(), HSMessageType.PRE_COMMIT, curView)) {
                 lockedQc = m.getJustify();
-                sendMessage(voteMsg(HSMessageType.COMMIT, m.getJustify().getNode(), null), getNode(leader));
+                sendMessage(voteMsg(HSMessageType.COMMIT, m.getJustify().getNode(), null), getNameFromId(leader));
                 state = HSMessageType.DECIDE;
                 decideOperation();
             }
@@ -340,7 +340,8 @@ public class HSReplica extends Validator<HSMessage> {
      * Starts the next view by sending out a NEW_VIEW message to the leader of the next view.
      */
     private void startNextView() {
-        sendMessage(voteMsg(HSMessageType.NEW_VIEW, null, prepareQc), getNode(getLeader(curView + 1)));
+        sendMessage(voteMsg(HSMessageType.NEW_VIEW, null, prepareQc),
+                getNameFromId(getLeader(curView + 1)));
         startHsTimer();
         messageHolder.advanceView(curView, curView + 1);
         curView++;
@@ -351,7 +352,7 @@ public class HSReplica extends Validator<HSMessage> {
     @Override
     public String toString() {
         return String.format("%s (%s, %d)",
-                getName(),
+                super.toString(),
                 state,
                 curView);
     }
@@ -367,7 +368,12 @@ public class HSReplica extends Validator<HSMessage> {
     }
 
     @Override
-    public Object getState() {
-        return state;
+    public String getState() {
+        return state.toString();
+    }
+
+    @Override
+    public Collection<String> getStates() {
+        return Arrays.stream(HSMessageType.values()).map(HSMessageType::toString).collect(Collectors.toList());
     }
 }

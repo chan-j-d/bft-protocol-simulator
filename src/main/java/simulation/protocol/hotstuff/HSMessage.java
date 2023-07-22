@@ -1,4 +1,4 @@
-package simulation.network.entity.hotstuff;
+package simulation.protocol.hotstuff;
 
 import simulation.network.entity.BFTMessage;
 

@@ -1,4 +1,4 @@
-package simulation.network.entity.hotstuff;
+package simulation.protocol.hotstuff;
 
 /**
  * Encapsulates a command proposed by a HotStuff validator.
