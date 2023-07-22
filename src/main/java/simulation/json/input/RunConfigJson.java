@@ -1,4 +1,4 @@
-package simulation.json;
+package simulation.json.input;
 
 /**
  * Encapsulates the setting configuration for a simulation run.

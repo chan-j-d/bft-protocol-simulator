@@ -1,12 +1,14 @@
 package simulation.simulator;
 
-import simulation.json.NetworkConfigurationJson;
-import simulation.json.RunConfigJson;
-import simulation.json.SwitchConfigJson;
-import simulation.json.ValidatorConfigJson;
+import simulation.json.input.FaultConfigJson;
+import simulation.json.input.NetworkConfigurationJson;
+import simulation.json.input.RunConfigJson;
+import simulation.json.input.SwitchConfigJson;
+import simulation.json.input.ValidatorConfigJson;
 import simulation.network.entity.BFTMessage;
 import simulation.network.entity.EndpointNode;
 import simulation.network.entity.Validator;
+import simulation.network.entity.fault.UnresponsiveValidator;
 import simulation.network.entity.timer.TimerNotifier;
 import simulation.network.router.Switch;
 import simulation.network.topology.NetworkTopology;
@@ -42,12 +44,14 @@ public class RunConfigUtil {
         double baseTimeLimit = validatorSettings.getBaseTimeLimit();
         int consensusLimit = validatorSettings.getNumConsensus();
         double validatorServiceRate = validatorSettings.getNodeProcessingRate();
+        FaultConfigJson faultSettings = validatorSettings.getFaultSettings();
+        int numFaults = faultSettings.getNumNodes();
 
         switch (consensusProtocol) {
-        case "HS": case "HotStuff":
+        case "hs": case "hotstuff":
             SimulatorImpl<HSMessage> hsSimulator = new SimulatorImpl<>();
             Pair<List<Validator<HSMessage>>, Map<Integer, String>> hsPair = createValidatorNodes(numNodes,
-                    validatorServiceRate, consensusLimit, hsSimulator);
+                    validatorServiceRate, consensusLimit, hsSimulator, faultSettings);
 
             List<Validator<HSMessage>> hsNodes = hsPair.first();
             Map<Integer, String> idNameMap = hsPair.second();
@@ -62,10 +66,10 @@ public class RunConfigUtil {
             hsSimulator.setNodes(hsNodes);
             fixNetworkConnections(json, hsSimulator);
             return hsSimulator;
-        case "IBFT":
+        case "ibft":
             SimulatorImpl<IBFTMessage> ibftSimulator = new SimulatorImpl<>();
             Pair<List<Validator<IBFTMessage>>, Map<Integer, String>> ibftPair = createValidatorNodes(numNodes,
-                    validatorServiceRate, consensusLimit, ibftSimulator);
+                    validatorServiceRate, consensusLimit, ibftSimulator, faultSettings);
 
             List<Validator<IBFTMessage>> ibftNodes = ibftPair.first();
             idNameMap = ibftPair.second();
@@ -92,17 +96,33 @@ public class RunConfigUtil {
      * @param validatorServiceRate Service rate of validators.
      * @param consensusLimit Limit of consensus to be simulated.
      * @param timerNotifier Time notification for the validator. Used for setting timers.
+     * @param faultSettings Fault node settings.
      * @return Pair of list of validators and map of ids to node name.
      */
     private static <T extends BFTMessage> Pair<List<Validator<T>>, Map<Integer, String>> createValidatorNodes(
-            int numNodes, double validatorServiceRate, int consensusLimit, TimerNotifier<Validator<T>> timerNotifier) {
+            int numNodes, double validatorServiceRate, int consensusLimit, TimerNotifier<Validator<T>> timerNotifier,
+            FaultConfigJson faultSettings) {
         List<Validator<T>> nodes = new ArrayList<>();
         Map<Integer, String> idNameMap = new HashMap<>();
+        int numFaults = faultSettings.getNumNodes();
+        String faultType = faultSettings.getFaultType();
         for (int i = 0; i < numNodes; i++) {
             String nodeName = "HS-" + i;
             idNameMap.put(i, nodeName);
             RandomNumberGenerator serviceTimeGenerator = new ExponentialDistribution(validatorServiceRate);
-            nodes.add(new Validator<>(nodeName, consensusLimit, timerNotifier, serviceTimeGenerator));
+            Validator<T> faultyNode;
+            if (i < numFaults) {
+                switch (faultType) {
+                    case "unresponsive": case "ur":
+                        faultyNode = new UnresponsiveValidator<>(nodeName, timerNotifier);
+                        break;
+                    default:
+                        throw new RuntimeException(String.format("Unrecognized fault type (%s).", faultType));
+                }
+                nodes.add(faultyNode);
+            } else {
+                nodes.add(new Validator<>(nodeName, consensusLimit, timerNotifier, serviceTimeGenerator));
+            }
         }
         return new Pair<>(nodes, idNameMap);
     }
@@ -133,19 +153,19 @@ public class RunConfigUtil {
                 switchServiceRate < 0 ? () -> new DegenerateDistribution(0)
                         : () -> new ExponentialDistribution(switchServiceRate);
         switch (networkType) {
-            case "FoldedClos": case "fc":
+            case "foldedclos": case "fc":
                 return NetworkTopology.arrangeFoldedClosStructure(nodes, networkParameters,
                         messageChannelSuccessRate, processingGeneratorFunction);
-            case "Butterfly": case "b":
+            case "butterfly": case "b":
                 return NetworkTopology.arrangeButterflyStructure(nodes, networkParameters,
                         messageChannelSuccessRate, processingGeneratorFunction);
-            case "Clique": case "c":
+            case "clique": case "c":
                 return NetworkTopology.arrangeCliqueStructure(nodes, messageChannelSuccessRate,
                         processingGeneratorSupplier);
-            case "Torus": case "t":
+            case "torus": case "t":
                 return NetworkTopology.arrangeTorusStructure(nodes, networkParameters, messageChannelSuccessRate,
                         processingGeneratorSupplier);
-            case "Mesh": case "m":
+            case "mesh": case "m":
                 return NetworkTopology.arrangeMeshStructure(nodes, networkParameters, messageChannelSuccessRate,
                         processingGeneratorSupplier);
             default:

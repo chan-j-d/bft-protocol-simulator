@@ -1,4 +1,4 @@
-package simulation.json;
+package simulation.json.output;
 
 import simulation.statistics.ConsensusStatistics;
 import simulation.statistics.QueueStatistics;

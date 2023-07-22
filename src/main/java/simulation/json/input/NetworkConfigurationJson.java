@@ -1,4 +1,4 @@
-package simulation.json;
+package simulation.json.input;
 
 import java.util.List;
 
@@ -13,7 +13,7 @@ public class NetworkConfigurationJson {
     }
 
     public String getNetworkType() {
-        return networkType;
+        return networkType.toLowerCase();
     }
 
     public List<Integer> getNetworkParameters() {

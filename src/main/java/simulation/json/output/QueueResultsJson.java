@@ -1,4 +1,4 @@
-package simulation.json;
+package simulation.json.output;
 
 /**
  * Encapsulates the queue statistics of an object that employs a queue.

@@ -1,4 +1,4 @@
-package simulation.json;
+package simulation.json.input;
 
 public class ValidatorConfigJson {
 
@@ -7,6 +7,7 @@ public class ValidatorConfigJson {
     private String consensusProtocol;
     private double baseTimeLimit;
     private double nodeProcessingRate;
+    private FaultConfigJson faultSettings;
 
     public int getNumConsensus() {
         return numConsensus;
@@ -25,6 +26,10 @@ public class ValidatorConfigJson {
     }
 
     public String getConsensusProtocol() {
-        return consensusProtocol;
+        return consensusProtocol.toLowerCase();
+    }
+
+    public FaultConfigJson getFaultSettings() {
+        return faultSettings;
     }
 }
