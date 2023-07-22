@@ -6,6 +6,7 @@ import simulation.network.entity.Validator;
 import simulation.network.entity.timer.TimerNotifier;
 import simulation.protocol.ConsensusProgram;
 import simulation.util.Pair;
+import simulation.util.rng.ExponentialDistribution;
 import simulation.util.rng.RandomNumberGenerator;
 
 import java.util.List;
@@ -15,15 +16,15 @@ import java.util.List;
  */
 public class UnresponsiveValidator<T extends BFTMessage> extends Validator<T> {
 
+    private static final RandomNumberGenerator DUMMY_RNG = new ExponentialDistribution(1);
+    private static final int DUMMY_CONSENSUS_LIMIT = -1;
+
     /**
      * @param name Name of validator.
-     * @param consensusLimit Consensus count limit.
      * @param timerNotifier TimerNotifier to check time and set timers.
-     * @param serviceTimeGenerator RNG for service time.
      */
-    public UnresponsiveValidator(String name, int consensusLimit, TimerNotifier<Validator<T>> timerNotifier,
-            RandomNumberGenerator serviceTimeGenerator) {
-        super(name, consensusLimit, timerNotifier, serviceTimeGenerator);
+    public UnresponsiveValidator(String name, TimerNotifier<Validator<T>> timerNotifier) {
+        super(name, DUMMY_CONSENSUS_LIMIT, timerNotifier, DUMMY_RNG);
     }
 
     @Override
