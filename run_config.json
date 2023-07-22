@@ -9,7 +9,7 @@
     "nodeProcessingRate": 3,
     "consensusProtocol": "IBFT",
     "faultSettings": {
-      "numNodes": 1,
+      "numFaults": 1,
       "faultType": "UR",
       "faultParameters": []
     }

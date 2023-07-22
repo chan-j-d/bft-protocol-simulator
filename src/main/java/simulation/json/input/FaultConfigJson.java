@@ -4,12 +4,12 @@ import java.util.List;
 
 public class FaultConfigJson {
 
-    private int numNodes;
+    private int numFaults;
     private String faultType;
     private List<Integer> faultParameters;
 
-    public int getNumNodes() {
-        return numNodes;
+    public int getNumFaults() {
+        return numFaults;
     }
 
     public String getFaultType() {
