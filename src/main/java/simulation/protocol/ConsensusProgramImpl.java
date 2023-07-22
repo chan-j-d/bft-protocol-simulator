@@ -60,6 +60,11 @@ public abstract class ConsensusProgramImpl<T extends BFTMessage> implements Cons
         statistics.addMessageCountForState(getState());
     }
 
+    @Override
+    public ConsensusStatistics getStatistics() {
+        return statistics;
+    }
+
     // Payload handling responsibilities during processing
 
     /**
@@ -141,6 +146,7 @@ public abstract class ConsensusProgramImpl<T extends BFTMessage> implements Cons
      */
     public List<Payload<T>> notifyTime(int timerCount) {
         if (timerCount == this.timerCount) {
+            statistics.addRoundChangeStateCount(getState());
             return onTimerExpiry();
         }
         return List.of();
