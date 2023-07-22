@@ -26,7 +26,7 @@ public class ValidatorConfigJson {
     }
 
     public String getConsensusProtocol() {
-        return consensusProtocol;
+        return consensusProtocol.toLowerCase();
     }
 
     public FaultConfigJson getFaultSettings() {

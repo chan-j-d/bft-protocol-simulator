@@ -13,7 +13,7 @@ public class NetworkConfigurationJson {
     }
 
     public String getNetworkType() {
-        return networkType;
+        return networkType.toLowerCase();
     }
 
     public List<Integer> getNetworkParameters() {

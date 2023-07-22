@@ -133,19 +133,19 @@ public class RunConfigUtil {
                 switchServiceRate < 0 ? () -> new DegenerateDistribution(0)
                         : () -> new ExponentialDistribution(switchServiceRate);
         switch (networkType) {
-            case "FoldedClos": case "fc":
+            case "foldedclos": case "fc":
                 return NetworkTopology.arrangeFoldedClosStructure(nodes, networkParameters,
                         messageChannelSuccessRate, processingGeneratorFunction);
-            case "Butterfly": case "b":
+            case "butterfly": case "b":
                 return NetworkTopology.arrangeButterflyStructure(nodes, networkParameters,
                         messageChannelSuccessRate, processingGeneratorFunction);
-            case "Clique": case "c":
+            case "clique": case "c":
                 return NetworkTopology.arrangeCliqueStructure(nodes, messageChannelSuccessRate,
                         processingGeneratorSupplier);
-            case "Torus": case "t":
+            case "torus": case "t":
                 return NetworkTopology.arrangeTorusStructure(nodes, networkParameters, messageChannelSuccessRate,
                         processingGeneratorSupplier);
-            case "Mesh": case "m":
+            case "mesh": case "m":
                 return NetworkTopology.arrangeMeshStructure(nodes, networkParameters, messageChannelSuccessRate,
                         processingGeneratorSupplier);
             default:

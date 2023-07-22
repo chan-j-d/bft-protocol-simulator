@@ -13,7 +13,7 @@ public class FaultConfigJson {
     }
 
     public String getFaultType() {
-        return faultType;
+        return faultType.toLowerCase();
     }
 
     public List<Integer> getFaultParameters() {
