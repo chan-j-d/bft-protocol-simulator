@@ -4,10 +4,10 @@
   "seedMultiplier": 100,
   "validatorSettings": {
     "numNodes": 16,
-    "numConsensus": 1000,
-    "baseTimeLimit": 8,
+    "numConsensus": 2000,
+    "baseTimeLimit": 20.5,
     "nodeProcessingRate": 3,
-    "consensusProtocol": "IBFT"
+    "consensusProtocol": "HS"
   },
   "networkSettings": {
     "switchSettings": {
