@@ -7,7 +7,12 @@
     "numConsensus": 1000,
     "baseTimeLimit": 8,
     "nodeProcessingRate": 3,
-    "consensusProtocol": "IBFT"
+    "consensusProtocol": "IBFT",
+    "faultSettings": {
+      "numNodes": 1,
+      "faultType": "UR",
+      "faultParameters": []
+    }
   },
   "networkSettings": {
     "switchSettings": {

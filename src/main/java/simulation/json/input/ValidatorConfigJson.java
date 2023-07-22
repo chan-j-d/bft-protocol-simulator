@@ -7,6 +7,7 @@ public class ValidatorConfigJson {
     private String consensusProtocol;
     private double baseTimeLimit;
     private double nodeProcessingRate;
+    private FaultConfigJson faultSettings;
 
     public int getNumConsensus() {
         return numConsensus;
@@ -26,5 +27,9 @@ public class ValidatorConfigJson {
 
     public String getConsensusProtocol() {
         return consensusProtocol;
+    }
+
+    public FaultConfigJson getFaultSettings() {
+        return faultSettings;
     }
 }
