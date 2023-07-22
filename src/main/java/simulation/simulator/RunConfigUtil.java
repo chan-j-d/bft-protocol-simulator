@@ -1,9 +1,9 @@
 package simulation.simulator;
 
-import simulation.json.NetworkConfigurationJson;
-import simulation.json.RunConfigJson;
-import simulation.json.SwitchConfigJson;
-import simulation.json.ValidatorConfigJson;
+import simulation.json.input.NetworkConfigurationJson;
+import simulation.json.input.RunConfigJson;
+import simulation.json.input.SwitchConfigJson;
+import simulation.json.input.ValidatorConfigJson;
 import simulation.network.entity.BFTMessage;
 import simulation.network.entity.EndpointNode;
 import simulation.network.entity.Validator;

@@ -1,4 +1,4 @@
-package simulation.json;
+package simulation.json.input;
 
 import java.util.List;
 

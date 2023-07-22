@@ -1,4 +1,4 @@
-package simulation.json;
+package simulation.json.input;
 
 public class ValidatorConfigJson {
 
