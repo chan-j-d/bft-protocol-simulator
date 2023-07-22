@@ -7,21 +7,25 @@ import simulation.json.ValidatorConfigJson;
 import simulation.network.entity.BFTMessage;
 import simulation.network.entity.EndpointNode;
 import simulation.network.entity.Validator;
+import simulation.network.entity.timer.TimerNotifier;
+import simulation.network.router.Switch;
+import simulation.network.topology.NetworkTopology;
+import simulation.protocol.ConsensusProgram;
 import simulation.protocol.hotstuff.HSMessage;
 import simulation.protocol.hotstuff.HSReplica;
 import simulation.protocol.ibft.IBFTMessage;
 import simulation.protocol.ibft.IBFTNode;
-import simulation.network.router.Switch;
-import simulation.network.topology.NetworkTopology;
+import simulation.util.Pair;
 import simulation.util.rng.DegenerateDistribution;
 import simulation.util.rng.ExponentialDistribution;
 import simulation.util.rng.RandomNumberGenerator;
 
+import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 import java.util.function.Function;
 import java.util.function.Supplier;
-import java.util.stream.Collectors;
-import java.util.stream.IntStream;
 
 /**
  * Contains utility methods for reading a run configuration.
@@ -33,41 +37,80 @@ public class RunConfigUtil {
      */
     public static Simulator createSimulator(RunConfigJson json) {
         ValidatorConfigJson validatorSettings = json.getValidatorSettings();
-        String validatorNodeType = validatorSettings.getValidatorType();
+        String consensusProtocol = validatorSettings.getConsensusProtocol();
         int numNodes = validatorSettings.getNumNodes();
-        double timeLimit = validatorSettings.getBaseTimeLimit();
+        double baseTimeLimit = validatorSettings.getBaseTimeLimit();
         int consensusLimit = validatorSettings.getNumConsensus();
         double validatorServiceRate = validatorSettings.getNodeProcessingRate();
-        switch (validatorNodeType) {
+
+        switch (consensusProtocol) {
         case "HS": case "HotStuff":
             SimulatorImpl<HSMessage> hsSimulator = new SimulatorImpl<>();
-            List<Validator<HSMessage>> hsNodes = IntStream.iterate(0, x -> x < numNodes, x -> x + 1)
-                    .mapToObj(x -> new HSReplica("HS-" + x, x, timeLimit, hsSimulator, numNodes, consensusLimit,
-                            new ExponentialDistribution(validatorServiceRate))).collect(Collectors.toList());
+            Pair<List<Validator<HSMessage>>, Map<Integer, String>> hsPair = createValidatorNodes(numNodes,
+                    validatorServiceRate, consensusLimit, hsSimulator);
+
+            List<Validator<HSMessage>> hsNodes = hsPair.first();
+            Map<Integer, String> idNameMap = hsPair.second();
+
+            for (int i = 0; i < numNodes; i++) {
+                Validator<HSMessage> currentNode = hsNodes.get(i);
+                ConsensusProgram<HSMessage> program = new HSReplica(idNameMap.get(i), i, baseTimeLimit,
+                        numNodes, idNameMap, currentNode);
+                currentNode.setConsensusProgram(program);
+            }
+
             hsSimulator.setNodes(hsNodes);
             fixNetworkConnections(json, hsSimulator);
             return hsSimulator;
         case "IBFT":
             SimulatorImpl<IBFTMessage> ibftSimulator = new SimulatorImpl<>();
-            List<Validator<IBFTMessage>> ibftNodes = IntStream.iterate(0, x -> x < numNodes, x -> x + 1)
-                    .mapToObj(x -> new IBFTNode("IBFT-" + x, x, timeLimit, ibftSimulator, numNodes, consensusLimit,
-                            new ExponentialDistribution(validatorServiceRate))).collect(Collectors.toList());
+            Pair<List<Validator<IBFTMessage>>, Map<Integer, String>> ibftPair = createValidatorNodes(numNodes,
+                    validatorServiceRate, consensusLimit, ibftSimulator);
+
+            List<Validator<IBFTMessage>> ibftNodes = ibftPair.first();
+            idNameMap = ibftPair.second();
+
+            for (int i = 0; i < numNodes; i++) {
+                Validator<IBFTMessage> currentNode = ibftNodes.get(i);
+                ConsensusProgram<IBFTMessage> program = new IBFTNode(idNameMap.get(i), i, baseTimeLimit,
+                        numNodes, idNameMap, currentNode);
+                currentNode.setConsensusProgram(program);
+            }
+
             ibftSimulator.setNodes(ibftNodes);
             fixNetworkConnections(json, ibftSimulator);
             return ibftSimulator;
         default:
-            throw new RuntimeException(String.format("%s is an unrecognised validator node type.", validatorNodeType));
+            throw new RuntimeException(String.format("%s is an unrecognised validator node type.", consensusProtocol));
         }
+    }
+
+    /**
+     * Creates the validator nodes required for setup.
+     *
+     * @param numNodes Number of nodes to be created.
+     * @param validatorServiceRate Service rate of validators.
+     * @param consensusLimit Limit of consensus to be simulated.
+     * @param timerNotifier Time notification for the validator. Used for setting timers.
+     * @return Pair of list of validators and map of ids to node name.
+     */
+    private static <T extends BFTMessage> Pair<List<Validator<T>>, Map<Integer, String>> createValidatorNodes(
+            int numNodes, double validatorServiceRate, int consensusLimit, TimerNotifier<Validator<T>> timerNotifier) {
+        List<Validator<T>> nodes = new ArrayList<>();
+        Map<Integer, String> idNameMap = new HashMap<>();
+        for (int i = 0; i < numNodes; i++) {
+            String nodeName = "HS-" + i;
+            idNameMap.put(i, nodeName);
+            RandomNumberGenerator serviceTimeGenerator = new ExponentialDistribution(validatorServiceRate);
+            nodes.add(new Validator<>(nodeName, consensusLimit, timerNotifier, serviceTimeGenerator));
+        }
+        return new Pair<>(nodes, idNameMap);
     }
 
     /**
      * Fixes the arrangement of the nodes in {@code simulator} according to the given run configuration {@code json}.
      */
     private static <T extends BFTMessage> void fixNetworkConnections(RunConfigJson json, SimulatorImpl<T> simulator) {
-        List<Validator<T>> nodes = simulator.getNodes();
-        for (Validator<T> node : nodes) {
-            node.setAllNodes(nodes);
-        }
         List<List<Switch<T>>> switches = arrangeNodesInTopology(json, simulator.getNodes());
         simulator.setSwitches(switches);
     }

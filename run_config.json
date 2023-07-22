@@ -7,7 +7,7 @@
     "numConsensus": 1000,
     "baseTimeLimit": 8,
     "nodeProcessingRate": 3,
-    "validatorType": "IBFT"
+    "consensusProtocol": "IBFT"
   },
   "networkSettings": {
     "switchSettings": {

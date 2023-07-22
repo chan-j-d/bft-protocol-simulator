@@ -4,7 +4,7 @@ public class ValidatorConfigJson {
 
     private int numNodes;
     private int numConsensus;
-    private String validatorType;
+    private String consensusProtocol;
     private double baseTimeLimit;
     private double nodeProcessingRate;
 
@@ -24,7 +24,7 @@ public class ValidatorConfigJson {
         return baseTimeLimit;
     }
 
-    public String getValidatorType() {
-        return validatorType;
+    public String getConsensusProtocol() {
+        return consensusProtocol;
     }
 }
