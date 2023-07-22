@@ -1,25 +1,26 @@
-package simulation.network.entity.ibft;
+package simulation.protocol.ibft;
 
-import simulation.network.entity.timer.TimerNotifier;
 import simulation.network.entity.Payload;
-import simulation.network.entity.Validator;
+import simulation.network.entity.timer.TimerNotifier;
+import simulation.protocol.ConsensusProgram;
+import simulation.protocol.ConsensusProgramImpl;
 import simulation.util.Pair;
 import simulation.util.logging.Logger;
-import simulation.util.rng.RandomNumberGenerator;
 
 import java.util.Arrays;
+import java.util.Collection;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
 import java.util.stream.Collectors;
 
-import static simulation.network.entity.ibft.IBFTMessage.NULL_VALUE;
+import static simulation.protocol.ibft.IBFTMessage.NULL_VALUE;
 
 /**
  * Validator running the IBFT protocol.
  */
-public class IBFTNode extends Validator<IBFTMessage> {
+public class IBFTNode extends ConsensusProgramImpl<IBFTMessage> {
 
     /**
      * Dummy value to be proposed and passed around as part of the protocol.
@@ -45,8 +46,8 @@ public class IBFTNode extends Validator<IBFTMessage> {
     private int pr_i; // round at which process has prepared
     private int pv_i; // value for which process has prepared
     private List<IBFTMessage> preparedMessageJustification;
-    private Map<Integer, List<IBFTMessage>> consensusQuorum;
-    private Map<Integer, Integer> otherNodeHeights;
+    private final Map<Integer, List<IBFTMessage>> consensusQuorum;
+    private final Map<Integer, Integer> otherNodeHeights;
     private int inputValue_i; // value passed as input to instance
 
     private boolean hasPrePrepared;
@@ -57,15 +58,14 @@ public class IBFTNode extends Validator<IBFTMessage> {
      * @param name Name of IBFT validator.
      * @param id Unique integer identifier for IBFT validator.
      * @param baseTimeLimit Base time limit for timeouts.
-     * @param timerNotifier TimerNotifier used to get time and set timeouts.
      * @param N Number of nodes in the simulation.
-     * @param consensusLimit Consensus limit in simulation.
-     * @param serviceRateGenerator Rate at processing messages, assuming an exponentially distributed service time.
+     * @param idNodeNameMap Map of node ids to their names in the network.
+     * @param timerNotifier Time notifier to be used for setting timers.
      */
-    public IBFTNode(String name, int id, double baseTimeLimit, TimerNotifier<IBFTMessage> timerNotifier,
-            int N, int consensusLimit, RandomNumberGenerator serviceRateGenerator) {
-        super(name, id, consensusLimit, timerNotifier, serviceRateGenerator,
-                Arrays.asList((Object[]) IBFTState.values()));
+    public IBFTNode(String name, int id, double baseTimeLimit, int N,
+            Map<Integer, String> idNodeNameMap,
+            TimerNotifier<ConsensusProgram<IBFTMessage>> timerNotifier) {
+        super(idNodeNameMap, timerNotifier);
         logger = new Logger(name);
         this.state = IBFTState.NEW_ROUND;
         this.baseTimeLimit = baseTimeLimit;
@@ -99,8 +99,13 @@ public class IBFTNode extends Validator<IBFTMessage> {
     }
 
     @Override
-    public Object getState() {
-        return state;
+    public String getState() {
+        return state.toString();
+    }
+
+    @Override
+    public Collection<String> getStates() {
+        return Arrays.stream(IBFTState.values()).map(IBFTState::toString).collect(Collectors.toList());
     }
 
     @Override
@@ -137,7 +142,6 @@ public class IBFTNode extends Validator<IBFTMessage> {
 
     @Override
     protected List<Payload<IBFTMessage>> onTimerExpiry() {
-        getConsensusStatistics().addRoundChangeStateCount(state);
         timeoutOperation();
         return getProcessedPayloads();
     }
@@ -210,7 +214,7 @@ public class IBFTNode extends Validator<IBFTMessage> {
 
     // Message parsing methods
     @Override
-    protected List<Payload<IBFTMessage>> processMessage(IBFTMessage message) {
+    public List<Payload<IBFTMessage>> processMessage(IBFTMessage message) {
         IBFTMessageType messageType = message.getMessageType();
         int sender = message.getIdentifier();
         int lambda = message.getLambda();
@@ -243,7 +247,7 @@ public class IBFTNode extends Validator<IBFTMessage> {
             }
         } else if (messageType == IBFTMessageType.ROUND_CHANGE) {
             sendMessage(createSingleValueMessage(IBFTMessageType.SYNC, NULL_VALUE,
-                    consensusQuorum.get(lambda)), getNode(sender));
+                    consensusQuorum.get(lambda)), getNameFromId(sender));
         }
         return getProcessedPayloads();
     }

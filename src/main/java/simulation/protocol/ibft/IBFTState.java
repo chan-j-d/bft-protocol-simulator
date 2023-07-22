@@ -1,4 +1,4 @@
-package simulation.network.entity.ibft;
+package simulation.protocol.ibft;
 
 /**
  * Enum for different states a IBFT validator can take.

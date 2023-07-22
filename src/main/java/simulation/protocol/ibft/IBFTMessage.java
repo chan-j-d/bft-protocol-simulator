@@ -1,4 +1,4 @@
-package simulation.network.entity.ibft;
+package simulation.protocol.ibft;
 
 import simulation.network.entity.BFTMessage;
 
