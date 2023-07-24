@@ -69,6 +69,7 @@ public class HSReplica extends ConsensusProgramImpl<HSMessage> {
         this.messageHolder = new HSMessageHolder();
         this.numConsecutiveFailures = 0;
         this.hasReceivedLeaderMessageInDecidePhase = false;
+        this.leader = getLeader(curView);
 
         this.lockedQc = null;
         this.prepareQc = null;
@@ -163,7 +164,7 @@ public class HSReplica extends ConsensusProgramImpl<HSMessage> {
      */
     @Override
     public List<Payload<HSMessage>> initializationPayloads() {
-        if (id == getLeader(curView)) {
+        if (id == leader) {
             curProposal = createLeaf(null, new HSCommand(curView));
             broadcastMessageToAll(msg(HSMessageType.PREPARE, curProposal, highQc));
         }
@@ -205,7 +206,6 @@ public class HSReplica extends ConsensusProgramImpl<HSMessage> {
      * This block translates the code of the basic HotStuff protocol in Algorithm 2 as per the HotStuff paper.
      */
     private void prepareOperation() {
-        int leader = getLeader(curView);
         if (id == leader) {
             if (messageHolder.hasQuorumOfMessages(HSMessageType.NEW_VIEW, curView - 1, n - f)) {
                 List<HSMessage> newViewMessages = messageHolder.getVoteMessages(HSMessageType.NEW_VIEW, curView - 1);
@@ -251,7 +251,6 @@ public class HSReplica extends ConsensusProgramImpl<HSMessage> {
      * This block translates the code of the basic HotStuff protocol in Algorithm 2 as per the HotStuff paper.
      */
     private void preCommitOperation() {
-        int leader = getLeader(curView);
         if (id == leader) {
             if (messageHolder.hasQuorumOfMessages(HSMessageType.PREPARE, curView, n - f)) {
                 List<HSMessage> prepareMessages = messageHolder.getVoteMessages(HSMessageType.PREPARE, curView);
@@ -276,7 +275,6 @@ public class HSReplica extends ConsensusProgramImpl<HSMessage> {
      * This block translates the code of the basic HotStuff protocol in Algorithm 2 as per the HotStuff paper.
      */
     private void commitOperation() {
-        int leader = getLeader(curView);
         if (id == leader) {
             if (messageHolder.hasQuorumOfMessages(HSMessageType.PRE_COMMIT, curView, n - f)) {
                 List<HSMessage> preCommitMessages = messageHolder.getVoteMessages(HSMessageType.PRE_COMMIT, curView);
@@ -300,7 +298,6 @@ public class HSReplica extends ConsensusProgramImpl<HSMessage> {
      * This block translates the code of the basic HotStuff protocol in Algorithm 2 as per the HotStuff paper.
      */
     private void decideOperation() {
-        int leader = getLeader(curView);
         if (id == leader) {
             if (messageHolder.hasQuorumOfMessages(HSMessageType.COMMIT, curView, n - f)) {
                 List<HSMessage> commitMessages = messageHolder.getVoteMessages(HSMessageType.COMMIT, curView);
@@ -340,18 +337,16 @@ public class HSReplica extends ConsensusProgramImpl<HSMessage> {
 //        logger.log(String.format("Time: %s, Name: %s, (EXPIRY) State: %s, Leader: %s, CurView: %s, Consensus: %s, Consecutive Failures: %s",
 //                getTime(), getName(), state, getLeader(curView), curView, numConsensus, numConsecutiveFailures));
         startNextView();
-        List<Payload<HSMessage>> payloads = getProcessedPayloads();
-//        logger.log("Expiry payloads: " + payloads.toString());
-        return payloads;
-//        return getProcessedPayloads();
+        return getProcessedPayloads();
     }
 
     /**
      * Starts the next view by sending out a NEW_VIEW message to the leader of the next view.
      */
     private void startNextView() {
+        leader = getLeader(curView + 1);
         sendMessage(voteMsg(HSMessageType.NEW_VIEW, null, prepareQc),
-                getNameFromId(getLeader(curView + 1)));
+                getNameFromId(leader));
         startHsTimer();
         messageHolder.advanceView(curView, curView + 1);
         curView++;
