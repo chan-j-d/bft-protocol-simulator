@@ -132,14 +132,14 @@ public class IBFTNode extends ConsensusProgramImpl<IBFTMessage> {
     }
 
     /**
-     * Returns the leader for the current {@code consensusInstance} and {@code roundNumber}.
+     * Returns the leader for the current {@code lambda_i} and {@code r_i}.
      * A random permutation is chosen before running a round-robin algorithm.
      * A round-robin algorithm is used so the number of nodes {@code N} needs to be specified.
      */
-    private static int getLeader(int consensusInstance, int roundNumber, int N) {
+    private int getLeader() {
         List<Integer> intList = IntStream.range(0, N).boxed().collect(Collectors.toList());
-        Collections.shuffle(intList, new Random(consensusInstance));
-        return intList.get(roundNumber % N);
+        Collections.shuffle(intList, new Random(lambda_i));
+        return intList.get(r_i % N);
     }
 
     // Timer expire handling
@@ -182,13 +182,12 @@ public class IBFTNode extends ConsensusProgramImpl<IBFTMessage> {
         state = IBFTState.NEW_ROUND;
 
         lambda_i = lambda;
-        r_i = 1;
+        updateRound(1);
         pr_i = NULL_VALUE;
         pv_i = NULL_VALUE;
         preparedMessageJustification = List.of();
         inputValue_i = value;
         newRoundCleanup();
-        leader = getLeader(lambda_i, r_i, N);
         if (leader == p_i) {
             broadcastMessageToAll(createSingleValueMessage(IBFTMessageType.PREPREPARED, inputValue_i));
         }
@@ -269,7 +268,7 @@ public class IBFTNode extends ConsensusProgramImpl<IBFTMessage> {
     private void timeoutOperation() {
         resetRoundBooleans();
 
-        r_i++;
+        updateRound(r_i + 1);
         state = IBFTState.ROUND_CHANGE;
         startIbftTimer();
         if (pr_i == NULL_VALUE && pv_i == NULL_VALUE) {
@@ -289,13 +288,18 @@ public class IBFTNode extends ConsensusProgramImpl<IBFTMessage> {
     private void fPlusOneRoundChangeOperation() {
         if (messageHolder.hasMoreHigherRoundChangeMessagesThan(lambda_i, r_i)) {
             resetRoundBooleans();
-            r_i = messageHolder.getNextGreaterRoundChangeMessage(lambda_i, r_i);
+            updateRound(messageHolder.getNextGreaterRoundChangeMessage(lambda_i, r_i));
             startIbftTimer();
             broadcastMessageToAll(createPreparedValuesMessage(IBFTMessageType.ROUND_CHANGE));
             state = IBFTState.ROUND_CHANGE;
             prePrepareOperation();
             prepareOperation();
         }
+    }
+
+    private void updateRound(int newRound) {
+        r_i = newRound;
+        leader = getLeader();
     }
 
     /**
