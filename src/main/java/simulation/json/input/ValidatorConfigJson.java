@@ -6,15 +6,15 @@ public class ValidatorConfigJson {
     private int numConsensus;
     private String consensusProtocol;
     private double baseTimeLimit;
-    private double nodeProcessingRate;
+    private RngConfigJson nodeProcessingDistribution;
     private FaultConfigJson faultSettings;
 
     public int getNumConsensus() {
         return numConsensus;
     }
 
-    public double getNodeProcessingRate() {
-        return nodeProcessingRate;
+    public RngConfigJson getNodeProcessingDistribution() {
+        return nodeProcessingDistribution;
     }
 
     public int getNumNodes() {
