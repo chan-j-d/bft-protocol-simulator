@@ -6,7 +6,10 @@
     "numNodes": 16,
     "numConsensus": 2000,
     "baseTimeLimit": 20.5,
-    "nodeProcessingRate": 3,
+    "nodeProcessingDistribution": {
+      "distributionType": "degen",
+      "parameters": [1]
+    },
     "consensusProtocol": "IBFT",
     "faultSettings": {
       "numFaults": 1,
@@ -16,7 +19,10 @@
   },
   "networkSettings": {
     "switchSettings": {
-      "switchProcessingRate": -1,
+      "switchProcessingDistribution": {
+        "distributionType": "degen",
+        "parameters": [0]
+      },
       "messageChannelSuccessRate": 1
     },
     "networkType": "Clique",

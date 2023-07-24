@@ -2,11 +2,11 @@ package simulation.json.input;
 
 public class SwitchConfigJson {
 
-    private double switchProcessingRate;
+    private RngConfigJson switchProcessingDistribution;
     private double messageChannelSuccessRate;
 
-    public double getSwitchProcessingRate() {
-        return switchProcessingRate;
+    public RngConfigJson getSwitchProcessingDistribution() {
+        return switchProcessingDistribution;
     }
 
     public double getMessageChannelSuccessRate() {

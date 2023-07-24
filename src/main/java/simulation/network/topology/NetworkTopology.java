@@ -10,8 +10,6 @@ import simulation.util.rng.RandomNumberGenerator;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.List;
-import java.util.function.Function;
-import java.util.function.Supplier;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
@@ -28,16 +26,16 @@ public class NetworkTopology {
      *
      * @param nodes Nodes to be connected in a clique topology.
      * @param messageChannelSuccessRate Success rate of a message being sent by the switch.
-     * @param rngSupplier Switch processing time generator.
+     * @param switchProcessingTimeGenerator Rng for switch processing time.
      * @return Returns a list of a single list of proxy switches for each node.
      * @param <T> Message class being carried by switches.
      */
     public static <T> List<List<Switch<T>>> arrangeCliqueStructure(List<? extends EndpointNode<T>> nodes,
-            double messageChannelSuccessRate, Supplier<RandomNumberGenerator> rngSupplier) {
+            double messageChannelSuccessRate, RandomNumberGenerator switchProcessingTimeGenerator) {
         List<Switch<T>> switches = new ArrayList<>();
         for (EndpointNode<T> node : nodes) {
             Switch<T> switch_ = new Switch<>("Switch-" + node.getName(), messageChannelSuccessRate,
-                    new ArrayList<>(nodes), List.of(node), rngSupplier.get());
+                    new ArrayList<>(nodes), List.of(node), switchProcessingTimeGenerator);
             switches.add(switch_);
             node.setOutflowNodes(List.of(switch_));
         }
@@ -57,14 +55,14 @@ public class NetworkTopology {
      * @param nodes Nodes to be connected in a mesh topology.
      * @param networkParameters Side length of the 2D mesh topology.
      * @param messageChannelSuccessRate Success rate of a message being sent by the switch.
-     * @param rngSupplier Switch processing time generator.
+     * @param switchProcessingTimeGenerator Rng for switch processing time.
      * @return Returns a list of a single list of proxy switches for each node.
      * @param <T> Message class being carried by switches.
      */
     public static <T> List<List<Switch<T>>> arrangeMeshStructure(List<? extends EndpointNode<T>> nodes,
             List<Integer> networkParameters,
             double messageChannelSuccessRate,
-            Supplier<RandomNumberGenerator> rngSupplier) {
+            RandomNumberGenerator switchProcessingTimeGenerator) {
         if (networkParameters.size() == 0) {
             throw new RuntimeException("Please specify side length for network parameters.");
         }
@@ -77,7 +75,7 @@ public class NetworkTopology {
         int m = nodes.size() / n;
         List<List<Switch<T>>> switchArray =
                 createSwitchArray(nodes, n, m, "Mesh-Switch-(x: %d, y: %d)",
-                        messageChannelSuccessRate, rngSupplier);
+                        messageChannelSuccessRate, switchProcessingTimeGenerator);
         List<Switch<T>> switches = switchArray.stream().flatMap(List::stream).collect(Collectors.toList());
 
         // sets neighbors for each switch
@@ -108,13 +106,13 @@ public class NetworkTopology {
      * @param nameFormat Name format for switches.
      *                   Requires a string format argument that takes in its 2D index on the array.
      * @param messageChannelSuccessRate Success rate of a message being sent by the switch.
-     * @param rngSupplier Switch processing time generator.
+     * @param switchProcessingTimeGenerator Rng for switch processing time.
      * @return List of a single list of switches that form the 2D array.
      * @param <T> Message class being carried by switches.
      */
     private static <T> List<List<Switch<T>>> createSwitchArray(List<? extends EndpointNode<T>> nodes,
             int n, int m, String nameFormat, double messageChannelSuccessRate,
-            Supplier<RandomNumberGenerator> rngSupplier) {
+            RandomNumberGenerator switchProcessingTimeGenerator) {
         List<List<Switch<T>>> switchArray = new ArrayList<>();
         for (int i = 0; i < n; i++) {
             switchArray.add(new ArrayList<>());
@@ -123,7 +121,7 @@ public class NetworkTopology {
                 EndpointNode<T> endNode = nodes.get(i * m + j);
                 Switch<T> newSwitch =
                         new Switch<>(switchName, messageChannelSuccessRate,
-                                new ArrayList<>(nodes), List.of(endNode), rngSupplier.get());
+                                new ArrayList<>(nodes), List.of(endNode), switchProcessingTimeGenerator);
                 switchArray.get(i).add(newSwitch);
                 endNode.setOutflowNodes(List.of(newSwitch));
             }
@@ -138,14 +136,14 @@ public class NetworkTopology {
      * @param nodes Nodes to be connected in a Torus topology.
      * @param networkParameters Side length of the 2D Torus topology.
      * @param messageChannelSuccessRate Success rate of a message being sent by the switch.
-     * @param rngSupplier Switch processing time generator.
+     * @param switchProcessingTimeGenerator Rng for switch processing time.
      * @return Returns a list of a single list of proxy switches for each node.
      * @param <T> Message class being carried by switches.
      */
     public static <T> List<List<Switch<T>>> arrangeTorusStructure(List<? extends EndpointNode<T>> nodes,
             List<Integer> networkParameters,
             double messageChannelSuccessRate,
-            Supplier<RandomNumberGenerator> rngSupplier) {
+            RandomNumberGenerator switchProcessingTimeGenerator) {
         if (networkParameters.size() == 0) {
             throw new RuntimeException("Please specify side length for network parameters.");
         }
@@ -157,7 +155,7 @@ public class NetworkTopology {
 
         int m = nodes.size() / n;
         List<List<Switch<T>>> switchArray = createSwitchArray(nodes, n, m, "Torus-Switch-(x: %d, y: %d)",
-                messageChannelSuccessRate, rngSupplier);
+                messageChannelSuccessRate, switchProcessingTimeGenerator);
         List<Switch<T>> switches = switchArray.stream().flatMap(List::stream).collect(Collectors.toList());
         // sets neighbors for each switch
         for (int i = 0; i < n; i++) {
@@ -188,17 +186,17 @@ public class NetworkTopology {
      *                          front/back concentrated - 0 or 1. 0 for concentrating connections to the front,
      *                          0 for back.
      * @param messageChannelSuccessRate Success rate of a message being sent by the switch.
-     * @param levelRngFunction Function that returns an RNG based on the level of the node in the butterfly network.
-     *                         Can be used to vary the processing power of switches at different levels.
+     * @param switchProcessingTimeGenerator Rng for switch processing time.
      * @return Returns a list of list of switches separated by level in the butterfly network.
      * @param <T> Message class being carried by switches.
      */
     public static <T> List<List<Switch<T>>> arrangeButterflyStructure(List<? extends EndpointNode<T>> nodes,
             List<Integer> networkParameters,
             double messageChannelSuccessRate,
-            Function<Integer, RandomNumberGenerator> levelRngFunction) {
+            RandomNumberGenerator switchProcessingTimeGenerator) {
         List<List<Switch<T>>> groupedSwitches =
-                arrangeButterflyArrangement(nodes, networkParameters, messageChannelSuccessRate, levelRngFunction, false);
+                arrangeButterflyArrangement(nodes, networkParameters, messageChannelSuccessRate,
+                        switchProcessingTimeGenerator, false);
         int radix = networkParameters.get(0);
         List<Switch<T>> flattenedLastLayerSwitches = new ArrayList<>(groupedSwitches.get(groupedSwitches.size() - 1));
         int numGroups = groupedSwitches.get(0).size();
@@ -237,10 +235,10 @@ public class NetworkTopology {
     public static <T> List<List<Switch<T>>> arrangeFoldedClosStructure(List<? extends EndpointNode<T>> nodes,
             List<Integer> networkParameters,
             double messageChannelSuccessRate,
-            Function<Integer, RandomNumberGenerator> levelRngFunction) {
+            RandomNumberGenerator switchProcessingTimeGenerator) {
         List<List<Switch<T>>> groupedSwitches =
                 arrangeButterflyArrangement(nodes, networkParameters, messageChannelSuccessRate,
-                        levelRngFunction, true);
+                        switchProcessingTimeGenerator, true);
         flattenAndUpdateRoutes(groupedSwitches);
         return groupedSwitches;
     }
@@ -255,7 +253,7 @@ public class NetworkTopology {
     private static <T> List<List<Switch<T>>> arrangeButterflyArrangement(List<? extends EndpointNode<T>> nodes,
             List<Integer> networkParameters,
             double messageChannelSuccessRate,
-            Function<Integer, RandomNumberGenerator> levelRngFunction,
+            RandomNumberGenerator switchProcessingTimeGenerator,
             boolean isBackwardConnecting) {
         if (networkParameters.size() <= 2) {
             throw new RuntimeException(
@@ -290,7 +288,7 @@ public class NetworkTopology {
                     messageChannelSuccessRate,
                     new ArrayList<>(nodes),
                     isBackwardConnecting ? endpointSublist : List.of(),
-                    levelRngFunction.apply(1));
+                    switchProcessingTimeGenerator);
             firstLayerSwitches.add(directSwitch_);
             endpointSublist.forEach(node -> node.setOutflowNodes(List.of(firstLayerSwitches.get(index))));
         }
@@ -307,10 +305,12 @@ public class NetworkTopology {
                 List<Switch<T>> prevGroupedSwitches = prevLayerGroupedSwitches.get(i);
                 if (networkParameters.get(2) == 0) {
                     newLayerGroupedSwitches.addAll(addNextSwitchLayer(nodes, messageChannelSuccessRate,
-                            prevGroupedSwitches, radix, currentLayer, i, levelRngFunction, isBackwardConnecting));
+                            prevGroupedSwitches, radix, currentLayer, i, switchProcessingTimeGenerator,
+                            isBackwardConnecting));
                 } else if (networkParameters.get(2) == 1) {
                     newLayerGroupedSwitches.addAll(addNextSwitchLayerTwo(nodes, messageChannelSuccessRate,
-                            prevGroupedSwitches, radix, currentLayer, i, levelRngFunction, isBackwardConnecting));
+                            prevGroupedSwitches, radix, currentLayer, i, switchProcessingTimeGenerator,
+                            isBackwardConnecting));
                 } else {
                     throw new RuntimeException("Next layer parameter should be 0 or 1.");
                 }
@@ -333,8 +333,8 @@ public class NetworkTopology {
      */
     private static <T> List<List<Switch<T>>> addNextSwitchLayerTwo(List<? extends EndpointNode<T>> endpoints,
             double messageChannelSuccessRate,
-            List<Switch<T>> prevLayer, int radix, int level, int group, Function<Integer,
-            RandomNumberGenerator> levelRngFunction, boolean isBackwardConnecting) {
+            List<Switch<T>> prevLayer, int radix, int level, int group,
+            RandomNumberGenerator switchProcessingTimeGenerator, boolean isBackwardConnecting) {
         if (level > 3) {
             return List.of();
         }
@@ -353,7 +353,7 @@ public class NetworkTopology {
                         messageChannelSuccessRate,
                         new ArrayList<>(endpoints),
                         List.of(),
-                        levelRngFunction.apply(level));
+                        switchProcessingTimeGenerator);
                 List<Switch<T>> prevLayerNeighbors = Stream.iterate(0, prevIndex -> prevIndex < effectiveRadix, prevIndex -> prevIndex + 1)
                         .map(prevIndex -> prevLayer.get(finalIndex + groupSize * prevIndex))
                         .collect(Collectors.toList());
@@ -372,8 +372,8 @@ public class NetworkTopology {
      */
     private static <T> List<List<Switch<T>>> addNextSwitchLayer(List<? extends EndpointNode<T>> endpoints,
             double messageChannelSuccessRate,
-            List<Switch<T>> prevLayer, int radix, int level, int group, Function<Integer,
-            RandomNumberGenerator> levelRngFunction, boolean isBackwardConnecting) {
+            List<Switch<T>> prevLayer, int radix, int level, int group,
+            RandomNumberGenerator switchProcessingTimeGenerator, boolean isBackwardConnecting) {
         int numNodes = prevLayer.size();
         int numGroups = Math.max(numNodes / radix, 1);
         radix = Math.min(numNodes, radix);
@@ -390,7 +390,7 @@ public class NetworkTopology {
                                     messageChannelSuccessRate,
                                     new ArrayList<>(endpoints),
                                     List.of(),
-                                    levelRngFunction.apply(level)))
+                                    switchProcessingTimeGenerator))
                             .collect(Collectors.toList());
             List<Switch<T>> prevLayerGroup = Stream.iterate(0, index -> index < effectiveRadix, index -> index + 1)
                     .map(index -> prevLayer.get(index * numGroups + finalGroupNumber))
