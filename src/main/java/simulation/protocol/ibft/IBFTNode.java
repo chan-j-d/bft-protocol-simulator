@@ -9,11 +9,14 @@ import simulation.util.logging.Logger;
 
 import java.util.Arrays;
 import java.util.Collection;
+import java.util.Collections;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Random;
 import java.util.Set;
 import java.util.stream.Collectors;
+import java.util.stream.IntStream;
 
 import static simulation.protocol.ibft.IBFTMessage.NULL_VALUE;
 
@@ -49,6 +52,7 @@ public class IBFTNode extends ConsensusProgramImpl<IBFTMessage> {
     private final Map<Integer, List<IBFTMessage>> consensusQuorum;
     private final Map<Integer, Integer> otherNodeHeights;
     private int inputValue_i; // value passed as input to instance
+    private int leader;
 
     private boolean hasPrePrepared;
     private boolean hasPrepared;
@@ -129,10 +133,13 @@ public class IBFTNode extends ConsensusProgramImpl<IBFTMessage> {
 
     /**
      * Returns the leader for the current {@code consensusInstance} and {@code roundNumber}.
+     * A random permutation is chosen before running a round-robin algorithm.
      * A round-robin algorithm is used so the number of nodes {@code N} needs to be specified.
      */
     private static int getLeader(int consensusInstance, int roundNumber, int N) {
-        return (consensusInstance + roundNumber) % N;
+        List<Integer> intList = IntStream.range(0, N).boxed().collect(Collectors.toList());
+        Collections.shuffle(intList, new Random(consensusInstance));
+        return intList.get(roundNumber % N);
     }
 
     // Timer expire handling
@@ -181,7 +188,8 @@ public class IBFTNode extends ConsensusProgramImpl<IBFTMessage> {
         preparedMessageJustification = List.of();
         inputValue_i = value;
         newRoundCleanup();
-        if (getLeader(lambda_i, r_i, N) == p_i) {
+        leader = getLeader(lambda_i, r_i, N);
+        if (leader == p_i) {
             broadcastMessageToAll(createSingleValueMessage(IBFTMessageType.PREPREPARED, inputValue_i));
         }
         startIbftTimer();
@@ -295,7 +303,7 @@ public class IBFTNode extends ConsensusProgramImpl<IBFTMessage> {
      * This corresponds to the third code block in Algorithm 3.
      */
     private void leaderRoundChangeOperation() {
-        if (p_i == getLeader(lambda_i, r_i, N)) {
+        if (p_i == leader) {
             if (messageHolder.hasQuorumOfAnyValuedMessages(IBFTMessageType.ROUND_CHANGE, lambda_i, r_i)) {
                 List<IBFTMessage> roundChangeMessages =
                         messageHolder.getQuorumOfAnyValuedMessages(IBFTMessageType.ROUND_CHANGE,
@@ -325,7 +333,7 @@ public class IBFTNode extends ConsensusProgramImpl<IBFTMessage> {
         List<IBFTMessage> preprepareMessages = messageHolder.getMessages(IBFTMessageType.PREPREPARED, lambda_i, r_i);
         for (IBFTMessage message : preprepareMessages) {
             int sender = message.getIdentifier();
-            if (sender == getLeader(lambda_i, r_i, N) && justifyPrePrepare(message) && !hasPrePrepared) {
+            if (sender == leader && justifyPrePrepare(message) && !hasPrePrepared) {
                 hasPrePrepared = true;
 
                 startIbftTimer();
