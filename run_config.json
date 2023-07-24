@@ -7,10 +7,10 @@
     "numConsensus": 1000,
     "baseTimeLimit": 8,
     "nodeProcessingDistribution": {
-      "distributionType": "degen",
-      "parameters": [1]
+      "distributionType": "exp",
+      "parameters": [3]
     },
-    "consensusProtocol": "IBFT",
+    "consensusProtocol": "HS",
     "faultSettings": {
       "numFaults": 1,
       "faultType": "UR",
