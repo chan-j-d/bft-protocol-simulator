@@ -8,9 +8,12 @@ import simulation.util.logging.Logger;
 
 import java.util.Arrays;
 import java.util.Collection;
+import java.util.Collections;
 import java.util.List;
 import java.util.Map;
+import java.util.Random;
 import java.util.stream.Collectors;
+import java.util.stream.IntStream;
 
 /**
  * Replica running the HotStuff protocol.
@@ -26,6 +29,7 @@ public class HSReplica extends ConsensusProgramImpl<HSMessage> {
     private final int id;
     private final double baseTimeLimit;
     private int numConsecutiveFailures;
+    private int leader;
 
     private int curView;
     private HSMessageType state;
@@ -122,10 +126,16 @@ public class HSReplica extends ConsensusProgramImpl<HSMessage> {
     // Other utilities
     /**
      * Returns the leader for the current {@code viewNumber}.
-     * A round-robin algorithm is used.
+     * A random permutation is chosen before running a round-robin algorithm.
+     * A round-robin algorithm is used so the number of nodes {@code N} needs to be specified.
      */
     private int getLeader(int viewNumber) {
-        return viewNumber % n;
+        int rotation = viewNumber / n;
+        int remainder = viewNumber % n;
+        List<Integer> intList = IntStream.range(0, n).boxed().collect(Collectors.toList());
+        Collections.shuffle(intList, new Random(rotation));
+
+        return intList.get(remainder);
     }
 
     private boolean hasLeaderMessage() {
