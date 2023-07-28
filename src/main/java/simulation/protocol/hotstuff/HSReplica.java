@@ -181,8 +181,8 @@ public class HSReplica extends ConsensusProgramImpl<HSMessage> {
             return List.of();
         }
 
-//        logger.log(String.format("Time: %s, Name: %s, (PROCESSING) State: %s, Leader: %s, CurView: %s, Consensus: %s, Consecutive Failures: %s, Message: %s",
-//                getTime(), getName(), state, getLeader(curView), curView, numConsensus, numConsecutiveFailures, message));
+//        logger.log(String.format("Time: %s, (PROCESSING) State: %s, Leader: %s, CurView: %s, Consensus: %s, Consecutive Failures: %s, Message: %s",
+//                getTime(), state, getLeader(curView), curView, numConsensus, numConsecutiveFailures, message));
         messageHolder.addMessage(message);
         switch (state) {
             case PREPARE:
