@@ -139,8 +139,8 @@ public class ConsensusStatistics extends Statistics {
         Map<String, Double> totalStateTimeMap = mergeTwoMaps(stateTimeMap, otherStatistics.stateTimeMap);
         Map<Integer, Map<String, Double>> totalRoundStateTimeMap = new LinkedHashMap<>();
         int highestRound = Math.max(
-                roundStateTimeMap.keySet().stream().max(Integer::compare).get(),
-                otherStatistics.roundStateTimeMap.keySet().stream().max(Integer::compare).get());
+                roundStateTimeMap.keySet().stream().max(Integer::compare).orElse(0),
+                otherStatistics.roundStateTimeMap.keySet().stream().max(Integer::compare).orElse(0));
         for (int round = 1; round <= highestRound; round++) {
             totalRoundStateTimeMap.put(round, mergeTwoMaps(roundStateTimeMap.get(round),
                     otherStatistics.roundStateTimeMap.get(round)));
