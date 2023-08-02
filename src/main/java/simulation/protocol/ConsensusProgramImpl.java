@@ -55,9 +55,9 @@ public abstract class ConsensusProgramImpl<T extends BFTMessage> implements Cons
     }
 
     @Override
-    public void registerMessageProcessed(double timeTaken) {
+    public void registerMessageProcessed(T message, double timeTaken) {
         registerTimeElapsed(timeTaken);
-        statistics.addMessageCountForState(getState());
+        statistics.addMessageCountForState(message.getType());
     }
 
     @Override

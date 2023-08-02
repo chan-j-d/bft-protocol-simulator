@@ -25,7 +25,7 @@ public class NoProgram<T extends BFTMessage> implements ConsensusProgram<T> {
     }
 
     @Override
-    public void registerMessageProcessed(double timeTaken) {
+    public void registerMessageProcessed(T message, double timeTaken) {
         return;
     }
 
