@@ -25,4 +25,9 @@ public class HSCommand {
         HSCommand other = (HSCommand) o;
         return value == other.value;
     }
+
+    @Override
+    public String toString() {
+        return "Value: " + value;
+    }
 }

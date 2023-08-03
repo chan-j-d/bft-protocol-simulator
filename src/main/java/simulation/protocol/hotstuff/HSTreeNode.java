@@ -58,4 +58,9 @@ public class HSTreeNode {
         return height == other.height &&
                 command.equals(other.command);
     }
+
+    @Override
+    public String toString() {
+        return "Height: " + height + ", " + command.toString();
+    }
 }

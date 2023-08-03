@@ -106,7 +106,7 @@ public class RunConfigUtil {
         int numFaults = faultSettings.getNumFaults();
         String faultType = faultSettings.getFaultType();
         for (int i = 0; i < numNodes; i++) {
-            String nodeName = "HS-" + i;
+            String nodeName = "Val-" + i;
             idNameMap.put(i, nodeName);
             Validator<T> faultyNode;
             if (i < numFaults) {
