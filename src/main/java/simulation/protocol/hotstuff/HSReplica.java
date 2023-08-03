@@ -356,10 +356,10 @@ public class HSReplica extends ConsensusProgramImpl<HSMessage> {
 
     @Override
     public String toString() {
-        return String.format("%s (%s, %d)",
-                super.toString(),
+        return String.format("HS (%s, %d) (timeout at %.3f)",
                 state,
-                curView);
+                curView,
+                getTimeoutTime());
     }
 
     @Override

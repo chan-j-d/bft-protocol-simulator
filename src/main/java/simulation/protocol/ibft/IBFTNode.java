@@ -114,8 +114,7 @@ public class IBFTNode extends ConsensusProgramImpl<IBFTMessage> {
 
     @Override
     public String toString() {
-        return String.format("%s (%s, %d, %d) (timeout at %.3f)",
-                super.toString(),
+        return String.format("IBFT (%s, %d, %d) (timeout at %.3f)",
                 state,
                 lambda_i,
                 r_i,
