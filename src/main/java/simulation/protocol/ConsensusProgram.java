@@ -32,7 +32,7 @@ public interface ConsensusProgram<T extends BFTMessage> {
     /**
      * Registers the effects of {@code timeTaken}
      */
-    void registerMessageProcessed(double timeTaken);
+    void registerMessageProcessed(T message, double timeTaken);
 
     int getConsensusCount();
     int getNumConsecutiveFailure();

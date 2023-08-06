@@ -83,8 +83,8 @@ public class Validator<T extends BFTMessage> extends EndpointNode<T>
         double duration = rng.generateRandomNumber();
         double timePassed = time - previousRecordedTime;
         previousRecordedTime = time + duration;
-        consensusProgram.registerMessageProcessed(duration + timePassed);
         T message = payload.getMessage();
+        consensusProgram.registerMessageProcessed(message, duration + timePassed);
         List<Payload<T>> payloads = consensusProgram.processMessage(message);
         return new Pair<>(duration, payloads);
     }
