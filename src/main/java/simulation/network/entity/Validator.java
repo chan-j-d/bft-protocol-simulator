@@ -102,4 +102,9 @@ public class Validator<T extends BFTMessage> extends EndpointNode<T>
     public double getTime() {
         return timerNotifier.getTime();
     }
+
+    @Override
+    public String toString() {
+        return super.toString() + ": " + consensusProgram.toString();
+    }
 }
