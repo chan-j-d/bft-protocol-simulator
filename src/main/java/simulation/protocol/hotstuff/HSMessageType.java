@@ -1,4 +1,4 @@
-package simulation.network.entity.hotstuff;
+package simulation.protocol.hotstuff;
 
 /**
  * Enum for different message types the HotStuff protocol requires.

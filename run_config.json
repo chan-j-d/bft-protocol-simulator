@@ -1,13 +1,31 @@
 {
   "numRuns": 1,
-  "numConsensus": 1000,
   "startingSeed": 0,
   "seedMultiplier": 100,
-  "numNodes": 16,
-  "nodeProcessingRate": 3,
-  "switchProcessingRate": -1,
-  "baseTimeLimit": 8,
-  "networkType": "Clique",
-  "validatorType": "IBFT",
-  "networkParameters": [3, 1, 0]
+  "validatorSettings": {
+    "numNodes": 16,
+    "numConsensus": 1000,
+    "baseTimeLimit": 8,
+    "nodeProcessingDistribution": {
+      "distributionType": "exp",
+      "parameters": [3]
+    },
+    "consensusProtocol": "HS",
+    "faultSettings": {
+      "numFaults": 1,
+      "faultType": "UR",
+      "faultParameters": []
+    }
+  },
+  "networkSettings": {
+    "switchSettings": {
+      "switchProcessingDistribution": {
+        "distributionType": "degen",
+        "parameters": [0]
+      },
+      "messageChannelSuccessRate": 1
+    },
+    "networkType": "Clique",
+    "networkParameters": [3, 1, 0]
+  }
 }

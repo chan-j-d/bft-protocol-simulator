@@ -1,4 +1,4 @@
-package simulation.network.entity.hotstuff;
+package simulation.protocol.hotstuff;
 
 /**
  * HotStuff replica signature for a message, used to verify the replica sent the message.

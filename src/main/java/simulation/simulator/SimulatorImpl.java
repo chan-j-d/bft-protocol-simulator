@@ -5,7 +5,6 @@ import simulation.event.NodeEvent;
 import simulation.event.TimedEvent;
 import simulation.network.entity.BFTMessage;
 import simulation.network.entity.Node;
-import simulation.network.entity.TimedNode;
 import simulation.network.entity.Validator;
 import simulation.network.entity.timer.TimerNotifier;
 import simulation.network.router.Switch;
@@ -25,7 +24,7 @@ import java.util.stream.Collectors;
  *
  * @param <T> Message class used by nodes in the simulation.
  */
-public class SimulatorImpl<T extends BFTMessage> implements Simulator, TimerNotifier<T> {
+public class SimulatorImpl<T extends BFTMessage> implements Simulator, TimerNotifier<Validator<T>> {
 
     private static final int SNAPSHOT_INTERVAL = 50;
     private static final double TIME_CUTOFF = 1000000000; // for safety
@@ -154,7 +153,7 @@ public class SimulatorImpl<T extends BFTMessage> implements Simulator, TimerNoti
     }
 
     @Override
-    public void notifyAtTime(TimedNode<T> node, double time, int timerCount) {
+    public void notifyAtTime(Validator<T> node, double time, int timerCount) {
         eventQueue.add(new TimedEvent<T>(time, node, timerCount));
     }
 

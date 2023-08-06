@@ -1,4 +1,4 @@
-package simulation.network.entity.hotstuff;
+package simulation.protocol.hotstuff;
 
 /**
  * Tree data structure that HotStuff uses to maintain the chain of consensus decisions.

@@ -28,13 +28,13 @@ public class ConsensusStatistics extends Statistics {
     /**
      * @param states Various states the validator can take during a simulation.
      */
-    public ConsensusStatistics(Collection<Object> states) {
+    public ConsensusStatistics(Collection<String> states) {
         nodeCount = 1;
         consensusCount = 0;
         totalTime = 0;
         stateTimeMap = new LinkedHashMap<>();
-        for (Object state : states) {
-            stateTimeMap.put(state.toString(), 0.0);
+        for (String state : states) {
+            stateTimeMap.put(state, 0.0);
         }
         roundStateTimeMap = new LinkedHashMap<>();
         messageCountMap = new LinkedHashMap<>();
@@ -61,7 +61,7 @@ public class ConsensusStatistics extends Statistics {
         return stateTimeMap.keySet();
     }
 
-    public void addMessageCount(String state) {
+    public void addMessageCountForState(String state) {
         messageCountMap.compute(state, (k, v) -> v == null ? 1 : v + 1);
     }
 
@@ -139,8 +139,8 @@ public class ConsensusStatistics extends Statistics {
         Map<String, Double> totalStateTimeMap = mergeTwoMaps(stateTimeMap, otherStatistics.stateTimeMap);
         Map<Integer, Map<String, Double>> totalRoundStateTimeMap = new LinkedHashMap<>();
         int highestRound = Math.max(
-                roundStateTimeMap.keySet().stream().max(Integer::compare).get(),
-                otherStatistics.roundStateTimeMap.keySet().stream().max(Integer::compare).get());
+                roundStateTimeMap.keySet().stream().max(Integer::compare).orElse(0),
+                otherStatistics.roundStateTimeMap.keySet().stream().max(Integer::compare).orElse(0));
         for (int round = 1; round <= highestRound; round++) {
             totalRoundStateTimeMap.put(round, mergeTwoMaps(roundStateTimeMap.get(round),
                     otherStatistics.roundStateTimeMap.get(round)));

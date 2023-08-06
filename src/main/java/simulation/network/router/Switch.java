@@ -4,6 +4,7 @@ import simulation.network.entity.EndpointNode;
 import simulation.network.entity.Node;
 import simulation.network.entity.Payload;
 import simulation.util.Pair;
+import simulation.util.rng.BernoulliDistribution;
 import simulation.util.rng.RNGUtil;
 import simulation.util.rng.RandomNumberGenerator;
 
@@ -20,6 +21,7 @@ import java.util.stream.Collectors;
 public class Switch<T> extends Node<T> {
 
     private final RandomNumberGenerator rng;
+    private final BernoulliDistribution messageTransferResultGenerator;
     private final Map<String, Node<T>> stringToNodeMap;
     private final List<Node<T>> endpoints;
     private List<Node<T>> directlyConnectedEndpoints;
@@ -28,14 +30,16 @@ public class Switch<T> extends Node<T> {
 
     /**
      * @param name Name of switch.
+     * @param messageTransferSuccessRate Probability in which a message is dropped.
      * @param allEndpoints Endpoints in the network.
      * @param directlyConnectedEndpoints Nodes directly connected to this switch.
      * @param rng Random number generator for service rate of switch.
      */
-    public Switch(String name, List<? extends Node<T>> allEndpoints,
+    public Switch(String name, double messageTransferSuccessRate, List<? extends Node<T>> allEndpoints,
             List<? extends Node<T>> directlyConnectedEndpoints, RandomNumberGenerator rng) {
         super(name);
         this.endpoints = new ArrayList<>(allEndpoints);
+        this.messageTransferResultGenerator = new BernoulliDistribution(messageTransferSuccessRate);
         this.directlyConnectedEndpoints = new ArrayList<>(directlyConnectedEndpoints);
         this.stringToNodeMap = allEndpoints.stream()
                 .collect(Collectors.toMap(Node::getName, endPoint -> endPoint));
@@ -119,7 +123,13 @@ public class Switch<T> extends Node<T> {
     @Override
     public Pair<Double, List<Payload<T>>> processPayload(double time, Payload<T> payload) {
         double duration = rng.generateRandomNumber();
-        return new Pair<>(duration, List.of(payload));
+
+        boolean isSuccessfulSend = messageTransferResultGenerator.generateResult();
+        if (!isSuccessfulSend) {
+            return new Pair<>(duration, List.of(payload));
+        } else {
+            return new Pair<>(duration, List.of());
+        }
     }
 
     @Override

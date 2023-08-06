@@ -1,24 +1,32 @@
 package simulation.simulator;
 
-import simulation.json.RunConfigJson;
+import simulation.json.input.FaultConfigJson;
+import simulation.json.input.NetworkConfigurationJson;
+import simulation.json.input.RngConfigJson;
+import simulation.json.input.RunConfigJson;
+import simulation.json.input.SwitchConfigJson;
+import simulation.json.input.ValidatorConfigJson;
 import simulation.network.entity.BFTMessage;
 import simulation.network.entity.EndpointNode;
 import simulation.network.entity.Validator;
-import simulation.network.entity.hotstuff.HSMessage;
-import simulation.network.entity.hotstuff.HSReplica;
-import simulation.network.entity.ibft.IBFTMessage;
-import simulation.network.entity.ibft.IBFTNode;
+import simulation.network.entity.fault.UnresponsiveValidator;
+import simulation.network.entity.timer.TimerNotifier;
 import simulation.network.router.Switch;
 import simulation.network.topology.NetworkTopology;
+import simulation.protocol.ConsensusProgram;
+import simulation.protocol.hotstuff.HSMessage;
+import simulation.protocol.hotstuff.HSReplica;
+import simulation.protocol.ibft.IBFTMessage;
+import simulation.protocol.ibft.IBFTNode;
+import simulation.util.Pair;
 import simulation.util.rng.DegenerateDistribution;
 import simulation.util.rng.ExponentialDistribution;
 import simulation.util.rng.RandomNumberGenerator;
 
+import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.List;
-import java.util.function.Function;
-import java.util.function.Supplier;
-import java.util.stream.Collectors;
-import java.util.stream.IntStream;
+import java.util.Map;
 
 /**
  * Contains utility methods for reading a run configuration.
@@ -29,41 +37,98 @@ public class RunConfigUtil {
      * Creates a {@code Simulator} from the given run configuration {@code json}.
      */
     public static Simulator createSimulator(RunConfigJson json) {
-        String validatorNodeType = json.getValidatorType();
-        int numNodes = json.getNumNodes();
-        double timeLimit = json.getBaseTimeLimit();
-        int consensusLimit = json.getNumConsensus();
-        double validatorServiceRate = json.getNodeProcessingRate();
-        switch (validatorNodeType) {
-        case "HS": case "HotStuff":
+        ValidatorConfigJson validatorSettings = json.getValidatorSettings();
+        String consensusProtocol = validatorSettings.getConsensusProtocol();
+        int numNodes = validatorSettings.getNumNodes();
+        double baseTimeLimit = validatorSettings.getBaseTimeLimit();
+        int consensusLimit = validatorSettings.getNumConsensus();
+
+        RandomNumberGenerator nodeRng = getRngFromConfig(validatorSettings.getNodeProcessingDistribution());
+        FaultConfigJson faultSettings = validatorSettings.getFaultSettings();
+
+        switch (consensusProtocol) {
+        case "hs": case "hotstuff":
             SimulatorImpl<HSMessage> hsSimulator = new SimulatorImpl<>();
-            List<Validator<HSMessage>> hsNodes = IntStream.iterate(0, x -> x < numNodes, x -> x + 1)
-                    .mapToObj(x -> new HSReplica("HS-" + x, x, timeLimit, hsSimulator, numNodes, consensusLimit,
-                            new ExponentialDistribution(validatorServiceRate))).collect(Collectors.toList());
+            Pair<List<Validator<HSMessage>>, Map<Integer, String>> hsPair = createValidatorNodes(numNodes,
+                    nodeRng, consensusLimit, hsSimulator, faultSettings);
+
+            List<Validator<HSMessage>> hsNodes = hsPair.first();
+            Map<Integer, String> idNameMap = hsPair.second();
+
+            for (int i = 0; i < numNodes; i++) {
+                Validator<HSMessage> currentNode = hsNodes.get(i);
+                ConsensusProgram<HSMessage> program = new HSReplica(idNameMap.get(i), i, baseTimeLimit,
+                        numNodes, idNameMap, currentNode);
+                currentNode.setConsensusProgram(program);
+            }
+
             hsSimulator.setNodes(hsNodes);
             fixNetworkConnections(json, hsSimulator);
             return hsSimulator;
-        case "IBFT":
+        case "ibft":
             SimulatorImpl<IBFTMessage> ibftSimulator = new SimulatorImpl<>();
-            List<Validator<IBFTMessage>> ibftNodes = IntStream.iterate(0, x -> x < numNodes, x -> x + 1)
-                    .mapToObj(x -> new IBFTNode("IBFT-" + x, x, timeLimit, ibftSimulator, numNodes, consensusLimit,
-                            new ExponentialDistribution(validatorServiceRate))).collect(Collectors.toList());
+            Pair<List<Validator<IBFTMessage>>, Map<Integer, String>> ibftPair = createValidatorNodes(numNodes,
+                    nodeRng, consensusLimit, ibftSimulator, faultSettings);
+
+            List<Validator<IBFTMessage>> ibftNodes = ibftPair.first();
+            idNameMap = ibftPair.second();
+
+            for (int i = 0; i < numNodes; i++) {
+                Validator<IBFTMessage> currentNode = ibftNodes.get(i);
+                ConsensusProgram<IBFTMessage> program = new IBFTNode(idNameMap.get(i), i, baseTimeLimit,
+                        numNodes, idNameMap, currentNode);
+                currentNode.setConsensusProgram(program);
+            }
+
             ibftSimulator.setNodes(ibftNodes);
             fixNetworkConnections(json, ibftSimulator);
             return ibftSimulator;
         default:
-            throw new RuntimeException(String.format("%s is an unrecognised validator node type.", validatorNodeType));
+            throw new RuntimeException(String.format("%s is an unrecognised validator node type.", consensusProtocol));
         }
+    }
+
+    /**
+     * Creates the validator nodes required for setup.
+     *
+     * @param numNodes Number of nodes to be created.
+     * @param nodeRng Processing time for node.
+     * @param consensusLimit Limit of consensus to be simulated.
+     * @param timerNotifier Time notification for the validator. Used for setting timers.
+     * @param faultSettings Fault node settings.
+     * @return Pair of list of validators and map of ids to node name.
+     */
+    private static <T extends BFTMessage> Pair<List<Validator<T>>, Map<Integer, String>> createValidatorNodes(
+            int numNodes, RandomNumberGenerator nodeRng, int consensusLimit, TimerNotifier<Validator<T>> timerNotifier,
+            FaultConfigJson faultSettings) {
+        List<Validator<T>> nodes = new ArrayList<>();
+        Map<Integer, String> idNameMap = new HashMap<>();
+        int numFaults = faultSettings.getNumFaults();
+        String faultType = faultSettings.getFaultType();
+        for (int i = 0; i < numNodes; i++) {
+            String nodeName = "HS-" + i;
+            idNameMap.put(i, nodeName);
+            Validator<T> faultyNode;
+            if (i < numFaults) {
+                switch (faultType) {
+                    case "unresponsive": case "ur":
+                        faultyNode = new UnresponsiveValidator<>(nodeName, timerNotifier);
+                        break;
+                    default:
+                        throw new RuntimeException(String.format("Unrecognized fault type (%s).", faultType));
+                }
+                nodes.add(faultyNode);
+            } else {
+                nodes.add(new Validator<>(nodeName, consensusLimit, timerNotifier, nodeRng));
+            }
+        }
+        return new Pair<>(nodes, idNameMap);
     }
 
     /**
      * Fixes the arrangement of the nodes in {@code simulator} according to the given run configuration {@code json}.
      */
     private static <T extends BFTMessage> void fixNetworkConnections(RunConfigJson json, SimulatorImpl<T> simulator) {
-        List<Validator<T>> nodes = simulator.getNodes();
-        for (Validator<T> node : nodes) {
-            node.setAllNodes(nodes);
-        }
         List<List<Switch<T>>> switches = arrangeNodesInTopology(json, simulator.getNodes());
         simulator.setSwitches(switches);
     }
@@ -73,33 +138,49 @@ public class RunConfigUtil {
      */
     public static <T> List<List<Switch<T>>> arrangeNodesInTopology(RunConfigJson json,
             List<? extends EndpointNode<T>> nodes) {
-        double switchServiceRate = json.getSwitchProcessingRate();
-        String networkType = json.getNetworkType();
-        List<Integer> networkParameters = json.getNetworkParameters();
-        Function<Integer, RandomNumberGenerator> processingGeneratorFunction =
-                switchServiceRate < 0 ? x -> new DegenerateDistribution(0)
-                        : x -> new ExponentialDistribution(switchServiceRate);
-        Supplier<RandomNumberGenerator> processingGeneratorSupplier =
-                switchServiceRate < 0 ? () -> new DegenerateDistribution(0)
-                        : () -> new ExponentialDistribution(switchServiceRate);
+        NetworkConfigurationJson networkSettings = json.getNetworkSettings();
+        SwitchConfigJson switchSettings = networkSettings.getSwitchSettings();
+        RandomNumberGenerator switchServiceTimeGenerator =
+                getRngFromConfig(switchSettings.getSwitchProcessingDistribution());
+        double messageChannelSuccessRate = switchSettings.getMessageChannelSuccessRate();
+        String networkType = networkSettings.getNetworkType();
+        List<Integer> networkParameters = networkSettings.getNetworkParameters();
         switch (networkType) {
-            case "FoldedClos": case "fc":
+            case "foldedclos": case "fc":
                 return NetworkTopology.arrangeFoldedClosStructure(nodes, networkParameters,
-                        processingGeneratorFunction);
-            case "Butterfly": case "b":
+                        messageChannelSuccessRate, switchServiceTimeGenerator);
+            case "butterfly": case "b":
                 return NetworkTopology.arrangeButterflyStructure(nodes, networkParameters,
-                        processingGeneratorFunction);
-            case "Clique": case "c":
-                return NetworkTopology.arrangeCliqueStructure(nodes, processingGeneratorSupplier);
-            case "Torus": case "t":
-                return NetworkTopology.arrangeTorusStructure(nodes, networkParameters,
-                        processingGeneratorSupplier);
-            case "Mesh": case "m":
-                return NetworkTopology.arrangeMeshStructure(nodes, networkParameters,
-                        processingGeneratorSupplier);
+                        messageChannelSuccessRate, switchServiceTimeGenerator);
+            case "clique": case "c":
+                return NetworkTopology.arrangeCliqueStructure(nodes, messageChannelSuccessRate,
+                        switchServiceTimeGenerator);
+            case "torus": case "t":
+                return NetworkTopology.arrangeTorusStructure(nodes, networkParameters, messageChannelSuccessRate,
+                        switchServiceTimeGenerator);
+            case "mesh": case "m":
+                return NetworkTopology.arrangeMeshStructure(nodes, networkParameters, messageChannelSuccessRate,
+                        switchServiceTimeGenerator);
             default:
                 throw new RuntimeException(String.format("The network type %s has not been defined/implemented.",
                         networkType));
+        }
+    }
+
+    /**
+     * Returns the appropriate rng distribution from the given {@code rngConfigJson}.
+     */
+    private static RandomNumberGenerator getRngFromConfig(RngConfigJson rngConfigJson) {
+        String distributionType = rngConfigJson.getDistributionType();
+        List<Double> distributionParameters = rngConfigJson.getParameters();
+
+        switch (distributionType) {
+            case "degen": case "d": case "degenerate":
+                return new DegenerateDistribution(distributionParameters.get(0));
+            case "exp": case "e": case "exponential":
+                return new ExponentialDistribution(distributionParameters.get(0));
+            default:
+                throw new RuntimeException("Not a valid distribution specification:\n" + rngConfigJson);
         }
     }
 }
