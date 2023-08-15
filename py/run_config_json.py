@@ -11,7 +11,7 @@ def create_run_config_json(num_runs: int, starting_seed: int, seed_multiplier: i
     switch_processing_distribution = {"distributionType": switch_processing_distribution, "parameters": switch_processing_parameters}
     switch_settings_dic = {"switchProcessingDistribution": switch_processing_distribution, "messageChannelSuccessRate": message_channel_success_rate}
     node_processing_distribution = {"distributionType": node_processing_distribution, "parameters": node_processing_parameters}
-    network_settings_dic = {"switchSettings": switch_settings_dic, "networkType": network_type, "networkParamters": network_parameters}
+    network_settings_dic = {"switchSettings": switch_settings_dic, "networkType": network_type, "networkParameters": network_parameters}
     fault_settings_dic = {"numFaults": num_faults, "faultType": fault_type, "faultParameters": fault_parameters}
     validator_settings_dic = {"numNodes": num_nodes, "numConsensus": num_consensus, "baseTimeLimit": base_time_limit, 
                               "nodeProcessingDistribution": node_processing_distribution, 

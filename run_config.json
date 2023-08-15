@@ -3,16 +3,16 @@
   "startingSeed": 0,
   "seedMultiplier": 100,
   "validatorSettings": {
-    "numNodes": 16,
+    "numNodes": 27,
     "numConsensus": 2000,
-    "baseTimeLimit": 20.5,
+    "baseTimeLimit": 10000,
     "nodeProcessingDistribution": {
       "distributionType": "exp",
       "parameters": [3]
     },
     "consensusProtocol": "HS",
     "faultSettings": {
-      "numFaults": 1,
+      "numFaults": 0,
       "faultType": "UR",
       "faultParameters": []
     }
@@ -20,12 +20,12 @@
   "networkSettings": {
     "switchSettings": {
       "switchProcessingDistribution": {
-        "distributionType": "degen",
-        "parameters": [0]
+        "distributionType": "exp",
+        "parameters": [1]
       },
       "messageChannelSuccessRate": 1
     },
-    "networkType": "Clique",
+    "networkType": "FoldedClos",
     "networkParameters": [3, 1, 0]
   }
 }
