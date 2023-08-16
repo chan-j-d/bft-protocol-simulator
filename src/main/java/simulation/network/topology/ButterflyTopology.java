@@ -102,23 +102,11 @@ public class ButterflyTopology {
         int numFirstLayerGroups = MathUtil.ceilDiv(minimumNodeCount, baseGroupSize) * baseGroupSize;
 
         List<Switch<T>> firstLayerSwitches = new ArrayList<>();
-        int minEndpointPerSwitch = nodes.size() / numFirstLayerGroups;
-        int numAdditional = nodes.size() % numFirstLayerGroups;
-        int startIndex = 0;
         for (int i = 0; i < numFirstLayerGroups; i++) {
             int index = i;
-            List<? extends EndpointNode<T>> endpointSublist;
-            if (networkParameters.get(1) == 1) {
-                // 1 for spread, 0 for flushed
-                int endIndex = startIndex + minEndpointPerSwitch + (i < numAdditional ? 1 : 0);
-                endpointSublist = nodes.subList(startIndex, endIndex);
-                startIndex = endIndex;
-            } else if (networkParameters.get(1) == 0) {
-                endpointSublist = (i * radix) >= nodes.size() ? List.of() :
-                        nodes.subList(i * radix, Math.min(nodes.size(), (i + 1) * radix));
-            } else {
-                throw new RuntimeException("Initial connection parameter (second field) must be 1 or 0.");
-            }
+
+            List<EndpointNode<T>> endpointSublist = TopologyUtil.getEndpointSublist(nodes, networkParameters.get(1),
+                    numFirstLayerGroups, radix, i);
             Switch<T> directSwitch_ = new Switch<>(
                     getTreeSwitchName(1, 0, i),
                     messageChannelSuccessRate,
