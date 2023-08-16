@@ -17,9 +17,7 @@ public class TopologyUtil {
      */
     public static <T> List<EndpointNode<T>> getEndpointSublist(List<? extends EndpointNode<T>> nodes, int param,
             int numSwitches, int connections, int index) {
-        if (connections * index > nodes.size()) {
-            return List.of();
-        }
+
         int minEndpointPerSwitch = nodes.size() / numSwitches;
         int numAdditional = nodes.size() % numSwitches;
         if (param == 1) {
