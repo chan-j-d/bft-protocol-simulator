@@ -14,30 +14,36 @@ import java.util.List;
  */
 public class DragonflyTopology {
 
-
+    /**
+     * @param nodes Nodes to be arranged in a dragonfly topology.
+     * @param networkParameters Network parameters for {radix, connection type}.
+     *                          Number of terminals - positive integer > 0
+     *                          Number of switches in a group - positive integer > 0
+     *                          Connection type - 0 or 1. 0 for a flushed type connection and 1 for spread.
+     *                          Distribution of nodes over switches - 0 or 1. 1 for fitting into as few groups as
+     *                          possible and 0 for spreading out over as many groups as possible.
+     *
+     * @param messageChannelSuccessRate Success rate of a message being sent by the switch.
+     * @param switchProcessingTimeGenerator Rng for switch processing time.
+     * @return Returns a list of list of switches separated by level in the butterfly network.
+     * @param <T> Message class being carried by switches.
+     */
     public static <T> List<List<Switch<T>>> arrangeDragonflyStructure(List<? extends EndpointNode<T>> nodes,
             List<Integer> networkParameters,
             double messageChannelSuccessRate,
             RandomNumberGenerator switchProcessingTimeGenerator) {
-        int k = networkParameters.get(0);
-        if (k % 4 != 0) {
-            throw new RuntimeException(String.format("Invalid radix count for dragonfly: %d. " +
-                    "Please specify a multiple of 4.", k));
-        }
-
-        int a = k / 2;
-        int p = k / 4;
-        int h = k / 4;
-
+        int p = networkParameters.get(0);
+        int a = networkParameters.get(1);
+        int numGroups = a + 1;
+        int numSwitches = a * numGroups;
         List<List<Switch<T>>> groupsOfSwitches = new ArrayList<>();
-        for (int i = 0; i < h + 1; i++) {
+        for (int i = 0; i < numGroups; i++) {
             List<Switch<T>> groupSwitches = new ArrayList<>();
             groupsOfSwitches.add(groupSwitches);
-
             for (int j = 0; j < a; j++) {
-
+                int index = networkParameters.get(3) == 1 ? i * a + j : i + j * numGroups;
                 List<? extends EndpointNode<T>> endpointSublist = TopologyUtil.getEndpointSublist(
-                        nodes, networkParameters.get(1), a * (h + 1), p, j);
+                        nodes, networkParameters.get(2), numSwitches, p, index);
                 groupSwitches.add(new Switch<>(String.format("Switch-(G:%d,N:%d)", i, j), messageChannelSuccessRate,
                         new ArrayList<>(nodes),
                         endpointSublist,
@@ -45,6 +51,20 @@ public class DragonflyTopology {
             }
         }
 
-        return null;
+        for (int i = 0; i < numGroups; i++) {
+            for (int j = 0; j < a; j++) {
+                List<Switch<T>> switchNeighbors = new ArrayList<>(groupsOfSwitches.get(i));
+                int globalSwitchIndex = i * a + j;
+                int correspondingGlobalIndex = numSwitches - 1 - globalSwitchIndex;
+                int correspondingGroup = correspondingGlobalIndex / a;
+                int correspondingIndex = correspondingGlobalIndex % a;
+                switchNeighbors.add(groupsOfSwitches.get(correspondingGroup).get(correspondingIndex));
+                groupsOfSwitches.get(i).get(j).setSwitchNeighbors(switchNeighbors);
+            }
+        }
+
+        TopologyUtil.flattenAndUpdateRoutes(groupsOfSwitches);
+        return groupsOfSwitches;
     }
+
 }
