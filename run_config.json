@@ -3,7 +3,7 @@
   "startingSeed": 0,
   "seedMultiplier": 100,
   "validatorSettings": {
-    "numNodes": 27,
+    "numNodes": 32,
     "numConsensus": 2000,
     "baseTimeLimit": 10000,
     "nodeProcessingDistribution": {
@@ -21,11 +21,11 @@
     "switchSettings": {
       "switchProcessingDistribution": {
         "distributionType": "exp",
-        "parameters": [1]
+        "parameters": [10]
       },
       "messageChannelSuccessRate": 1
     },
-    "networkType": "FoldedClos",
-    "networkParameters": [3, 1, 0]
+    "networkType": "df",
+    "networkParameters": [4, 3, 0, 0]
   }
 }

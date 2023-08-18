@@ -14,6 +14,7 @@ import simulation.network.entity.timer.TimerNotifier;
 import simulation.network.router.Switch;
 import simulation.network.topology.ArrayTopololgy;
 import simulation.network.topology.ButterflyTopology;
+import simulation.network.topology.DragonflyTopology;
 import simulation.network.topology.SimpleTopology;
 import simulation.protocol.ConsensusProgram;
 import simulation.protocol.hotstuff.HSMessage;
@@ -162,6 +163,9 @@ public class RunConfigUtil {
                         switchServiceTimeGenerator);
             case "mesh": case "m":
                 return ArrayTopololgy.arrangeMeshStructure(nodes, networkParameters, messageChannelSuccessRate,
+                        switchServiceTimeGenerator);
+            case "dragonfly": case "df":
+                return DragonflyTopology.arrangeDragonflyStructure(nodes, networkParameters, messageChannelSuccessRate,
                         switchServiceTimeGenerator);
             default:
                 throw new RuntimeException(String.format("The network type %s has not been defined/implemented.",
