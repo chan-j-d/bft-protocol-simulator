@@ -1,9 +1,13 @@
 package simulation.network.topology;
 
 import simulation.network.entity.EndpointNode;
+import simulation.network.router.RoutingUtil;
+import simulation.network.router.Switch;
 
 import java.util.ArrayList;
+import java.util.Collection;
 import java.util.List;
+import java.util.stream.Collectors;
 
 public class TopologyUtil {
 
@@ -33,5 +37,13 @@ public class TopologyUtil {
         } else {
             throw new RuntimeException("Initial connection parameter (second field) must be 1 or 0.");
         }
+    }
+
+    /**
+     * Updates the routing tables of the grouped switches.
+     */
+    public static <T> void flattenAndUpdateRoutes(List<List<Switch<T>>> groupedSwitches) {
+        List<Switch<T>> allSwitches = groupedSwitches.stream().flatMap(Collection::stream).collect(Collectors.toList());
+        RoutingUtil.updateRoutingTables(allSwitches);
     }
 }

@@ -1,13 +1,11 @@
 package simulation.network.topology;
 
 import simulation.network.entity.EndpointNode;
-import simulation.network.router.RoutingUtil;
 import simulation.network.router.Switch;
 import simulation.util.MathUtil;
 import simulation.util.rng.RandomNumberGenerator;
 
 import java.util.ArrayList;
-import java.util.Collection;
 import java.util.List;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
@@ -46,7 +44,7 @@ public class ButterflyTopology {
             Switch<T> lastHopSwitch = flattenedLastLayerSwitches.get(i);
             lastHopSwitch.setDirectlyConnectedEndpoints(endpointSublist);
         }
-        flattenAndUpdateRoutes(groupedSwitches);
+        TopologyUtil.flattenAndUpdateRoutes(groupedSwitches);
         return groupedSwitches;
     }
 
@@ -54,13 +52,6 @@ public class ButterflyTopology {
         return String.format("(Level: %d, Group: %d, Index: %d)", level, group, index);
     }
 
-    /**
-     * Updates the routing tables of the grouped switches.
-     */
-    private static <T> void flattenAndUpdateRoutes(List<List<Switch<T>>> groupedSwitches) {
-        List<Switch<T>> allSwitches = groupedSwitches.stream().flatMap(Collection::stream).collect(Collectors.toList());
-        RoutingUtil.updateRoutingTables(allSwitches);
-    }
 
     /**
      * Arranges a foldedClos network topology.
@@ -75,7 +66,7 @@ public class ButterflyTopology {
         List<List<Switch<T>>> groupedSwitches =
                 arrangeButterflyArrangement(nodes, networkParameters, messageChannelSuccessRate,
                         switchProcessingTimeGenerator, true);
-        flattenAndUpdateRoutes(groupedSwitches);
+        TopologyUtil.flattenAndUpdateRoutes(groupedSwitches);
         return groupedSwitches;
     }
 
