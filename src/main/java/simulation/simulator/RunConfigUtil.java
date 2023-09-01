@@ -12,7 +12,10 @@ import simulation.network.entity.Validator;
 import simulation.network.entity.fault.UnresponsiveValidator;
 import simulation.network.entity.timer.TimerNotifier;
 import simulation.network.router.Switch;
-import simulation.network.topology.NetworkTopology;
+import simulation.network.topology.ArrayTopololgy;
+import simulation.network.topology.ButterflyTopology;
+import simulation.network.topology.DragonflyTopology;
+import simulation.network.topology.SimpleTopology;
 import simulation.protocol.ConsensusProgram;
 import simulation.protocol.hotstuff.HSMessage;
 import simulation.protocol.hotstuff.HSReplica;
@@ -147,19 +150,22 @@ public class RunConfigUtil {
         List<Integer> networkParameters = networkSettings.getNetworkParameters();
         switch (networkType) {
             case "foldedclos": case "fc":
-                return NetworkTopology.arrangeFoldedClosStructure(nodes, networkParameters,
+                return ButterflyTopology.arrangeFoldedClosStructure(nodes, networkParameters,
                         messageChannelSuccessRate, switchServiceTimeGenerator);
             case "butterfly": case "b":
-                return NetworkTopology.arrangeButterflyStructure(nodes, networkParameters,
+                return ButterflyTopology.arrangeButterflyStructure(nodes, networkParameters,
                         messageChannelSuccessRate, switchServiceTimeGenerator);
             case "clique": case "c":
-                return NetworkTopology.arrangeCliqueStructure(nodes, messageChannelSuccessRate,
+                return SimpleTopology.arrangeCliqueStructure(nodes, messageChannelSuccessRate,
                         switchServiceTimeGenerator);
             case "torus": case "t":
-                return NetworkTopology.arrangeTorusStructure(nodes, networkParameters, messageChannelSuccessRate,
+                return ArrayTopololgy.arrangeTorusStructure(nodes, networkParameters, messageChannelSuccessRate,
                         switchServiceTimeGenerator);
             case "mesh": case "m":
-                return NetworkTopology.arrangeMeshStructure(nodes, networkParameters, messageChannelSuccessRate,
+                return ArrayTopololgy.arrangeMeshStructure(nodes, networkParameters, messageChannelSuccessRate,
+                        switchServiceTimeGenerator);
+            case "dragonfly": case "df":
+                return DragonflyTopology.arrangeDragonflyStructure(nodes, networkParameters, messageChannelSuccessRate,
                         switchServiceTimeGenerator);
             default:
                 throw new RuntimeException(String.format("The network type %s has not been defined/implemented.",
