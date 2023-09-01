@@ -17,18 +17,20 @@ public class IBFTMessage extends BFTMessage {
      */
     public static final int NULL_VALUE = -1;
 
-    private int identifier;
-    private IBFTMessageType messageType;
-    private int lambda;
-    private int round;
-    private int value;
-    private int preparedRound;
-    private int preparedValue;
-    private List<IBFTMessage> piggybackMessages;
+    private final int identifier;
+    private final int recipient;
+    private final IBFTMessageType messageType;
+    private final int lambda;
+    private final int round;
+    private final int value;
+    private final int preparedRound;
+    private final int preparedValue;
+    private final List<IBFTMessage> piggybackMessages;
 
-    private IBFTMessage(int identifier, IBFTMessageType messageType, int lambda,
+    private IBFTMessage(int identifier, int recipient, IBFTMessageType messageType, int lambda,
                 int round, int value, int preparedRound, int preparedValue) {
         this.identifier = identifier;
+        this.recipient = recipient;
         this.messageType = messageType;
         this.lambda = lambda;
         this.round = round;
@@ -38,9 +40,10 @@ public class IBFTMessage extends BFTMessage {
         this.piggybackMessages = List.of();
     }
 
-    private IBFTMessage(int identifier, IBFTMessageType messageType, int lambda,
+    private IBFTMessage(int identifier, int recipient, IBFTMessageType messageType, int lambda,
             int round, int value, int preparedRound, int preparedValue, List<IBFTMessage> piggybackMessages) {
         this.identifier = identifier;
+        this.recipient = recipient;
         this.messageType = messageType;
         this.lambda = lambda;
         this.round = round;
@@ -53,34 +56,35 @@ public class IBFTMessage extends BFTMessage {
     /**
      * Creates an IBFT message of the given {@code type} and specified {@code value}.
      */
-    public static IBFTMessage createValueMessage(int identifier, IBFTMessageType type,
+    public static IBFTMessage createValueMessage(int identifier, int recipient, IBFTMessageType type,
             int lambda, int round, int value) {
-        return new IBFTMessage(identifier, type, lambda, round, value, NULL_VALUE, NULL_VALUE);
+        return new IBFTMessage(identifier, recipient, type, lambda, round, value, NULL_VALUE, NULL_VALUE);
     }
 
     /**
      * Creates an IBFT message of the given {@code type} and specified {@code value} with {@code piggybackMessages}.
      */
-    public static IBFTMessage createValueMessage(int identifier, IBFTMessageType type,
+    public static IBFTMessage createValueMessage(int identifier, int recipient, IBFTMessageType type,
             int lambda, int round, int value, List<IBFTMessage> piggybackMessages) {
-        return new IBFTMessage(identifier, type, lambda, round, value,
+        return new IBFTMessage(identifier, recipient, type, lambda, round, value,
                 NULL_VALUE, NULL_VALUE, piggybackMessages);
     }
 
     /**
      * Creates an IBFT message with {@code preparedRound} and {@code preparedValue} specified.
      */
-    public static IBFTMessage createPreparedValuesMessage(int identifier, IBFTMessageType messageType,
+    public static IBFTMessage createPreparedValuesMessage(int identifier, int recipient, IBFTMessageType messageType,
             int lambda, int round, int preparedRound, int preparedValue) {
-        return new IBFTMessage(identifier, messageType, lambda, round, NULL_VALUE, preparedRound, preparedValue);
+        return new IBFTMessage(identifier, recipient, messageType, lambda, round, NULL_VALUE,
+                preparedRound, preparedValue);
     }
 
     /**
      * Creates an IBFT message with {@code preparedRound} and {@code preparedValue} with {@code piggybackMessages}.
      */
-    public static IBFTMessage createPreparedValuesMessage(int identifier, IBFTMessageType messageType,
+    public static IBFTMessage createPreparedValuesMessage(int identifier, int recipient, IBFTMessageType messageType,
             int lambda, int round, int preparedRound, int preparedValue, List<IBFTMessage> piggybackMessages) {
-        return new IBFTMessage(identifier, messageType, lambda, round, NULL_VALUE,
+        return new IBFTMessage(identifier, recipient, messageType, lambda, round, NULL_VALUE,
                 preparedRound, preparedValue, piggybackMessages);
     }
 
@@ -128,5 +132,10 @@ public class IBFTMessage extends BFTMessage {
     @Override
     public String getType() {
         return getMessageType().toString();
+    }
+
+    @Override
+    public int getRecipientId() {
+        return recipient;
     }
 }
