@@ -91,12 +91,11 @@ public class Validator<T extends BFTMessage> extends EndpointNode<T>
     @Override
     public Pair<Double, List<Payload<T>>> processPayload(double time, Payload<T> payload) {
         double duration = rng.generateRandomNumber();
-        double timePassed = time - previousRecordedTime;
         previousRecordedTime = time + duration;
         T message = payload.getMessage();
         int programId = payload.getProgramId();
         ConsensusProgram<T> consensusProgram = consensusPrograms.get(programId);
-        consensusProgram.registerMessageProcessed(message, duration + timePassed);
+        consensusProgram.registerMessageProcessed(message, previousRecordedTime);
         List<T> responseMessages = consensusProgram.processMessage(message);
         return new Pair<>(duration, convertMessagesToPayloads(responseMessages, programId));
     }

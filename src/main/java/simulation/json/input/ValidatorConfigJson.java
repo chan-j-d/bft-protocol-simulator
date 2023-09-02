@@ -4,6 +4,7 @@ public class ValidatorConfigJson {
 
     private int numNodes;
     private int numConsensus;
+    private int numPrograms;
     private String consensusProtocol;
     private double baseTimeLimit;
     private RngConfigJson nodeProcessingDistribution;
@@ -11,6 +12,10 @@ public class ValidatorConfigJson {
 
     public int getNumConsensus() {
         return numConsensus;
+    }
+
+    public int getNumPrograms() {
+        return numPrograms;
     }
 
     public RngConfigJson getNodeProcessingDistribution() {

@@ -26,6 +26,7 @@ public abstract class ConsensusProgramImpl<T extends BFTMessage> implements Cons
     private final int numNodes;
     private int timerCount; // Used to differentiate multiple timers in the same instance & round
     private double timeoutTime;
+    private double previousRecordedTime;
 
     /**
      * @param numNodes Number of nodes in the consensus program.
@@ -37,6 +38,7 @@ public abstract class ConsensusProgramImpl<T extends BFTMessage> implements Cons
         this.timerNotifier = timerNotifier;
         this.timeoutTime = 0;
         this.timerCount = 0;
+        this.previousRecordedTime = 0;
         this.statistics = new ConsensusStatistics(getStates());
     }
 
@@ -50,7 +52,9 @@ public abstract class ConsensusProgramImpl<T extends BFTMessage> implements Cons
     }
 
     @Override
-    public void registerMessageProcessed(T message, double timeTaken) {
+    public void registerMessageProcessed(T message, double currentTime) {
+        double timeTaken = currentTime - previousRecordedTime;
+        previousRecordedTime = currentTime;
         registerTimeElapsed(timeTaken);
         statistics.addMessageCountForState(message.getType());
     }
