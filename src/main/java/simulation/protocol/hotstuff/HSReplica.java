@@ -9,7 +9,6 @@ import java.util.Arrays;
 import java.util.Collection;
 import java.util.Collections;
 import java.util.List;
-import java.util.Map;
 import java.util.Random;
 import java.util.stream.Collectors;
 import java.util.stream.IntStream;
@@ -50,11 +49,9 @@ public class HSReplica extends ConsensusProgramImpl<HSMessage> {
      * @param baseTimeLimit Base time limit for timeouts.
      * @param timerNotifier TimerNotifier used to get time and set timeouts.
      * @param n Number of nodes in the simulation.
-     * @param idNodeNameMap Map of node ids to their names in the network.
      * @param timerNotifier Time notifier to be used for setting timers.
      */
     public HSReplica(String name, int id, double baseTimeLimit, int n,
-            Map<Integer, String> idNodeNameMap,
             TimerNotifier<ConsensusProgram<HSMessage>> timerNotifier) {
         super(n, timerNotifier);
         this.logger = new Logger(name);

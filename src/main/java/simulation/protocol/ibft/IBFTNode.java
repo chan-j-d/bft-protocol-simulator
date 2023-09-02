@@ -62,11 +62,9 @@ public class IBFTNode extends ConsensusProgramImpl<IBFTMessage> {
      * @param id Unique integer identifier for IBFT validator.
      * @param baseTimeLimit Base time limit for timeouts.
      * @param N Number of nodes in the simulation.
-     * @param idNodeNameMap Map of node ids to their names in the network.
      * @param timerNotifier Time notifier to be used for setting timers.
      */
     public IBFTNode(String name, int id, double baseTimeLimit, int N,
-            Map<Integer, String> idNodeNameMap,
             TimerNotifier<ConsensusProgram<IBFTMessage>> timerNotifier) {
         super(N, timerNotifier);
         logger = new Logger(name);
