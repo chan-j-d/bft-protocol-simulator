@@ -1,6 +1,5 @@
 package simulation.protocol.ibft;
 
-import simulation.network.entity.Payload;
 import simulation.network.entity.timer.TimerNotifier;
 import simulation.protocol.ConsensusProgram;
 import simulation.protocol.ConsensusProgramImpl;
@@ -69,7 +68,7 @@ public class IBFTNode extends ConsensusProgramImpl<IBFTMessage> {
     public IBFTNode(String name, int id, double baseTimeLimit, int N,
             Map<Integer, String> idNodeNameMap,
             TimerNotifier<ConsensusProgram<IBFTMessage>> timerNotifier) {
-        super(idNodeNameMap, timerNotifier);
+        super(N, timerNotifier);
         logger = new Logger(name);
         this.state = IBFTState.NEW_ROUND;
         this.baseTimeLimit = baseTimeLimit;
@@ -87,9 +86,9 @@ public class IBFTNode extends ConsensusProgramImpl<IBFTMessage> {
      * Starts up the protocol and sends out initial messages.
      */
     @Override
-    public List<Payload<IBFTMessage>> initializationPayloads() {
+    public List<IBFTMessage> initializationPayloads() {
         start(FIRST_CONSENSUS_INSTANCE, DUMMY_VALUE);
-        return getProcessedPayloads();
+        return getMessages();
     }
 
     @Override
@@ -147,26 +146,29 @@ public class IBFTNode extends ConsensusProgramImpl<IBFTMessage> {
     }
 
     @Override
-    protected List<Payload<IBFTMessage>> onTimerExpiry() {
+    protected List<IBFTMessage> onTimerExpiry() {
         timeoutOperation();
-        return getProcessedPayloads();
+        return getMessages();
     }
 
     // Message util
-    private IBFTMessage createSingleValueMessage(IBFTMessageType type, int value) {
-        return IBFTMessage.createValueMessage(p_i, type, lambda_i, r_i, value);
+    private IBFTMessage createSingleValueMessage(int recipient, IBFTMessageType type, int value) {
+        return IBFTMessage.createValueMessage(p_i, recipient, type, lambda_i, r_i, value);
     }
 
-    private IBFTMessage createSingleValueMessage(IBFTMessageType type, int value, List<IBFTMessage> piggybackMessages) {
-        return IBFTMessage.createValueMessage(p_i, type, lambda_i, r_i, value, piggybackMessages);
+    private IBFTMessage createSingleValueMessage(int recipient, IBFTMessageType type, int value,
+            List<IBFTMessage> piggybackMessages) {
+        return IBFTMessage.createValueMessage(p_i, recipient, type, lambda_i, r_i, value, piggybackMessages);
     }
 
-    private IBFTMessage createPreparedValuesMessage(IBFTMessageType type) {
-        return IBFTMessage.createPreparedValuesMessage(p_i, type, lambda_i, r_i, pr_i, pv_i);
+    private IBFTMessage createPreparedValuesMessage(int recipient, IBFTMessageType type) {
+        return IBFTMessage.createPreparedValuesMessage(p_i, recipient, type, lambda_i, r_i, pr_i, pv_i);
     }
 
-    private IBFTMessage createPreparedValuesMessage(IBFTMessageType type, List<IBFTMessage> piggybackMessages) {
-        return IBFTMessage.createPreparedValuesMessage(p_i, type, lambda_i, r_i, pr_i, pv_i, piggybackMessages);
+    private IBFTMessage createPreparedValuesMessage(int recipient, IBFTMessageType type,
+            List<IBFTMessage> piggybackMessages) {
+        return IBFTMessage.createPreparedValuesMessage(p_i, recipient,
+                type, lambda_i, r_i, pr_i, pv_i, piggybackMessages);
     }
 
     // Round start handling
@@ -188,7 +190,7 @@ public class IBFTNode extends ConsensusProgramImpl<IBFTMessage> {
         inputValue_i = value;
         newRoundCleanup();
         if (leader == p_i) {
-            broadcastMessageToAll(createSingleValueMessage(IBFTMessageType.PREPREPARED, inputValue_i));
+            broadcastMessage(id -> createSingleValueMessage(id, IBFTMessageType.PREPREPARED, inputValue_i));
         }
         startIbftTimer();
         runBacklogProcessingOperation();
@@ -220,7 +222,7 @@ public class IBFTNode extends ConsensusProgramImpl<IBFTMessage> {
 
     // Message parsing methods
     @Override
-    public List<Payload<IBFTMessage>> processMessage(IBFTMessage message) {
+    public List<IBFTMessage> processMessage(IBFTMessage message) {
         IBFTMessageType messageType = message.getMessageType();
         int sender = message.getIdentifier();
         int lambda = message.getLambda();
@@ -252,10 +254,10 @@ public class IBFTNode extends ConsensusProgramImpl<IBFTMessage> {
                     break;
             }
         } else if (messageType == IBFTMessageType.ROUND_CHANGE) {
-            sendMessage(createSingleValueMessage(IBFTMessageType.SYNC, NULL_VALUE,
-                    consensusQuorum.get(lambda)), getNameFromId(sender));
+            sendMessage(createSingleValueMessage(sender, IBFTMessageType.SYNC, NULL_VALUE,
+                    consensusQuorum.get(lambda)));
         }
-        return getProcessedPayloads();
+        return getMessages();
     }
 
     // Algorithm 3 in IBFT Paper - Round change handling
@@ -271,9 +273,9 @@ public class IBFTNode extends ConsensusProgramImpl<IBFTMessage> {
         state = IBFTState.ROUND_CHANGE;
         startIbftTimer();
         if (pr_i == NULL_VALUE && pv_i == NULL_VALUE) {
-            broadcastMessageToAll(createPreparedValuesMessage(IBFTMessageType.ROUND_CHANGE));
+            broadcastMessage(id -> createPreparedValuesMessage(id, IBFTMessageType.ROUND_CHANGE));
         } else {
-            broadcastMessageToAll(createPreparedValuesMessage(IBFTMessageType.ROUND_CHANGE,
+            broadcastMessage(id -> createPreparedValuesMessage(id, IBFTMessageType.ROUND_CHANGE,
                     preparedMessageJustification));
         }
         prePrepareOperation();
@@ -289,7 +291,7 @@ public class IBFTNode extends ConsensusProgramImpl<IBFTMessage> {
             resetRoundBooleans();
             updateRound(messageHolder.getNextGreaterRoundChangeMessage(lambda_i, r_i));
             startIbftTimer();
-            broadcastMessageToAll(createPreparedValuesMessage(IBFTMessageType.ROUND_CHANGE));
+            broadcastMessage(id -> createPreparedValuesMessage(id, IBFTMessageType.ROUND_CHANGE));
             state = IBFTState.ROUND_CHANGE;
             prePrepareOperation();
             prepareOperation();
@@ -319,7 +321,7 @@ public class IBFTNode extends ConsensusProgramImpl<IBFTMessage> {
                     if (pr != NULL_VALUE && pv != NULL_VALUE) {
                         inputValue_i = pv;
                     }
-                    broadcastMessageToAll(createSingleValueMessage(
+                    broadcastMessage(id -> createSingleValueMessage(id,
                             IBFTMessageType.PREPREPARED, inputValue_i, roundChangeMessages));
                 }
             }
@@ -342,7 +344,7 @@ public class IBFTNode extends ConsensusProgramImpl<IBFTMessage> {
                 startIbftTimer();
                 state = IBFTState.PREPREPARED;
                 inputValue_i = message.getValue();
-                broadcastMessageToAll(createSingleValueMessage(IBFTMessageType.PREPARED, inputValue_i));
+                broadcastMessage(id -> createSingleValueMessage(id, IBFTMessageType.PREPARED, inputValue_i));
             }
         }
     }
@@ -362,7 +364,7 @@ public class IBFTNode extends ConsensusProgramImpl<IBFTMessage> {
             pr_i = r_i;
             pv_i = prepareMessages.get(0).getValue();
             preparedMessageJustification = prepareMessages;
-            broadcastMessageToAll(createSingleValueMessage(IBFTMessageType.COMMIT, inputValue_i));
+            broadcastMessage(id -> createSingleValueMessage(id, IBFTMessageType.COMMIT, inputValue_i));
         }
     }
 

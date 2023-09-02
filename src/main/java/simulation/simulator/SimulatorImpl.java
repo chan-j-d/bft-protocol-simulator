@@ -153,8 +153,8 @@ public class SimulatorImpl<T extends BFTMessage> implements Simulator, TimerNoti
     }
 
     @Override
-    public void notifyAtTime(Validator<T> node, double time, int timerCount) {
-        eventQueue.add(new TimedEvent<T>(time, node, timerCount));
+    public void notifyAtTime(Validator<T> node, double time, int id, int timerCount) {
+        eventQueue.add(new TimedEvent<>(time, node, id, timerCount));
     }
 
     @Override

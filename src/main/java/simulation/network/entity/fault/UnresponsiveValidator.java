@@ -43,7 +43,7 @@ public class UnresponsiveValidator<T extends BFTMessage> extends Validator<T> {
     }
 
     @Override
-    public void notifyAtTime(ConsensusProgram<T> program, double time, int timerCount) {
+    public void notifyAtTime(ConsensusProgram<T> program, double time, int id, int timerCount) {
         return;
     }
 }

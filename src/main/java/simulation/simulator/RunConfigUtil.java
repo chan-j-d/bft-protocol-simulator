@@ -62,7 +62,7 @@ public class RunConfigUtil {
                 Validator<HSMessage> currentNode = hsNodes.get(i);
                 ConsensusProgram<HSMessage> program = new HSReplica(idNameMap.get(i), i, baseTimeLimit,
                         numNodes, idNameMap, currentNode);
-                currentNode.setConsensusProgram(program);
+                currentNode.addConsensusProgram(program);
             }
 
             hsSimulator.setNodes(hsNodes);
@@ -80,7 +80,7 @@ public class RunConfigUtil {
                 Validator<IBFTMessage> currentNode = ibftNodes.get(i);
                 ConsensusProgram<IBFTMessage> program = new IBFTNode(idNameMap.get(i), i, baseTimeLimit,
                         numNodes, idNameMap, currentNode);
-                currentNode.setConsensusProgram(program);
+                currentNode.addConsensusProgram(program);
             }
 
             ibftSimulator.setNodes(ibftNodes);

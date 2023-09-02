@@ -166,10 +166,10 @@ public class HSReplica extends ConsensusProgramImpl<HSMessage> {
     public List<Payload<HSMessage>> initializationPayloads() {
         if (id == leader) {
             curProposal = createLeaf(null, new HSCommand(curView));
-            broadcastMessageToAll(msg(HSMessageType.PREPARE, curProposal, highQc));
+            broadcastMessage(msg(HSMessageType.PREPARE, curProposal, highQc));
         }
         startHsTimer();
-        return getProcessedPayloads();
+        return getMessages();
     }
 
     @Override
@@ -198,7 +198,7 @@ public class HSReplica extends ConsensusProgramImpl<HSMessage> {
                 decideOperation();
                 break;
         }
-        return getProcessedPayloads();
+        return getMessages();
     }
 
     /**
@@ -213,7 +213,7 @@ public class HSReplica extends ConsensusProgramImpl<HSMessage> {
                 highQc = getMaxViewNumberQc(newViewMessages);
                 // creates a generic command as the contents are not important
                 curProposal = createLeaf(highQc != null ? highQc.getNode() : null, new HSCommand(curView));
-                broadcastMessageToAll(msg(HSMessageType.PREPARE, curProposal, highQc));
+                broadcastMessage(msg(HSMessageType.PREPARE, curProposal, highQc));
             }
         }
         if (hasLeaderMessage()) {
@@ -255,7 +255,7 @@ public class HSReplica extends ConsensusProgramImpl<HSMessage> {
             if (messageHolder.hasQuorumOfMessages(HSMessageType.PREPARE, curView, n - f)) {
                 List<HSMessage> prepareMessages = messageHolder.getVoteMessages(HSMessageType.PREPARE, curView);
                 prepareQc = new QuorumCertificate(prepareMessages);
-                broadcastMessageToAll(msg(HSMessageType.PRE_COMMIT, null, prepareQc));
+                broadcastMessage(msg(HSMessageType.PRE_COMMIT, null, prepareQc));
             }
         }
         if (hasLeaderMessage()) {
@@ -279,7 +279,7 @@ public class HSReplica extends ConsensusProgramImpl<HSMessage> {
             if (messageHolder.hasQuorumOfMessages(HSMessageType.PRE_COMMIT, curView, n - f)) {
                 List<HSMessage> preCommitMessages = messageHolder.getVoteMessages(HSMessageType.PRE_COMMIT, curView);
                 preCommitQc = new QuorumCertificate(preCommitMessages);
-                broadcastMessageToAll(msg(HSMessageType.COMMIT, null, preCommitQc));
+                broadcastMessage(msg(HSMessageType.COMMIT, null, preCommitQc));
             }
         }
         if (hasLeaderMessage()) {
@@ -302,7 +302,7 @@ public class HSReplica extends ConsensusProgramImpl<HSMessage> {
             if (messageHolder.hasQuorumOfMessages(HSMessageType.COMMIT, curView, n - f)) {
                 List<HSMessage> commitMessages = messageHolder.getVoteMessages(HSMessageType.COMMIT, curView);
                 commitQc = new QuorumCertificate(commitMessages);
-                broadcastMessageToAll(msg(HSMessageType.DECIDE, null, commitQc));
+                broadcastMessage(msg(HSMessageType.DECIDE, null, commitQc));
                 return;
             }
         }
@@ -332,12 +332,12 @@ public class HSReplica extends ConsensusProgramImpl<HSMessage> {
      * On timeout, starts the next view.
      */
     @Override
-    protected List<Payload<HSMessage>> onTimerExpiry() {
+    protected List<HSMessage> onTimerExpiry() {
         numConsecutiveFailures++;
 //        logger.log(String.format("Time: %s, Name: %s, (EXPIRY) State: %s, Leader: %s, CurView: %s, Consensus: %s, Consecutive Failures: %s",
 //                getTime(), getName(), state, getLeader(curView), curView, numConsensus, numConsecutiveFailures));
         startNextView();
-        return getProcessedPayloads();
+        return getMessages();
     }
 
     /**
