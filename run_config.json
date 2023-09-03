@@ -4,7 +4,8 @@
   "seedMultiplier": 100,
   "validatorSettings": {
     "numNodes": 32,
-    "numConsensus": 2000,
+    "numConsensus": 1000,
+    "numPrograms": 2,
     "baseTimeLimit": 10000,
     "nodeProcessingDistribution": {
       "distributionType": "exp",

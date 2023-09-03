@@ -18,16 +18,18 @@ public class TimedEvent<T extends BFTMessage> extends NodeEvent<T> {
 
     private final Validator<T> node;
     private final int id;
+    private final int timerCount;
 
-    public TimedEvent(double time, Validator<T> node, int id) {
+    public TimedEvent(double time, Validator<T> node, int id, int timerCount) {
         super(time, node);
         this.node = node;
         this.id = id;
+        this.timerCount = timerCount;
     }
 
     @Override
     public List<NodeEvent<T>> simulate() {
-        return convertPayloadsToQueueEvents(getTime(), node, node.notifyTime(id));
+        return convertPayloadsToQueueEvents(getTime(), node, node.notifyTime(id, timerCount));
     }
 
     @Override

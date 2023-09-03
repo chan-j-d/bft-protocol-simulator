@@ -121,18 +121,18 @@ public class SimulatorImpl<T extends BFTMessage> implements Simulator, TimerNoti
     @Override
     public RunResults getRunResults() {
         ConsensusStatistics fastestRunConsensusStats = nodes.stream()
-                .map(Validator::getConsensusStatistics)
+                .map(v -> v.getConsensusStatistics(1))
                 .sorted(new ConsensusTimeComparator())
                 .limit(n - f)
                 .reduce(ConsensusStatistics::combineStatistics).orElseThrow();
         ConsensusStatistics remainderRunConsensusStats = nodes.stream()
-                .map(Validator::getConsensusStatistics)
+                .map(v -> v.getConsensusStatistics(1))
                 .sorted(new ConsensusTimeComparator().reversed())
                 .limit(f)
                 .reduce(ConsensusStatistics::combineStatistics).orElseThrow();
 
         Comparator<Validator<T>> consensusTimeComparatorForQueue = (n1, n2) ->
-                new ConsensusTimeComparator().compare(n1.getConsensusStatistics(), n2.getConsensusStatistics());
+                new ConsensusTimeComparator().compare(n1.getConsensusStatistics(1), n2.getConsensusStatistics(1));
         QueueStatistics fastestRunValidatorQueueStats = nodes.stream()
                 .sorted(consensusTimeComparatorForQueue)
                 .map(Node::getQueueStatistics)
@@ -153,8 +153,8 @@ public class SimulatorImpl<T extends BFTMessage> implements Simulator, TimerNoti
     }
 
     @Override
-    public void notifyAtTime(Validator<T> node, double time, int timerCount) {
-        eventQueue.add(new TimedEvent<T>(time, node, timerCount));
+    public void notifyAtTime(Validator<T> node, double time, int id, int timerCount) {
+        eventQueue.add(new TimedEvent<>(time, node, id, timerCount));
     }
 
     @Override

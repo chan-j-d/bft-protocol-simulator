@@ -2,7 +2,6 @@ package simulation.network.entity;
 
 import simulation.network.entity.timer.TimerNotifier;
 import simulation.protocol.ConsensusProgram;
-import simulation.protocol.NoProgram;
 import simulation.simulator.ValidatorResults;
 import simulation.statistics.ConsensusStatistics;
 import simulation.util.Pair;
@@ -11,6 +10,7 @@ import simulation.util.rng.RandomNumberGenerator;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.stream.Collectors;
 
 /**
  * Encapsulates an {@code EndpointNode} that runs a BFT protocol.
@@ -25,7 +25,10 @@ public class Validator<T extends BFTMessage> extends EndpointNode<T>
     private final TimerNotifier<Validator<T>> timerNotifier;
     private final RandomNumberGenerator rng;
 
-    private ConsensusProgram<T> consensusProgram;
+    private final Map<Integer, String> idNodeNameMap;
+    private final Map<Integer, ConsensusProgram<T>> consensusPrograms;
+    private final Map<ConsensusProgram<T>, Integer> programToIdMap;
+
     private double previousRecordedTime;
 
     /**
@@ -34,37 +37,44 @@ public class Validator<T extends BFTMessage> extends EndpointNode<T>
      * @param timerNotifier TimerNotifier to check time and set timers.
      * @param serviceTimeGenerator RNG for service time.
      */
-    public Validator(String name, int consensusLimit, TimerNotifier<Validator<T>> timerNotifier,
+    public Validator(String name, Map<Integer, String> idNodeNameMap, int consensusLimit,
+            TimerNotifier<Validator<T>> timerNotifier,
             RandomNumberGenerator serviceTimeGenerator) {
         super(name);
         this.timerNotifier = timerNotifier;
+        this.idNodeNameMap = idNodeNameMap;
         this.rng = serviceTimeGenerator;
         this.allNodes = new HashMap<>();
         this.consensusLimit = consensusLimit;
-        this.consensusProgram = new NoProgram<T>();
+        this.consensusPrograms = new HashMap<>();
+        this.programToIdMap = new HashMap<>();
     }
 
-    public void setConsensusProgram(ConsensusProgram<T> consensusProgram) {
-        this.consensusProgram = consensusProgram;
+    public void addConsensusProgram(ConsensusProgram<T> consensusProgram) {
+        this.consensusPrograms.put(this.consensusPrograms.size() + 1, consensusProgram);
+        this.programToIdMap.put(consensusProgram, this.programToIdMap.size() + 1);
     }
 
     @Override
-    public ConsensusStatistics getConsensusStatistics() {
-        return consensusProgram.getStatistics();
+    public ConsensusStatistics getConsensusStatistics(int programNumber) {
+        return consensusPrograms.get(programNumber).getStatistics();
     }
 
-    public int getConsensusCount() {
-        return consensusProgram.getConsensusCount();
+    @Override
+    public int getNumConsensusPrograms() {
+        return consensusPrograms.size();
     }
 
     @Override
     public boolean isStillRequiredToRun() {
-        return getConsensusCount() < consensusLimit;
+        return consensusPrograms.values().stream().anyMatch(p -> p.getConsensusCount() < consensusLimit);
     }
 
     @Override
     public List<Payload<T>> initializationPayloads() {
-        return consensusProgram.initializationPayloads();
+        return consensusPrograms.keySet().stream()
+                .flatMap(x -> convertMessagesToPayloads(consensusPrograms.get(x).initializationPayloads(), x).stream())
+                .collect(Collectors.toList());
     }
 
     /**
@@ -81,21 +91,31 @@ public class Validator<T extends BFTMessage> extends EndpointNode<T>
     @Override
     public Pair<Double, List<Payload<T>>> processPayload(double time, Payload<T> payload) {
         double duration = rng.generateRandomNumber();
-        double timePassed = time - previousRecordedTime;
         previousRecordedTime = time + duration;
         T message = payload.getMessage();
-        consensusProgram.registerMessageProcessed(message, duration + timePassed);
-        List<Payload<T>> payloads = consensusProgram.processMessage(message);
-        return new Pair<>(duration, payloads);
+        int programId = payload.getProgramId();
+        ConsensusProgram<T> consensusProgram = consensusPrograms.get(programId);
+        consensusProgram.registerMessageProcessed(message, previousRecordedTime);
+        List<T> responseMessages = consensusProgram.processMessage(message);
+        return new Pair<>(duration, convertMessagesToPayloads(responseMessages, programId));
     }
 
-    public List<Payload<T>> notifyTime(int timerCount) {
-        return consensusProgram.notifyTime(timerCount);
+    private String getIdNodeName(int id) {
+        return idNodeNameMap.get(id);
+    }
+
+    private List<Payload<T>> convertMessagesToPayloads(List<? extends T> messages, int programId) {
+        return messages.stream().map(m -> new Payload<T>(m, getIdNodeName(m.getRecipientId()), programId))
+                .collect(Collectors.toList());
+    }
+
+    public List<Payload<T>> notifyTime(int id, int timerCount) {
+        return convertMessagesToPayloads(consensusPrograms.get(id).notifyTime(timerCount), id);
     }
 
     @Override
-    public void notifyAtTime(ConsensusProgram<T> program, double time, int timerCount) {
-        timerNotifier.notifyAtTime(this, time, timerCount);
+    public void notifyAtTime(ConsensusProgram<T> program, double time, int id, int timerCount) {
+        timerNotifier.notifyAtTime(this, time, programToIdMap.get(program), timerCount);
     }
 
     @Override
@@ -105,6 +125,6 @@ public class Validator<T extends BFTMessage> extends EndpointNode<T>
 
     @Override
     public String toString() {
-        return super.toString() + ": " + consensusProgram.toString();
+        return super.toString() + ": " + consensusPrograms.toString();
     }
 }

@@ -60,9 +60,12 @@ public class RunConfigUtil {
 
             for (int i = 0; i < numNodes; i++) {
                 Validator<HSMessage> currentNode = hsNodes.get(i);
-                ConsensusProgram<HSMessage> program = new HSReplica(idNameMap.get(i), i, baseTimeLimit,
-                        numNodes, idNameMap, currentNode);
-                currentNode.setConsensusProgram(program);
+                for (int j = 0; j < validatorSettings.getNumPrograms(); j++) {
+                    String programName = idNameMap.get(i) + "-P" + j;
+                    ConsensusProgram<HSMessage> program = new HSReplica(programName, i, baseTimeLimit,
+                            numNodes, currentNode);
+                    currentNode.addConsensusProgram(program);
+                }
             }
 
             hsSimulator.setNodes(hsNodes);
@@ -78,9 +81,12 @@ public class RunConfigUtil {
 
             for (int i = 0; i < numNodes; i++) {
                 Validator<IBFTMessage> currentNode = ibftNodes.get(i);
-                ConsensusProgram<IBFTMessage> program = new IBFTNode(idNameMap.get(i), i, baseTimeLimit,
-                        numNodes, idNameMap, currentNode);
-                currentNode.setConsensusProgram(program);
+                for (int j = 0; j < validatorSettings.getNumPrograms(); j++) {
+                    String programName = idNameMap.get(i) + "-P" + j;
+                    ConsensusProgram<IBFTMessage> program = new IBFTNode(programName, i, baseTimeLimit,
+                            numNodes, currentNode);
+                    currentNode.addConsensusProgram(program);
+                }
             }
 
             ibftSimulator.setNodes(ibftNodes);
@@ -111,6 +117,9 @@ public class RunConfigUtil {
         for (int i = 0; i < numNodes; i++) {
             String nodeName = "Val-" + i;
             idNameMap.put(i, nodeName);
+        }
+        for (int i = 0; i < numNodes; i++) {
+            String nodeName = "Val-" + i;
             Validator<T> faultyNode;
             if (i < numFaults) {
                 switch (faultType) {
@@ -122,7 +131,7 @@ public class RunConfigUtil {
                 }
                 nodes.add(faultyNode);
             } else {
-                nodes.add(new Validator<>(nodeName, consensusLimit, timerNotifier, nodeRng));
+                nodes.add(new Validator<>(nodeName, idNameMap, consensusLimit, timerNotifier, nodeRng));
             }
         }
         return new Pair<>(nodes, idNameMap);

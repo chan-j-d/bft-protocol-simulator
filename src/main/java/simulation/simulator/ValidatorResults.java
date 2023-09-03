@@ -7,5 +7,6 @@ import simulation.statistics.ConsensusStatistics;
  */
 public interface ValidatorResults extends QueueResults {
 
-    ConsensusStatistics getConsensusStatistics();
+    ConsensusStatistics getConsensusStatistics(int programNumber);
+    int getNumConsensusPrograms();
 }
