@@ -4,10 +4,7 @@ import simulation.network.entity.Node;
 import simulation.network.entity.Payload;
 import simulation.util.Pair;
 
-import java.util.ArrayList;
 import java.util.List;
-
-import static simulation.event.EventUtil.convertPayloadsToQueueEvents;
 
 /**
  * Processes the given {@code payload} at {@code node}.
@@ -31,10 +28,8 @@ public class ProcessingDelayEvent<T> extends NodeEvent<T> {
         Pair<Double, List<Payload<T>>> durationPayloadsPair = node.processPayload(getTime(), payload);
         List<Payload<T>> processedPayloads = durationPayloadsPair.second();
         double processingEndTime = getTime() + durationPayloadsPair.first();
-        List<NodeEvent<T>> eventList =
-                new ArrayList<>(convertPayloadsToQueueEvents(processingEndTime, node, processedPayloads));
-        eventList.add(new ProcessedPayloadEvent<>(processingEndTime, node));
-        return eventList;
+        return List.of(new QueueEvent<>(processingEndTime, node, processedPayloads),
+                new ProcessedPayloadEvent<>(processingEndTime, node));
     }
 
     @Override

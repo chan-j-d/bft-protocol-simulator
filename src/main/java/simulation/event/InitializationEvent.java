@@ -24,7 +24,7 @@ public class InitializationEvent<T> extends NodeEvent<T> {
     @Override
     public List<NodeEvent<T>> simulate() {
         List<Payload<T>> payloads = getNode().initializationPayloads();
-        return EventUtil.convertPayloadsToQueueEvents(START_TIME, getNode(), payloads);
+        return List.of(new QueueEvent<>(START_TIME, getNode(), payloads));
     }
 
     @Override
