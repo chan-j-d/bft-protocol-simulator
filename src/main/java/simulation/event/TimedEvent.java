@@ -5,8 +5,6 @@ import simulation.network.entity.Validator;
 
 import java.util.List;
 
-import static simulation.event.EventUtil.convertPayloadsToQueueEvents;
-
 /**
  * Represents a timed notification event for the given {@code node}.
  *
@@ -29,7 +27,7 @@ public class TimedEvent<T extends BFTMessage> extends NodeEvent<T> {
 
     @Override
     public List<NodeEvent<T>> simulate() {
-        return convertPayloadsToQueueEvents(getTime(), node, node.notifyTime(id, timerCount));
+        return List.of(new QueueEvent<>(getTime(), node, node.notifyTime(id, timerCount)));
     }
 
     @Override

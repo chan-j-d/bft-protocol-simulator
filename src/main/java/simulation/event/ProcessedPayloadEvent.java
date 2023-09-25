@@ -19,8 +19,15 @@ public class ProcessedPayloadEvent<T> extends NodeEvent<T> {
 
     @Override
     public List<NodeEvent<T>> simulate() {
-        getNode().setIdle(getTime());
-        return List.of(new PollQueueEvent<>(getTime(), getNode()));
+        Node<T> node = getNode();
+        // setIdle has other side effects and requires to be called at the end of each message processed.
+        node.setIdle(getTime());
+        if (!node.isEmpty()) {
+            node.setOccupied();
+            return List.of(new ProcessingDelayEvent<>(getTime(), node, node.popFromQueue()));
+        } else {
+            return List.of();
+        }
     }
 
     @Override
