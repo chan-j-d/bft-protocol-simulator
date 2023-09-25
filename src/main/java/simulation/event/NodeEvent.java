@@ -29,13 +29,7 @@ public abstract class NodeEvent<T> implements Comparable<NodeEvent<T>> {
 
     @Override
     public int compareTo(NodeEvent<T> e) {
-        if (this.time > e.time) {
-            return 1;
-        } else if (this.time == e.time) {
-            return 0;
-        } else {
-            return -1;
-        }
+        return Double.compare(this.time, e.time);
     }
 
     @Override
