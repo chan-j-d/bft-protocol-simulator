@@ -29,7 +29,6 @@ public class ProcessingDelayEvent<T> extends NodeEvent<T> {
     public List<NodeEvent<T>> simulate() {
         Node<T> node = getNode();
         Pair<Double, List<Payload<T>>> durationPayloadsPair = node.processPayload(getTime(), payload);
-        node.setOccupied();
         List<Payload<T>> processedPayloads = durationPayloadsPair.second();
         double processingEndTime = getTime() + durationPayloadsPair.first();
         List<NodeEvent<T>> eventList =

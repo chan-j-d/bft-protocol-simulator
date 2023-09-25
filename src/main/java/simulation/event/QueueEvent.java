@@ -24,6 +24,7 @@ public class QueueEvent<T> extends NodeEvent<T> {
         boolean wasNodeEmpty = node.isEmpty();
         node.addToQueue(getTime(), payload);
         if (wasNodeEmpty && !node.isOccupied()) {
+            node.setOccupied();
             return List.of(new ProcessingDelayEvent<>(getTime(), node, node.popFromQueue()));
         } else {
             return List.of();
