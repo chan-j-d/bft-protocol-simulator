@@ -2,7 +2,7 @@ import json
 from typing import Tuple, List
 
 def create_run_config_json(num_runs: int, starting_seed: int, seed_multiplier: int, 
-                           num_nodes: int, num_consensus: int, base_time_limit: float, 
+                           num_nodes: int, num_consensus: int, num_programs: int, base_time_limit: float, 
                            node_processing_distribution: str, node_processing_parameters: List[float], 
                            consensus_protocol: str, num_faults: int, fault_type: str, fault_parameters: List[int],
                            switch_processing_distribution: str, switch_processing_parameters: List[float], 
@@ -13,7 +13,7 @@ def create_run_config_json(num_runs: int, starting_seed: int, seed_multiplier: i
     node_processing_distribution = {"distributionType": node_processing_distribution, "parameters": node_processing_parameters}
     network_settings_dic = {"switchSettings": switch_settings_dic, "networkType": network_type, "networkParameters": network_parameters}
     fault_settings_dic = {"numFaults": num_faults, "faultType": fault_type, "faultParameters": fault_parameters}
-    validator_settings_dic = {"numNodes": num_nodes, "numConsensus": num_consensus, "baseTimeLimit": base_time_limit, 
+    validator_settings_dic = {"numNodes": num_nodes, "numConsensus": num_consensus, "numPrograms": num_programs, "baseTimeLimit": base_time_limit, 
                               "nodeProcessingDistribution": node_processing_distribution, 
                               "consensusProtocol": consensus_protocol, "faultSettings": fault_settings_dic}
     json_dic = {"numRuns": num_runs,"startingSeed": starting_seed, "seedMultiplier": seed_multiplier,
