@@ -10,6 +10,7 @@ import simulation.util.rng.ExponentialDistribution;
 import simulation.util.rng.RandomNumberGenerator;
 
 import java.util.List;
+import java.util.Map;
 
 /**
  * Represents a defunct validator that stopped responding.
@@ -24,7 +25,7 @@ public class UnresponsiveValidator<T extends BFTMessage> extends Validator<T> {
      * @param timerNotifier TimerNotifier to check time and set timers.
      */
     public UnresponsiveValidator(String name, TimerNotifier<Validator<T>> timerNotifier) {
-        super(name, DUMMY_CONSENSUS_LIMIT, timerNotifier, DUMMY_RNG);
+        super(name, Map.of(), DUMMY_CONSENSUS_LIMIT, timerNotifier, DUMMY_RNG);
     }
 
     @Override
@@ -43,7 +44,7 @@ public class UnresponsiveValidator<T extends BFTMessage> extends Validator<T> {
     }
 
     @Override
-    public void notifyAtTime(ConsensusProgram<T> program, double time, int timerCount) {
+    public void notifyAtTime(ConsensusProgram<T> program, double time, int id, int timerCount) {
         return;
     }
 }

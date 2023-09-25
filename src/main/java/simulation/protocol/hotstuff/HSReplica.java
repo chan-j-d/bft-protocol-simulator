@@ -1,6 +1,5 @@
 package simulation.protocol.hotstuff;
 
-import simulation.network.entity.Payload;
 import simulation.network.entity.timer.TimerNotifier;
 import simulation.protocol.ConsensusProgram;
 import simulation.protocol.ConsensusProgramImpl;
@@ -10,7 +9,6 @@ import java.util.Arrays;
 import java.util.Collection;
 import java.util.Collections;
 import java.util.List;
-import java.util.Map;
 import java.util.Random;
 import java.util.stream.Collectors;
 import java.util.stream.IntStream;
@@ -51,13 +49,11 @@ public class HSReplica extends ConsensusProgramImpl<HSMessage> {
      * @param baseTimeLimit Base time limit for timeouts.
      * @param timerNotifier TimerNotifier used to get time and set timeouts.
      * @param n Number of nodes in the simulation.
-     * @param idNodeNameMap Map of node ids to their names in the network.
      * @param timerNotifier Time notifier to be used for setting timers.
      */
     public HSReplica(String name, int id, double baseTimeLimit, int n,
-            Map<Integer, String> idNodeNameMap,
             TimerNotifier<ConsensusProgram<HSMessage>> timerNotifier) {
-        super(idNodeNameMap, timerNotifier);
+        super(n, timerNotifier);
         this.logger = new Logger(name);
         this.numConsensus = 0;
         this.id = id;
@@ -80,16 +76,16 @@ public class HSReplica extends ConsensusProgramImpl<HSMessage> {
     /**
      * Creates a leader {@code HSMessage} of {@code type}, containing {@code node} and {@code qc} as justification.
      */
-    private HSMessage msg(HSMessageType type, HSTreeNode node, QuorumCertificate qc) {
-        return new HSMessage(id, type, curView, node, qc, false);
+    private HSMessage msg(int recipient, HSMessageType type, HSTreeNode node, QuorumCertificate qc) {
+        return new HSMessage(id, recipient, type, curView, node, qc, false);
     }
 
     /**
      * Creates a vote {@code HSMessage} of {@code type}, containing{@code node} and {@code qc} as justification.
      */
-    private HSMessage voteMsg(HSMessageType type, HSTreeNode node, QuorumCertificate qc) {
+    private HSMessage voteMsg(int recipient, HSMessageType type, HSTreeNode node, QuorumCertificate qc) {
         // Here, we ignore the signing component of the vote message as we are not concerned with verification.
-        return new HSMessage(id, type, curView, node, qc, true);
+        return new HSMessage(id, recipient, type, curView, node, qc, true);
     }
 
     /**
@@ -163,17 +159,17 @@ public class HSReplica extends ConsensusProgramImpl<HSMessage> {
      * Replica: Start timer.
      */
     @Override
-    public List<Payload<HSMessage>> initializationPayloads() {
+    public List<HSMessage> initializationPayloads() {
         if (id == leader) {
             curProposal = createLeaf(null, new HSCommand(curView));
-            broadcastMessageToAll(msg(HSMessageType.PREPARE, curProposal, highQc));
+            broadcastMessage(id -> msg(id, HSMessageType.PREPARE, curProposal, highQc));
         }
         startHsTimer();
-        return getProcessedPayloads();
+        return getMessages();
     }
 
     @Override
-    public List<Payload<HSMessage>> processMessage(HSMessage message) {
+    public List<HSMessage> processMessage(HSMessage message) {
         int messageView = message.getViewNumber();
         HSMessageType type = message.getMessageType();
         if (messageView < curView - 1 || (type != HSMessageType.NEW_VIEW && messageView == curView - 1)) {
@@ -198,7 +194,7 @@ public class HSReplica extends ConsensusProgramImpl<HSMessage> {
                 decideOperation();
                 break;
         }
-        return getProcessedPayloads();
+        return getMessages();
     }
 
     /**
@@ -213,7 +209,7 @@ public class HSReplica extends ConsensusProgramImpl<HSMessage> {
                 highQc = getMaxViewNumberQc(newViewMessages);
                 // creates a generic command as the contents are not important
                 curProposal = createLeaf(highQc != null ? highQc.getNode() : null, new HSCommand(curView));
-                broadcastMessageToAll(msg(HSMessageType.PREPARE, curProposal, highQc));
+                broadcastMessage(id -> msg(id, HSMessageType.PREPARE, curProposal, highQc));
             }
         }
         if (hasLeaderMessage()) {
@@ -221,7 +217,7 @@ public class HSReplica extends ConsensusProgramImpl<HSMessage> {
             if (m.getSender() == leader && matchingMessage(m, HSMessageType.PREPARE, curView)) {
                 if (m.getJustify() == null || (m.getNode().extendsFrom(m.getJustify().getNode()) &&
                         safeNode(m.getNode(), m.getJustify()))) {
-                    sendMessage(voteMsg(HSMessageType.PREPARE, m.getNode(), null), getNameFromId(leader));
+                    sendMessage(voteMsg(leader, HSMessageType.PREPARE, m.getNode(), null));
                     state = HSMessageType.PRE_COMMIT;
                     preCommitOperation();
                 }
@@ -255,15 +251,14 @@ public class HSReplica extends ConsensusProgramImpl<HSMessage> {
             if (messageHolder.hasQuorumOfMessages(HSMessageType.PREPARE, curView, n - f)) {
                 List<HSMessage> prepareMessages = messageHolder.getVoteMessages(HSMessageType.PREPARE, curView);
                 prepareQc = new QuorumCertificate(prepareMessages);
-                broadcastMessageToAll(msg(HSMessageType.PRE_COMMIT, null, prepareQc));
+                broadcastMessage(id -> msg(id, HSMessageType.PRE_COMMIT, null, prepareQc));
             }
         }
         if (hasLeaderMessage()) {
             HSMessage m = getLeaderMessage();
             if (m.getSender() == leader && matchingQc(m.getJustify(), HSMessageType.PREPARE, curView)) {
                 prepareQc = m.getJustify();
-                sendMessage(voteMsg(HSMessageType.PRE_COMMIT,
-                        m.getJustify().getNode(), null), getNameFromId(leader));
+                sendMessage(voteMsg(leader, HSMessageType.PRE_COMMIT, m.getJustify().getNode(), null));
                 state = HSMessageType.COMMIT;
                 commitOperation();
             }
@@ -279,14 +274,14 @@ public class HSReplica extends ConsensusProgramImpl<HSMessage> {
             if (messageHolder.hasQuorumOfMessages(HSMessageType.PRE_COMMIT, curView, n - f)) {
                 List<HSMessage> preCommitMessages = messageHolder.getVoteMessages(HSMessageType.PRE_COMMIT, curView);
                 preCommitQc = new QuorumCertificate(preCommitMessages);
-                broadcastMessageToAll(msg(HSMessageType.COMMIT, null, preCommitQc));
+                broadcastMessage(id -> msg(id, HSMessageType.COMMIT, null, preCommitQc));
             }
         }
         if (hasLeaderMessage()) {
             HSMessage m = getLeaderMessage();
             if (m.getSender() == leader && matchingQc(m.getJustify(), HSMessageType.PRE_COMMIT, curView)) {
                 lockedQc = m.getJustify();
-                sendMessage(voteMsg(HSMessageType.COMMIT, m.getJustify().getNode(), null), getNameFromId(leader));
+                sendMessage(voteMsg(leader, HSMessageType.COMMIT, m.getJustify().getNode(), null));
                 state = HSMessageType.DECIDE;
                 decideOperation();
             }
@@ -302,7 +297,7 @@ public class HSReplica extends ConsensusProgramImpl<HSMessage> {
             if (messageHolder.hasQuorumOfMessages(HSMessageType.COMMIT, curView, n - f)) {
                 List<HSMessage> commitMessages = messageHolder.getVoteMessages(HSMessageType.COMMIT, curView);
                 commitQc = new QuorumCertificate(commitMessages);
-                broadcastMessageToAll(msg(HSMessageType.DECIDE, null, commitQc));
+                broadcastMessage(id -> msg(id, HSMessageType.DECIDE, null, commitQc));
                 return;
             }
         }
@@ -332,12 +327,12 @@ public class HSReplica extends ConsensusProgramImpl<HSMessage> {
      * On timeout, starts the next view.
      */
     @Override
-    protected List<Payload<HSMessage>> onTimerExpiry() {
+    protected List<HSMessage> onTimerExpiry() {
         numConsecutiveFailures++;
 //        logger.log(String.format("Time: %s, Name: %s, (EXPIRY) State: %s, Leader: %s, CurView: %s, Consensus: %s, Consecutive Failures: %s",
 //                getTime(), getName(), state, getLeader(curView), curView, numConsensus, numConsecutiveFailures));
         startNextView();
-        return getProcessedPayloads();
+        return getMessages();
     }
 
     /**
@@ -345,8 +340,7 @@ public class HSReplica extends ConsensusProgramImpl<HSMessage> {
      */
     private void startNextView() {
         leader = getLeader(curView + 1);
-        sendMessage(voteMsg(HSMessageType.NEW_VIEW, null, prepareQc),
-                getNameFromId(leader));
+        sendMessage(voteMsg(leader, HSMessageType.NEW_VIEW, null, prepareQc));
         startHsTimer();
         messageHolder.advanceView(curView, curView + 1);
         curView++;

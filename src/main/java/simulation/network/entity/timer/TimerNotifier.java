@@ -10,9 +10,10 @@ public interface TimerNotifier<T> {
      *
      * @param receiver Receiver to be notified.
      * @param time Time to be notified.
+     * @param id Integer identification to be notified.
      * @param timerCount An integer unique identifier for this specific notification.
      */
-    void notifyAtTime(T receiver, double time, int timerCount);
+    void notifyAtTime(T receiver, double time, int id, int timerCount);
 
     /**
      * Returns the current {@code time}.

@@ -9,10 +9,12 @@ public class Payload<T> {
 
     private final T message;
     private final String destination;
+    private final int programId;
 
-    public Payload(T message, String destination) {
+    public Payload(T message, String destination, int programId) {
         this.message = message;
         this.destination = destination;
+        this.programId = programId;
     }
 
     public String getDestination() {
@@ -22,6 +24,11 @@ public class Payload<T> {
     public T getMessage() {
         return message;
     }
+
+    public int getProgramId() {
+        return programId;
+    }
+
     @Override
     public String toString() {
         return "Payload: (" + message + ", " + destination + ")";

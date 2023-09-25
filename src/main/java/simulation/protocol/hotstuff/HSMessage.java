@@ -14,14 +14,16 @@ public class HSMessage extends BFTMessage {
 
     private final HSMessageType type;
     private final int viewNumber;
+    private final int recipient;
     private final HSTreeNode node;
     private final QuorumCertificate justify;
     private final int sender;
     private final boolean isVote;
 
-    public HSMessage(int sender, HSMessageType type, int viewNumber, HSTreeNode node, QuorumCertificate qc,
-            boolean isVote) {
+    public HSMessage(int sender, int recipient, HSMessageType type, int viewNumber,
+            HSTreeNode node, QuorumCertificate qc, boolean isVote) {
         this.type = type;
+        this.recipient = recipient;
         this.viewNumber = viewNumber;
         this.node = node;
         this.justify = qc;
@@ -36,6 +38,11 @@ public class HSMessage extends BFTMessage {
     @Override
     public String getType() {
         return type.toString();
+    }
+
+    @Override
+    public int getRecipientId() {
+        return recipient;
     }
 
     public int getViewNumber() {

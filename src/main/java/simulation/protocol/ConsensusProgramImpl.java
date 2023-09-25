@@ -1,14 +1,13 @@
 package simulation.protocol;
 
 import simulation.network.entity.BFTMessage;
-import simulation.network.entity.Payload;
 import simulation.network.entity.timer.TimerNotifier;
 import simulation.statistics.ConsensusStatistics;
 
 import java.util.ArrayList;
-import java.util.Collection;
 import java.util.List;
-import java.util.Map;
+import java.util.function.Function;
+import java.util.stream.IntStream;
 
 /**
  * Partial implementation of a consensus program that fulfills general responsibilities.
@@ -20,29 +19,27 @@ public abstract class ConsensusProgramImpl<T extends BFTMessage> implements Cons
      * Stores payloads while node is processing a message.
      * All payloads are retrieved and sent out after message processing.
      */
-    private List<Payload<T>> tempPayloadStore;
+    private List<T> tempMessageStore;
 
     private final ConsensusStatistics statistics;
-    private final Map<Integer, String> idNodeNameMap;
     private final TimerNotifier<ConsensusProgram<T>> timerNotifier;
+    private final int numNodes;
     private int timerCount; // Used to differentiate multiple timers in the same instance & round
     private double timeoutTime;
+    private double previousRecordedTime;
 
     /**
-     * @param idNodeNameMap Map of id to node names.
+     * @param numNodes Number of nodes in the consensus program.
      * @param timerNotifier For tracking time and setting timers.
      */
-    public ConsensusProgramImpl(Map<Integer, String> idNodeNameMap, TimerNotifier<ConsensusProgram<T>> timerNotifier) {
-        this.idNodeNameMap = idNodeNameMap;
-        this.tempPayloadStore = new ArrayList<>();
+    public ConsensusProgramImpl(int numNodes, TimerNotifier<ConsensusProgram<T>> timerNotifier) {
+        this.numNodes = numNodes;
+        this.tempMessageStore = new ArrayList<>();
         this.timerNotifier = timerNotifier;
         this.timeoutTime = 0;
         this.timerCount = 0;
+        this.previousRecordedTime = 0;
         this.statistics = new ConsensusStatistics(getStates());
-    }
-
-    protected String getNameFromId(int id) {
-        return idNodeNameMap.get(id);
     }
 
     /**
@@ -55,7 +52,9 @@ public abstract class ConsensusProgramImpl<T extends BFTMessage> implements Cons
     }
 
     @Override
-    public void registerMessageProcessed(T message, double timeTaken) {
+    public void registerMessageProcessed(T message, double currentTime) {
+        double timeTaken = currentTime - previousRecordedTime;
+        previousRecordedTime = currentTime;
         registerTimeElapsed(timeTaken);
         statistics.addMessageCountForState(message.getType());
     }
@@ -73,47 +72,28 @@ public abstract class ConsensusProgramImpl<T extends BFTMessage> implements Cons
      *
      * @return List of payloads that were generated from a processing step.
      */
-    protected List<Payload<T>> getProcessedPayloads() {
-        List<Payload<T>> payloads = tempPayloadStore;
-        tempPayloadStore = new ArrayList<>();
+    protected List<T> getMessages() {
+        List<T> payloads = tempMessageStore;
+        tempMessageStore = new ArrayList<>();
         return payloads;
     }
 
     /**
      * Sends {@code message} to destination {@code nodeName}.
      */
-    protected void sendMessage(T message, String nodeName) {
-        tempPayloadStore.add(createPayload(message, nodeName));
+    protected void sendMessage(T message) {
+        tempMessageStore.add(message);
     }
 
     /**
      * Sends {@code message} to all nodes in the collection of {@code nodeNames}.
      */
-    protected void broadcastMessage(T message, Collection<String> nodeNames) {
-        tempPayloadStore.addAll(createPayloads(message, nodeNames));
-    }
-
-    protected void broadcastMessageToAll(T message) {
-        broadcastMessage(message, idNodeNameMap.values());
-    }
-
-    public Payload<T> createPayload(T message, String nodeName) {
-        return new Payload<>(message, nodeName);
-    }
-
-    /**
-     * Returns a list of payloads for the {@code message} to all nodes specified in the collection of {@code nodeNames}.
-     */
-    public List<Payload<T>> createPayloads(T message, Collection<String> nodeNames) {
-        List<Payload<T>> payloads = new ArrayList<>();
-        for (String nodeName : nodeNames) {
-            payloads.add(new Payload<>(message, nodeName));
-        }
-        return payloads;
+    protected void broadcastMessage(Function<Integer, T> messageGenerator) {
+        IntStream.iterate(0, x -> x + 1).limit(numNodes)
+                .forEach(id -> sendMessage(messageGenerator.apply(id)));
     }
 
     // Timer utilities
-
     public double getTime() {
         return timerNotifier.getTime();
     }
@@ -123,7 +103,8 @@ public abstract class ConsensusProgramImpl<T extends BFTMessage> implements Cons
      * @param id Unique identification for the timer.
      */
     public void notifyAtTime(double time, int id) {
-        timerNotifier.notifyAtTime(this, time, id);
+        // Note here the 0 does not matter for now as the program itself does not need to differentiate timers.
+        timerNotifier.notifyAtTime(this, time, 0, id);
     }
 
     /**
@@ -144,7 +125,7 @@ public abstract class ConsensusProgramImpl<T extends BFTMessage> implements Cons
      * @param timerCount int identification for the specific timer.
      * @return List of payloads to be sent at the given time.
      */
-    public List<Payload<T>> notifyTime(int timerCount) {
+    public List<T> notifyTime(int timerCount) {
         if (timerCount == this.timerCount) {
             statistics.addRoundChangeStateCount(getState());
             return onTimerExpiry();
@@ -155,5 +136,5 @@ public abstract class ConsensusProgramImpl<T extends BFTMessage> implements Cons
     /**
      * Operation to be called on timer expiry.
      */
-    protected abstract List<Payload<T>> onTimerExpiry();
+    protected abstract List<T> onTimerExpiry();
 }
