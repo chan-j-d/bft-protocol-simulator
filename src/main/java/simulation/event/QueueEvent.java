@@ -28,7 +28,7 @@ public class QueueEvent<T> extends NodeEvent<T> {
             boolean wasDestinationEmpty = destination.isEmpty();
             destination.addToQueue(getTime(), payload);
             if (wasDestinationEmpty && !destination.isOccupied()) {
-                node.setOccupied();
+                destination.setOccupied();
                 // The message has to be added to queue before being popped due to side effects in addToQueue.
                 events.add(new ProcessingDelayEvent<>(getTime(), destination, destination.popFromQueue()));
             }
