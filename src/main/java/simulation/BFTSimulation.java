@@ -140,6 +140,12 @@ public class BFTSimulation {
      */
     private static void setup() {
         deleteFilesInDirectory(Logger.DEFAULT_DIRECTORY);
+
+        try {
+            Files.createDirectories(JSON_DIRECTORY);
+        } catch (IOException e) {
+            throw new RuntimeException("Unable to create " + JSON_DIRECTORY + " for storing results.\n" + e);
+        }
         deleteFilesInDirectory(JSON_DIRECTORY.toString());
         Logger.setup();
     }
