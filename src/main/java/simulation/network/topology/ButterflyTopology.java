@@ -2,7 +2,6 @@ package simulation.network.topology;
 
 import simulation.network.entity.EndpointNode;
 import simulation.network.router.Switch;
-import simulation.util.MathUtil;
 import simulation.util.rng.RandomNumberGenerator;
 
 import java.util.ArrayList;
@@ -15,11 +14,10 @@ public class ButterflyTopology {
      * Constructs a butterfly topology with the given nodes.
      *
      * @param nodes Nodes to be arranged in a butterfly topology.
-     * @param networkParameters Network parameters for {radix, connection type, front/back concentrated}.
-     *                          radix - positive integer >= 2, number of in/out connections per switch.
-     *                          connection type - 0 or 1. 0 for a flushed type connection and 1 for spread.
-     *                          front/back concentrated - 0 or 1. 0 for concentrating connections to the front,
-     *                          0 for back.
+     * @param networkParameters Network parameters for {# of switch per level, inter-switch radix}
+     *                          # of switch per level - number of switches per level in the folded clos network.
+     *                          radix - positive integer >= 2, number of in/out connections per switch connecting with
+     *                          other switches.
      * @param messageChannelSuccessRate Success rate of a message being sent by the switch.
      * @param switchProcessingTimeGenerator Rng for switch processing time.
      * @return Returns a list of list of switches separated by level in the butterfly network.
@@ -32,15 +30,14 @@ public class ButterflyTopology {
         List<List<Switch<T>>> groupedSwitches =
                 arrangeButterflyArrangement(nodes, networkParameters, messageChannelSuccessRate,
                         switchProcessingTimeGenerator, false);
-        int radix = networkParameters.get(0);
+        int radix = networkParameters.get(1);
         List<Switch<T>> flattenedLastLayerSwitches = new ArrayList<>(groupedSwitches.get(groupedSwitches.size() - 1));
         int numGroups = groupedSwitches.get(0).size();
         for (int i = 0; i < numGroups; i++) {
             if (i * radix >= nodes.size()) {
                 break;
             }
-            List<? extends EndpointNode<T>> endpointSublist =
-                    nodes.subList(i * radix, Math.min((i + 1) * radix, nodes.size()));
+            List<EndpointNode<T>> endpointSublist = TopologyUtil.getEndpointSublist(nodes, numGroups, i);
             Switch<T> lastHopSwitch = flattenedLastLayerSwitches.get(i);
             lastHopSwitch.setDirectlyConnectedEndpoints(endpointSublist);
         }
@@ -82,22 +79,19 @@ public class ButterflyTopology {
             double messageChannelSuccessRate,
             RandomNumberGenerator switchProcessingTimeGenerator,
             boolean isBackwardConnecting) {
-        if (networkParameters.size() <= 2) {
+        if (networkParameters.size() <= 1) {
             throw new RuntimeException(
-                    "Please specify parameters for network \"[{radix}, {initialConnection}, {version}]\"");
+                    "Please specify parameters for network " +
+                            "{# of terminal nodes, # of switch per level, inter-switch radix}");
         }
-        int radix = networkParameters.get(0);
-        int minimumNodeCount = MathUtil.ceilDiv(nodes.size(), radix);
-        int levels = (int) MathUtil.log(minimumNodeCount, radix);
-        int baseGroupSize = (int) Math.pow(radix, levels);
-        int numFirstLayerGroups = MathUtil.ceilDiv(minimumNodeCount, baseGroupSize) * baseGroupSize;
+        int numFirstLayerSwitches = networkParameters.get(0);
+        int radix = networkParameters.get(1);
 
         List<Switch<T>> firstLayerSwitches = new ArrayList<>();
-        for (int i = 0; i < numFirstLayerGroups; i++) {
+        for (int i = 0; i < numFirstLayerSwitches; i++) {
             int index = i;
 
-            List<EndpointNode<T>> endpointSublist = TopologyUtil.getEndpointSublist(nodes, networkParameters.get(1),
-                    numFirstLayerGroups, radix, i);
+            List<EndpointNode<T>> endpointSublist = TopologyUtil.getEndpointSublist(nodes, numFirstLayerSwitches, i);
             Switch<T> directSwitch_ = new Switch<>(
                     getTreeSwitchName(1, 0, i),
                     messageChannelSuccessRate,
@@ -118,17 +112,9 @@ public class ButterflyTopology {
             List<List<Switch<T>>> newLayerGroupedSwitches = new ArrayList<>();
             for (int i = 0; i < prevLayerGroupedSwitches.size(); i++) {
                 List<Switch<T>> prevGroupedSwitches = prevLayerGroupedSwitches.get(i);
-                if (networkParameters.get(2) == 0) {
-                    newLayerGroupedSwitches.addAll(addNextSwitchLayer(nodes, messageChannelSuccessRate,
-                            prevGroupedSwitches, radix, currentLayer, i, switchProcessingTimeGenerator,
-                            isBackwardConnecting));
-                } else if (networkParameters.get(2) == 1) {
-                    newLayerGroupedSwitches.addAll(addNextSwitchLayerTwo(nodes, messageChannelSuccessRate,
-                            prevGroupedSwitches, radix, currentLayer, i, switchProcessingTimeGenerator,
-                            isBackwardConnecting));
-                } else {
-                    throw new RuntimeException("Next layer parameter should be 0 or 1.");
-                }
+                newLayerGroupedSwitches.addAll(addNextSwitchLayer(nodes, messageChannelSuccessRate,
+                        prevGroupedSwitches, radix, currentLayer, i, switchProcessingTimeGenerator,
+                        isBackwardConnecting));
             }
             currentLayer++;
             prevLayerGroupedSwitches = newLayerGroupedSwitches;
@@ -140,45 +126,6 @@ public class ButterflyTopology {
             groupedSwitches.add(nextLayerSwitches);
         } while (nextGroupSize > 1);
         return groupedSwitches;
-    }
-
-    /**
-     * Returns the next layer of connection that maximizes group size instead of number of groups.
-     */
-    private static <T> List<List<Switch<T>>> addNextSwitchLayerTwo(List<? extends EndpointNode<T>> endpoints,
-            double messageChannelSuccessRate,
-            List<Switch<T>> prevLayer, int radix, int level, int group,
-            RandomNumberGenerator switchProcessingTimeGenerator, boolean isBackwardConnecting) {
-        if (level > 3) {
-            return List.of();
-        }
-        int numNodes = prevLayer.size();
-        int groupSize = (int) Math.pow(radix, Math.ceil(MathUtil.log(numNodes, radix) - 1));
-        int numGroups = Math.max(numNodes / groupSize, 1);
-        radix = numGroups;
-
-        List<List<Switch<T>>> nextLayerSwitches = new ArrayList<>();
-        Stream.generate(() -> new ArrayList<Switch<T>>()).limit(numGroups).forEach(nextLayerSwitches::add);
-        for (int groupNumber = 0; groupNumber < numGroups; groupNumber++) {
-            int effectiveRadix = radix;
-            for (int index = 0; index < groupSize; index++) {
-                int finalIndex = index;
-                Switch<T> switch_ = new Switch<>(getTreeSwitchName(level, group * groupSize + groupNumber, index),
-                        messageChannelSuccessRate,
-                        new ArrayList<>(endpoints),
-                        List.of(),
-                        switchProcessingTimeGenerator);
-                List<Switch<T>> prevLayerNeighbors = Stream.iterate(0, prevIndex -> prevIndex < effectiveRadix, prevIndex -> prevIndex + 1)
-                        .map(prevIndex -> prevLayer.get(finalIndex + groupSize * prevIndex))
-                        .collect(Collectors.toList());
-                prevLayerNeighbors.forEach(switch_2 -> switch_2.updateSwitchNeighbors(List.of(switch_)));
-                if (isBackwardConnecting) {
-                    switch_.setSwitchNeighbors(prevLayerNeighbors);
-                }
-                nextLayerSwitches.get(groupNumber).add(switch_);
-            }
-        }
-        return nextLayerSwitches;
     }
 
     /**
