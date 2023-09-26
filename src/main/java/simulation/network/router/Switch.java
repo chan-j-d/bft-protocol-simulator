@@ -120,6 +120,10 @@ public class Switch<T> extends Node<T> {
         return switchNeighbors;
     }
 
+    public List<Node<T>> getDirectlyConnectedEndpoints() {
+        return directlyConnectedEndpoints;
+    }
+
     @Override
     public Pair<Double, List<Payload<T>>> processPayload(double time, Payload<T> payload) {
         double duration = rng.generateRandomNumber();

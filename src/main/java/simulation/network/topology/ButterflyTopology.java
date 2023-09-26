@@ -46,7 +46,7 @@ public class ButterflyTopology {
     }
 
     private static String getTreeSwitchName(int level, int group, int index) {
-        return String.format("(Level: %d, Group: %d, Index: %d)", level, group, index);
+        return String.format("Switch-(L:%d,G:%d,N:%d)", level, group, index);
     }
 
 

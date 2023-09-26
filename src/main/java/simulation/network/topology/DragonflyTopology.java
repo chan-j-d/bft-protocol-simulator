@@ -16,9 +16,9 @@ public class DragonflyTopology {
 
     /**
      * @param nodes Nodes to be arranged in a dragonfly topology.
-     * @param networkParameters Network parameters for {radix, connection type}.
+     * @param networkParameters Network parameters for {# of switches in a group}.
      *                          Number of switches in a group - positive integer > 0
-     *
+     *                          By default, # of groups = # of switches + 1.
      * @param messageChannelSuccessRate Success rate of a message being sent by the switch.
      * @param switchProcessingTimeGenerator Rng for switch processing time.
      * @return Returns a list of list of switches separated by level in the butterfly network.
@@ -54,7 +54,9 @@ public class DragonflyTopology {
                 int correspondingGroup = i + (a - j) - numGroups * (a - j >= numGroups - i ? 1 : 0);
                 int correspondingIndex = a - 1 - j;
                 switchNeighbors.add(groupsOfSwitches.get(correspondingGroup).get(correspondingIndex));
-                groupsOfSwitches.get(i).get(j).setSwitchNeighbors(switchNeighbors);
+                Switch<T> currentSwitch = groupsOfSwitches.get(i).get(j);
+                switchNeighbors.remove(currentSwitch);
+                currentSwitch.setSwitchNeighbors(switchNeighbors);
             }
         }
 
