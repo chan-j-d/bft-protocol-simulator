@@ -1,7 +1,9 @@
 import json
-from typing import List
 import re
 import os
+import pandas as pd
+from typing import List, Callable, Dict, Any
+from results_util import *
 
 class ResultName:
 
@@ -182,6 +184,61 @@ def create_run_config_json(num_runs: int, starting_seed: int, seed_multiplier: i
     json_dic = {"numRuns": num_runs,"startingSeed": starting_seed, "seedMultiplier": seed_multiplier,
                 "validatorSettings": validator_settings_dic, "networkSettings": network_settings_dic}
     return json.dumps(json_dic, indent=4)
+
+DEFAULT_RESULTS_DIRECTORY = "results/"
+
+# Specify exact matching parameters for anything specified as non-None
+# For the index, specify the corresponding value as None, i.e. num_nodes as index -> num_nodes = None in arguments.
+def get_fn_data(index_fn: Callable[[ResultName], Any], value_fn: Callable[[Dict], Any], name: str, 
+                num_nodes: int = None, base_time_limit: float = None, 
+                node_dist: str = None, node_params: List[float] = None,
+                topology: str = None, topology_params: List[int] = None,
+                switch_dist: str = None, switch_params: List[float] = None,
+                protocol: str = None, 
+                num_faults: int = None, fault_type: str = None, fault_params: List[int] = None,
+                dir: str=DEFAULT_RESULTS_DIRECTORY) -> pd.Series:
+    results_lst = os.listdir(dir)
+    indices = []
+    lst = []
+    for result_filename in results_lst:
+        matcher = re.match(RESULTS_FOLDER_REGEX, result_filename)
+        if matcher == None: 
+            continue
+        
+        filename_obj = construct_result_name_obj_from_filename(result_filename)
+        if num_nodes != None and filename_obj.get_num_nodes() != num_nodes:
+            continue
+        if base_time_limit != None and abs(filename_obj.get_btl() - base_time_limit) >= 1e-5:
+            continue
+        if node_dist != None and filename_obj.get_node_dist().lower() != node_dist.lower():
+            continue
+        elif node_params != None and filename_obj.get_node_params() != node_params:
+            continue
+        if topology != None and filename_obj.get_topology().lower() != topology.lower():
+            continue
+        elif topology_params != None and filename_obj.get_topo_params() != topology_params:
+            continue
+        if switch_dist != None and filename_obj.get_switch_dist().lower() != switch_dist.lower():
+            continue
+        elif switch_params != None and filename_obj.get_switch_params() != switch_params:
+            continue
+        if protocol != None and filename_obj.get_protocol().lower() != protocol.lower():
+            continue
+        if num_faults != None and filename_obj.get_num_faults() != num_faults:
+            continue
+        elif fault_type != None and filename_obj.get_fault_type().lower() != fault_type.lower():
+            continue
+        elif fault_params != None and filename_obj.get_fault_params() != fault_params:
+            continue
+
+        index = index_fn(filename_obj)
+        if index in indices:
+            raise Exception("Index value already exists. Check arguments to ensure unique query.") 
+        indices.append(index)
+        with open(os.path.join(dir, result_filename, RESULTS_VALIDATOR_FILENAME), "r") as json_result:
+            result_json = json.load(json_result)
+            lst.append(value_fn(result_json))
+    return pd.Series(lst, index=indices, name=name).sort_index()
 
 def rename_results(folder: str):
     for dir in os.listdir(folder):
