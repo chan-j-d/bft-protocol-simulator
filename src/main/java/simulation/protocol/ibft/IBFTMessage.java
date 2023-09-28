@@ -3,6 +3,7 @@ package simulation.protocol.ibft;
 import simulation.network.entity.BFTMessage;
 
 import java.util.List;
+import java.util.Optional;
 import java.util.stream.Stream;
 
 import static simulation.util.StringUtil.MESSAGE_SEPARATOR;
@@ -50,7 +51,8 @@ public class IBFTMessage extends BFTMessage {
         this.value = value;
         this.preparedRound = preparedRound;
         this.preparedValue = preparedValue;
-        this.piggybackMessages = List.copyOf(piggybackMessages);
+        this.piggybackMessages = Optional.ofNullable(piggybackMessages).map(lst -> List.copyOf(piggybackMessages))
+                .orElse(List.of());
     }
 
     /**
