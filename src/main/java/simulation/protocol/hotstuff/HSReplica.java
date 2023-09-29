@@ -172,7 +172,12 @@ public class HSReplica extends ConsensusProgramImpl<HSMessage> {
     public List<HSMessage> processMessage(HSMessage message) {
         int messageView = message.getViewNumber();
         HSMessageType type = message.getMessageType();
-        if (messageView < curView - 1 || (type != HSMessageType.NEW_VIEW && messageView == curView - 1)) {
+
+        if (messageView < curView && type == HSMessageType.DECIDE) {
+            // A means to synchronize when a decision is made but fewer n - f receive it before round change.
+            numConsecutiveFailures = Math.min(numConsecutiveFailures, curView - messageView);
+            startHsTimer();
+        } else if (messageView < curView - 1 || (type != HSMessageType.NEW_VIEW && messageView == curView - 1)) {
             // If the view of the message is lower than expected, ignore the message.
             return List.of();
         }
