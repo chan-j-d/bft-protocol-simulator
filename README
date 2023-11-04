@@ -9,27 +9,90 @@ gradlew run --args="run_config.json" (Windows)
 ./gradlew run --args="run_config.json" (Linux or Mac OS)
 
 To vary the run settings, you can adjust it in the 'run_config.json' file.
-A sample config file looks like this.
+A sample config file is attached to the repostiory and looks like this.
+
 {
   "numRuns": 1,
-  "numConsensus": 100,
   "startingSeed": 0,
   "seedMultiplier": 100,
-  "numNodes": 64,
-  "nodeProcessingRate": 3,
-  "switchProcessingRate": 9,
-  "baseTimeLimit": 10000,
-  "networkType": "FoldedClos",
-  "networkParameters": [5, 1, 0]
+  "validatorSettings": {
+    "numNodes": 40,
+    "numConsensus": 5,
+    "numPrograms": 1,
+    "baseTimeLimit": 100,
+    "nodeProcessingDistribution": {
+      "distributionType": "exp",
+      "parameters": [3]
+    },
+    "consensusProtocol": "HS",
+    "faultSettings": {
+      "numFaults": 4,
+      "faultType": "UR",
+      "faultParameters": []
+    }
+  },
+  "networkSettings": {
+    "switchSettings": {
+      "switchProcessingDistribution": {
+        "distributionType": "exp",
+        "parameters": [9]
+      },
+      "messageChannelSuccessRate": 1
+    },
+    "networkType": "df",
+    "networkParameters": [4]
+  }
 }
 
-The important fields you might want to vary are
-- numConsensus: number of consensus before termination
-- numNodes: number of nodes in the network
-- nodeProcessingRate/switchProcessingRate: processing rates of validator nodes and switches. They use an exponential distribution with the specified rate to generate service time.
-- baseTimeLimit: time limit per round
-- networkType: Choose between "Clique", "Mesh", "Torus", "Butterfly", "FoldedClos"
-- networkParameters:
-    - Clique: no arguments needed
-    - Mesh/Torus: specify the length of one side of the 2D array
-    - Butterfly/FoldedClos: It uses 3 parameters, (Number of uplinks, 0 for flushed or 1 for spread, 0). The last parameter is currently a work in progress.
+**Run Config Formatting**
+
+Standard run configuration settings.
+numRuns: Number of runs to be done. The measured statistics are the average of all the runs.
+startingSeed: Starting RNG seed.
+seedMultiplier: Increases the seed by this amount after each run.
+
+Validator Settings (validatorSettings):
+numNodes: Number of validators
+numConsensus: Number of consensus instances to be simulated. Program terminates at the end of it.
+numPrograms: Number of separate consensus protocols to be run in parallel. Usually set at 1.
+baseTimeLimit: Base timer duration set before protocol times out.
+nodeProcessingDistribution: Distribution of node processing time for a single message. Argument type is a processing distribution (see below).
+consensusProtocol: Either "HS" for HotStuff or "IBFT" for IBFT protocol.
+faultSettings: Settings for the validator faults.
+- numFaults: Number of faults. Setting this to be greater than (numNodes - 1) / 3 would result in consensus being unachievable.
+- faultType: Type of fault. Only "UR" for unresponsive is available.
+- faultParameters: Field is currently not used, default to empty list [].
+
+Network Settings (networkSettings):
+switchSettings:
+- switchProcessingDistribution: Distribution of switch processing time for a single message. Argument type is a processing distribution (see below).
+- messageChannelSuccessRate: Probability a message travels a channel successfully.
+networkType: Type of network.
+networkParameters: Dependent on the network. See below for possible options.
+
+Processing Distribution:
+distributionType: Distribution type. Only "exp" for exponential and "degen" for degenerate distributions are supported.
+- "exp": Accepts one parameter which is its rate. e.g. [3] implies a rate of 3.
+- "degen": Accepts one parameter which is its mean. This random variable will only output 1 value.
+
+Network types:
+- "mesh": Takes in one parameter which gives one side length of the mesh network. Only 2D mesh is implemented. E.g. For 64 validators, [8] gives an 8x8 mesh network.
+- "torus": Argument is identical to "mesh". Only 2D torus is implemented.
+- "clique": No arguments required.
+- "butterfly": Takes in 2 parameters, [p, q]. p is the size of the first level and q is the size of a group in the first level. q must divide p.
+- "foldedClos": Arguments are identical to butterfly network.
+- "dragonfly": Takes in 1 parameter [a] where a is the number of switches in a group. Number of groups is defaulted to a+1.
+
+**Output Formatting**
+The output files are split into the main validator_results.json and several switch group json files.
+Each switch group json file contains the queuing statistics of switch groups which are predefined structures in the specified topology. For example, a switch group in dragonfly would be each group.
+For folded Clos, it would be each level.
+
+The validator_results.json file itself contains many recorded values for calculating various validator statistics.
+The main value of interests are the t_total, L, W and lambda values.
+- t_total = average time to consensus
+- L = average number of messages in the queue
+- W = average waiting time of a message in the queue
+- lambda = average message arrival rate
+The suffix fastest refers to the average of the fastest n-f validators and remainder refers to the remaining f validators.
+
