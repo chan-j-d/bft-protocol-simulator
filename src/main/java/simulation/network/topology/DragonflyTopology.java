@@ -51,7 +51,7 @@ public class DragonflyTopology {
         for (int i = 0; i < numGroups; i++) {
             for (int j = 0; j < a; j++) {
                 List<Switch<T>> switchNeighbors = new ArrayList<>(groupsOfSwitches.get(i));
-                int correspondingGroup = i + (a - j) - numGroups * (a - j >= numGroups - i ? 1 : 0);
+                int correspondingGroup = (i + a - j) % numGroups;
                 int correspondingIndex = a - 1 - j;
                 switchNeighbors.add(groupsOfSwitches.get(correspondingGroup).get(correspondingIndex));
                 Switch<T> currentSwitch = groupsOfSwitches.get(i).get(j);

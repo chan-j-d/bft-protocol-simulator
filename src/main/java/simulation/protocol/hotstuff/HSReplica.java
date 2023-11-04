@@ -334,8 +334,8 @@ public class HSReplica extends ConsensusProgramImpl<HSMessage> {
     @Override
     protected List<HSMessage> onTimerExpiry() {
         numConsecutiveFailures++;
-//        logger.log(String.format("Time: %s, Name: %s, (EXPIRY) State: %s, Leader: %s, CurView: %s, Consensus: %s, Consecutive Failures: %s",
-//                getTime(), getName(), state, getLeader(curView), curView, numConsensus, numConsecutiveFailures));
+//        logger.log(String.format("Time: %s, (EXPIRY) State: %s, Leader: %s, CurView: %s, Consensus: %s, Consecutive Failures: %s",
+//                getTime(),  state, getLeader(curView), curView, numConsensus, numConsecutiveFailures));
         startNextView();
         return getMessages();
     }
