@@ -4,9 +4,12 @@ To run the simulator, you will need
 - Gradle version 7.0 or later
 - Java 11 or later
 
-You can run the simulator with the command
-gradlew run --args="run_config.json" (Windows)
-./gradlew run --args="run_config.json" (Linux or Mac OS)
+For first time opening zip file, you'll probably need to run the command
+$ gradle wrapper
+
+After which you can run the simulator with the command
+$ .\gradlew run --args="run_config.json" (Windows)
+$ ./gradlew run --args="run_config.json" (Linux or Mac OS)
 
 To vary the run settings, you can adjust it in the 'run_config.json' file.
 A sample config file is attached to the repostiory and looks like this.
