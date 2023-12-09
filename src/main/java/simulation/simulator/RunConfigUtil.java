@@ -25,6 +25,7 @@ import simulation.util.Pair;
 import simulation.util.rng.DegenerateDistribution;
 import simulation.util.rng.ExponentialDistribution;
 import simulation.util.rng.RandomNumberGenerator;
+import simulation.util.rng.UniformDistribution;
 
 import java.util.ArrayList;
 import java.util.HashMap;
@@ -194,6 +195,8 @@ public class RunConfigUtil {
                 return new DegenerateDistribution(distributionParameters.get(0));
             case "exp": case "e": case "exponential":
                 return new ExponentialDistribution(distributionParameters.get(0));
+            case "uni": case "u": case "uniform":
+                return new UniformDistribution(distributionParameters.get(0), distributionParameters.get(1));
             default:
                 throw new RuntimeException("Not a valid distribution specification:\n" + rngConfigJson);
         }
