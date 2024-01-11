@@ -23,6 +23,7 @@ public class ConsensusStatistics extends Statistics {
     private final Map<String, Double> stateTimeMap;
     private final Map<Integer, Map<String, Double>> roundStateTimeMap;
     private final Map<String, Integer> messageCountMap;
+    private final Map<String, Integer> messageSentMap;
     private final Map<String, Integer> roundChangeStateCountMap;
 
     /**
@@ -38,11 +39,13 @@ public class ConsensusStatistics extends Statistics {
         }
         roundStateTimeMap = new LinkedHashMap<>();
         messageCountMap = new LinkedHashMap<>();
+        messageSentMap = new LinkedHashMap<>();
         roundChangeStateCountMap = new LinkedHashMap<>();
     }
 
     private ConsensusStatistics(int nodeCount, int consensusCount, double totalTime,
             Map<String, Double> stateTimeMap, Map<Integer, Map<String, Double>> roundStateTimeMap,
+            Map<String, Integer> messageSentMap,
             Map<String, Integer> messageCountMap, Map<String, Integer> roundChangeStateCountMap) {
         this.nodeCount = nodeCount;
         this.consensusCount = consensusCount;
@@ -50,6 +53,7 @@ public class ConsensusStatistics extends Statistics {
         this.stateTimeMap = stateTimeMap;
         this.roundStateTimeMap = roundStateTimeMap;
         this.messageCountMap = messageCountMap;
+        this.messageSentMap = messageSentMap;
         this.roundChangeStateCountMap = roundChangeStateCountMap;
     }
 
@@ -65,6 +69,10 @@ public class ConsensusStatistics extends Statistics {
         messageCountMap.compute(state, (k, v) -> v == null ? 1 : v + 1);
     }
 
+    public void addMessageSent(String state) {
+        messageSentMap.compute(state, (k, v) -> v == null ? 1 : v + 1);
+    }
+
     public void addRoundChangeStateCount(String state) {
         roundChangeStateCountMap.compute(state, (k, v) -> v == null ? 1 : v + 1);
     }
@@ -78,6 +86,10 @@ public class ConsensusStatistics extends Statistics {
      */
     public double getNormalizedMessageCountForState(String type) {
         return normalizeValue(messageCountMap.get(type).doubleValue());
+    }
+
+    public double getNormalizedMessageSentForState(String type) {
+        return normalizeValue(messageSentMap.get(type).doubleValue());
     }
 
     /**
@@ -150,13 +162,19 @@ public class ConsensusStatistics extends Statistics {
             newMessageCountMap.put(state, messageCountMap.getOrDefault(state, 0) +
                     otherStatistics.messageCountMap.getOrDefault(state, 0));
         }
+        Map<String, Integer> newMessageSentMap = new LinkedHashMap<>();
+        for (String state : messageSentMap.keySet()) {
+            newMessageSentMap.put(state, messageSentMap.getOrDefault(state, 0) +
+                    otherStatistics.messageSentMap.getOrDefault(state, 0));
+        }
         Map<String, Integer> newRoundChangeStateCountMap = new LinkedHashMap<>();
         for (String state : roundChangeStateCountMap.keySet()) {
             newRoundChangeStateCountMap.put(state, roundChangeStateCountMap.getOrDefault(state, 0) +
                     otherStatistics.roundChangeStateCountMap.getOrDefault(state, 0));
         }
         return new ConsensusStatistics(totalNodeCount, newConsensusCount, totalTime,
-                totalStateTimeMap, totalRoundStateTimeMap, newMessageCountMap, newRoundChangeStateCountMap);
+                totalStateTimeMap, totalRoundStateTimeMap, newMessageSentMap,
+                newMessageCountMap, newRoundChangeStateCountMap);
     }
 
     /**
@@ -252,6 +270,14 @@ public class ConsensusStatistics extends Statistics {
         Map<String, Double> newMap = new LinkedHashMap<>();
         for (String state : messageCountMap.keySet()) {
             newMap.put(state, getNormalizedMessageCountForState(state));
+        }
+        return newMap;
+    }
+
+    public Map<String, Double> getNormalizedMessageSentMap() {
+        Map<String, Double> newMap = new LinkedHashMap<>();
+        for (String state : messageSentMap.keySet()) {
+            newMap.put(state, getNormalizedMessageSentForState(state));
         }
         return newMap;
     }
