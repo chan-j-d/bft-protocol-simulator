@@ -19,6 +19,9 @@ public class ValidatorResultsJson {
     private final Map<String, Double> fastestMessageCountMap;
     private final Map<String, Double> remainderMessageCountMap;
 
+    private final Map<String, Double> fastestMessageSentMap;
+    private final Map<String, Double> remainderMessageSentMap;
+
     private final Map<String, Double> fastestRoundChangeStateCountMap;
     private final Map<String, Double> remainderRoundChangeStateCountMap;
 
@@ -48,6 +51,7 @@ public class ValidatorResultsJson {
         fastestStateTimeMap = fastestConsensusStats.getNormalizedStateTimeMap();
         fastestRoundStateTimeMap = fastestConsensusStats.getNormalizedRoundStateTimeMap();
         fastestMessageCountMap = fastestConsensusStats.getNormalizedMessageCountMap();
+        fastestMessageSentMap = fastestConsensusStats.getNormalizedMessageSentMap();
         fastestRoundChangeStateCountMap = fastestConsensusStats.getNormalizedRoundChangeStateCountMap();
 
         t_total_remainder = remainderConsensusStats.getAverageConsensusTime();
@@ -58,6 +62,7 @@ public class ValidatorResultsJson {
         remainderStateTimeMap = remainderConsensusStats.getNormalizedStateTimeMap();
         remainderRoundStateTimeMap = remainderConsensusStats.getNormalizedRoundStateTimeMap();
         remainderMessageCountMap = remainderConsensusStats.getNormalizedMessageCountMap();
+        remainderMessageSentMap = remainderConsensusStats.getNormalizedMessageSentMap();
         remainderRoundChangeStateCountMap = remainderConsensusStats.getNormalizedRoundChangeStateCountMap();
     }
 

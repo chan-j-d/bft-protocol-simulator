@@ -51,12 +51,23 @@ public abstract class ConsensusProgramImpl<T extends BFTMessage> implements Cons
         statistics.setConsensusCount(getConsensusCount());
     }
 
-    @Override
     public void registerMessageProcessed(T message, double currentTime) {
         double timeTaken = currentTime - previousRecordedTime;
         previousRecordedTime = currentTime;
         registerTimeElapsed(timeTaken);
         statistics.addMessageCountForState(message.getType());
+    }
+
+    public void registerMessagesSent(List<T> messages) {
+        messages.forEach(m -> statistics.addMessageSent(m.getType()));
+    }
+
+    @Override
+    public List<T> processAndRegisterMessage(T message, double currentTime) {
+        registerMessageProcessed(message, currentTime);
+        List<T> messages = processMessage(message);
+        registerMessagesSent(messages);
+        return messages;
     }
 
     @Override
@@ -128,7 +139,9 @@ public abstract class ConsensusProgramImpl<T extends BFTMessage> implements Cons
     public List<T> notifyTime(int timerCount) {
         if (timerCount == this.timerCount) {
             statistics.addRoundChangeStateCount(getState());
-            return onTimerExpiry();
+            List<T> messages = onTimerExpiry();
+            registerMessagesSent(messages);
+            return messages;
         }
         return List.of();
     }
