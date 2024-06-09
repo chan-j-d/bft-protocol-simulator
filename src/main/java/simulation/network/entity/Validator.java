@@ -95,8 +95,7 @@ public class Validator<T extends BFTMessage> extends EndpointNode<T>
         T message = payload.getMessage();
         int programId = payload.getProgramId();
         ConsensusProgram<T> consensusProgram = consensusPrograms.get(programId);
-        consensusProgram.registerMessageProcessed(message, previousRecordedTime);
-        List<T> responseMessages = consensusProgram.processMessage(message);
+        List<T> responseMessages = consensusProgram.processAndRegisterMessage(message, previousRecordedTime);
         return new Pair<>(duration, convertMessagesToPayloads(responseMessages, programId));
     }
 

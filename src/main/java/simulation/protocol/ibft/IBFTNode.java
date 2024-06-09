@@ -146,7 +146,9 @@ public class IBFTNode extends ConsensusProgramImpl<IBFTMessage> {
     @Override
     protected List<IBFTMessage> onTimerExpiry() {
         timeoutOperation();
-        return getMessages();
+        List<IBFTMessage> messages = getMessages();
+//        logger.log(String.format("Timed out at %.3f\n    Reponse: ", getTime()) + messages);
+        return messages;
     }
 
     // Message util
@@ -255,7 +257,9 @@ public class IBFTNode extends ConsensusProgramImpl<IBFTMessage> {
             sendMessage(createSingleValueMessage(sender, IBFTMessageType.SYNC, NULL_VALUE,
                     consensusQuorum.get(lambda)));
         }
-        return getMessages();
+        List<IBFTMessage> messages = getMessages();
+//        logger.log("Processed: " + message + "\n    Reponse: " + messages);
+        return messages;
     }
 
     // Algorithm 3 in IBFT Paper - Round change handling

@@ -9,6 +9,11 @@ import java.util.List;
 public class NoProgram<T extends BFTMessage> implements ConsensusProgram<T> {
 
     @Override
+    public List<T> processAndRegisterMessage(T message, double currentTime) {
+        return List.of();
+    }
+
+    @Override
     public List<T> processMessage(T message) {
         return List.of();
     }
@@ -21,11 +26,6 @@ public class NoProgram<T extends BFTMessage> implements ConsensusProgram<T> {
     @Override
     public List<T> notifyTime(int timerCount) {
         return List.of();
-    }
-
-    @Override
-    public void registerMessageProcessed(T message, double timeTaken) {
-        return;
     }
 
     @Override

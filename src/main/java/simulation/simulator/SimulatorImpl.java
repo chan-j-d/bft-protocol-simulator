@@ -94,11 +94,13 @@ public class SimulatorImpl<T extends BFTMessage> implements Simulator, TimerNoti
         eventQueue.addAll(resultingEvents);
         roundCount++;
 
-        String finalString = nextEvent.toString();
+        Optional<String> finalString = (node instanceof Switch<?>)
+                ? Optional.empty()
+                : Optional.of(nextEvent.toString());
         if (roundCount % SNAPSHOT_INTERVAL == 0) {
-            finalString = finalString + "\n\nSnapshot:\n" + getSnapshotOfNodes() + "\n";
+            finalString = finalString.map(s -> s + "\n\nSnapshot:\n" + getSnapshotOfNodes() + "\n");
         }
-        return Optional.of(finalString);
+        return finalString;
     }
 
     @Override

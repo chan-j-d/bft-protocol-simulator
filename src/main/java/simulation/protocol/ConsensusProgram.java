@@ -14,7 +14,14 @@ import java.util.List;
 public interface ConsensusProgram<T extends BFTMessage> {
 
     /**
-     * Returns the list of resulting payloads as a result of processing {@code message}.
+     * Registers the message received and processes it and returns the resulting messages for processing.
+     *
+     * Includes side effects such as recording statistics.
+     */
+    List<T> processAndRegisterMessage(T message, double currentTime);
+
+    /**
+     * Returns the list of resulting messages as a result of processing {@code message}.
      */
     List<T> processMessage(T message);
 
@@ -27,11 +34,6 @@ public interface ConsensusProgram<T extends BFTMessage> {
      * Returns the list of payloads as a result of a timer notification.
      */
     List<T> notifyTime(int timerCount);
-
-    /**
-     * Registers the effects of {@code timeTaken}
-     */
-    void registerMessageProcessed(T message, double timeTaken);
 
     int getConsensusCount();
     int getNumConsecutiveFailure();
